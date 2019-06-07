@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package scenarigo.testdata.test;
+
+option go_package = "test";
+
+enum UserType {
+    USER_TYPE_UNSPECIFIED = 0;
+    CUSTOMER = 1;
+    STAFF = 2;
+}
+
+service Test {
+    rpc Echo(EchoRequest) returns (EchoResponse) {
+    };
+}
+
+message EchoRequest {
+    string message_id = 1;
+    string message_body = 2;
+}
+
+message EchoResponse {
+    string message_id = 1;
+    string message_body = 2;
+    int64 received_at = 3;
+}

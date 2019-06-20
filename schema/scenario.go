@@ -1,6 +1,13 @@
 // Package schema provides the test scenario data schema for scenarigo.
 package schema
 
+import (
+	"github.com/pkg/errors"
+	"github.com/zoncoen/scenarigo/assert"
+	"github.com/zoncoen/scenarigo/context"
+	"github.com/zoncoen/scenarigo/protocol"
+)
+
 // Scenario represents a test scenario.
 type Scenario struct {
 	Title       string                 `yaml:"title"`
@@ -22,9 +29,81 @@ type Step struct {
 	Description string                 `yaml:"description"`
 	Vars        map[string]interface{} `yaml:"vars"`
 	Protocol    string                 `yaml:"protocol"`
-	Request     interface{}            `yaml:"request"`
-	Expect      interface{}            `yaml:"expect"`
+	Request     Request                `yaml:"request"`
+	Expect      Expect                 `yaml:"expect"`
 	Bind        Bind                   `yaml:"bind"`
+}
+
+type stepUnmarshaller Step
+
+// UnmarshalYAML implements yaml.Unmarshaler interface.
+func (s *Step) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	if err := unmarshal((*stepUnmarshaller)(s)); err != nil {
+		return err
+	}
+
+	p := protocol.Get(s.Protocol)
+	if p == nil {
+		return errors.Errorf("unknown protocol: %s", s.Protocol)
+	}
+	if s.Request.unmarshal != nil {
+		invoker, err := p.UnmarshalRequest(s.Request.unmarshal)
+		if err != nil {
+			return err
+		}
+		s.Request.Invoker = invoker
+	}
+	if s.Expect.unmarshal != nil {
+		builder, err := p.UnmarshalExpect(s.Expect.unmarshal)
+		if err != nil {
+			return err
+		}
+		s.Expect.AssertionBuilder = builder
+	}
+
+	return nil
+}
+
+// Request represents a request.
+type Request struct {
+	protocol.Invoker
+	unmarshal func(interface{}) error
+}
+
+// Invoke sends the request.
+func (r *Request) Invoke(ctx *context.Context) (*context.Context, interface{}, error) {
+	if r.Invoker == nil {
+		return ctx, nil, errors.New("invalid request")
+	}
+	return r.Invoker.Invoke(ctx)
+}
+
+// UnmarshalYAML implements yaml.Unmarshaler interface.
+func (r *Request) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	r.unmarshal = unmarshal
+	return nil
+}
+
+// Expect represents a expect response.
+type Expect struct {
+	protocol.AssertionBuilder
+	unmarshal func(interface{}) error
+}
+
+// Build builds the assertion which asserts the response.
+func (e *Expect) Build(ctx *context.Context) (assert.Assertion, error) {
+	if e.AssertionBuilder == nil {
+		return assert.AssertionFunc(func(v interface{}) error {
+			return nil
+		}), nil
+	}
+	return e.AssertionBuilder.Build(ctx)
+}
+
+// UnmarshalYAML implements yaml.Unmarshaler interface.
+func (e *Expect) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	e.unmarshal = unmarshal
+	return nil
 }
 
 // Bind represents bindings of variables.

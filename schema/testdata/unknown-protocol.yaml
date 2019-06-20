@@ -5,10 +5,10 @@ vars:
 steps:
   - title: POST /say
     description: check to respond same message
-    protocol: test
     request:
       body:
         message: "{{vars.message}}"
     expect:
       body:
         message: "{{request.body}}"
+

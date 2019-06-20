@@ -1,0 +1,14 @@
+title: echo-service
+description: check echo-service
+steps:
+- title: say
+  description: check to respond same message
+  protocol: test
+  request:
+    method: say
+    body:
+      message: "hello"
+  expect:
+    body:
+      message: "hello"
+

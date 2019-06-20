@@ -17,6 +17,7 @@ require (
 	github.com/zoncoen/goprotoyamltag v0.0.0-20190614090358-19b914992920
 	github.com/zoncoen/query-go v1.0.0
 	golang.org/x/net v0.0.0-20190619014844-b5b0513f8c1b
+	golang.org/x/sys v0.0.0-20190222072716-a9d3bda3a223 // indirect
 	google.golang.org/grpc v1.21.1
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
 	gopkg.in/yaml.v2 v2.2.2 // indirect

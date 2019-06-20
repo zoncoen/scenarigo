@@ -7,6 +7,14 @@ import (
 )
 
 func runStep(ctx *context.Context, s *schema.Step) *context.Context {
+	if s.Vars != nil {
+		vars, err := ctx.ExecuteTemplate(s.Vars)
+		if err != nil {
+			ctx.Reporter().Fatalf("invalid vars: %s", err)
+		}
+		ctx = ctx.WithVars(vars)
+	}
+
 	var resp interface{}
 	var err error
 	ctx, resp, err = s.Request.Invoke(ctx)

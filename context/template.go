@@ -3,9 +3,9 @@ package context
 import (
 	"reflect"
 
-	"github.com/go-yaml/yaml"
 	"github.com/pkg/errors"
 	"github.com/zoncoen/scenarigo/template"
+	"github.com/zoncoen/yaml"
 )
 
 var yamlMapItemType = reflect.TypeOf(yaml.MapItem{})

@@ -24,6 +24,20 @@ func TestContext_ExtractKey(t *testing.T) {
 			query:  "vars.foo",
 			expect: "bar",
 		},
+		"request": {
+			ctx: func(ctx *Context) *Context {
+				return ctx.WithRequest(vars)
+			},
+			query:  "request.foo",
+			expect: "bar",
+		},
+		"response": {
+			ctx: func(ctx *Context) *Context {
+				return ctx.WithResponse(vars)
+			},
+			query:  "response.foo",
+			expect: "bar",
+		},
 	}
 	for name, test := range tests {
 		test := test

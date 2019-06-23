@@ -1,31 +1,11 @@
 package context
 
-import (
-	"context"
-)
-
 const (
-	nameContext = "ctx"
-	nameVars    = "vars"
+	nameContext  = "ctx"
+	nameVars     = "vars"
+	nameRequest  = "request"
+	nameResponse = "response"
 )
-
-var (
-	keyContext = struct{}{}
-	keyVars    = struct{}{}
-)
-
-// WithVars returns a copy of c with v.
-func (c *Context) WithVars(v interface{}) *Context {
-	if v == nil {
-		return c
-	}
-	vars, _ := c.ctx.Value(keyVars).(Vars)
-	vars = vars.Append(v)
-	return newContext(
-		context.WithValue(c.ctx, keyVars, vars),
-		c.reporter,
-	)
-}
 
 // ExtractByKey implements query.KeyExtractor interface.
 func (c *Context) ExtractByKey(key string) (interface{}, bool) {
@@ -33,10 +13,22 @@ func (c *Context) ExtractByKey(key string) (interface{}, bool) {
 	case nameContext:
 		return c, true
 	case nameVars:
-		v, ok := c.ctx.Value(keyVars).(Vars)
+		v, ok := c.Vars().(Vars)
 		if ok {
 			return v, true
 		}
+	case nameRequest:
+		v := c.Request()
+		if v == nil {
+			return nil, false
+		}
+		return v, true
+	case nameResponse:
+		v := c.Response()
+		if v == nil {
+			return nil, false
+		}
+		return v, true
 	}
 	return nil, false
 }

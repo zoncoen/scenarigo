@@ -3,9 +3,9 @@ package context
 import (
 	"testing"
 
-	"github.com/go-yaml/yaml"
 	"github.com/google/go-cmp/cmp"
 	"github.com/zoncoen/scenarigo/reporter"
+	"github.com/zoncoen/yaml"
 )
 
 func TestContext_ExecuteTemplate(t *testing.T) {

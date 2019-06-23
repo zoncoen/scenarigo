@@ -1,0 +1,103 @@
+package protocol
+
+import (
+	"strings"
+	"testing"
+
+	"github.com/zoncoen/scenarigo/assert"
+	"github.com/zoncoen/yaml"
+)
+
+func TestCreateAssertion(t *testing.T) {
+	var str = `
+deps:
+- name: scenarigo
+  version:
+    major: 1
+    minor: 2
+    patch: 3
+  tags:
+    - go
+    - test`
+	var in yaml.MapSlice
+	if err := yaml.Unmarshal([]byte(str), &in); err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+	qs := []string{
+		".deps[0].name",
+		".deps[0].version.major",
+		".deps[0].version.minor",
+		".deps[0].version.patch",
+		".deps[0].tags[0]",
+		".deps[0].tags[1]",
+	}
+	assertion := CreateAssertion(in)
+
+	type info struct {
+		Deps []map[string]interface{} `yaml:"deps"`
+	}
+
+	t.Run("ok", func(t *testing.T) {
+		v := info{
+			Deps: []map[string]interface{}{
+				{
+					"name": "scenarigo",
+					"version": map[string]int{
+						"major": 1,
+						"minor": 2,
+						"patch": 3,
+					},
+					"tags": []string{"go", "test"},
+				},
+			},
+		}
+		if err := assertion.Assert(v); err != nil {
+			t.Errorf("unexpected error: %s", err)
+		}
+	})
+	t.Run("ng", func(t *testing.T) {
+		v := info{
+			Deps: []map[string]interface{}{
+				{
+					"name": "Ruby on Rails",
+					"version": map[string]int{
+						"major": 2,
+						"minor": 3,
+						"patch": 4,
+					},
+					"tags": []string{"ruby", "http"},
+				},
+			},
+		}
+		err := assertion.Assert(v)
+		if err == nil {
+			t.Fatalf("expected error but no error")
+		}
+		errs := err.(*assert.Error).Errors
+		if got, expect := len(errs), len(qs); got != expect {
+			t.Fatalf("expected %d but got %d", expect, got)
+		}
+		for i, e := range errs {
+			q := qs[i]
+			if !strings.Contains(e.Error(), q) {
+				t.Errorf(`"%s" does not contain "%s"`, e.Error(), q)
+			}
+		}
+	})
+	t.Run("nil", func(t *testing.T) {
+		err := assertion.Assert(nil)
+		if err == nil {
+			t.Fatalf("expected error but no error")
+		}
+		errs := err.(*assert.Error).Errors
+		if got, expect := len(errs), len(qs); got != expect {
+			t.Fatalf("expected %d but got %d", expect, got)
+		}
+		for i, e := range errs {
+			q := qs[i]
+			if !strings.Contains(e.Error(), q) {
+				t.Errorf(`"%s" does not contain "%s"`, e.Error(), q)
+			}
+		}
+	})
+}

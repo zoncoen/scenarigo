@@ -4,8 +4,8 @@ import (
 	"io"
 	"os"
 
-	"github.com/go-yaml/yaml"
 	"github.com/pkg/errors"
+	"github.com/zoncoen/yaml"
 )
 
 // LoadScenarios loads test scenarios from path.

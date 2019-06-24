@@ -1,6 +1,7 @@
 package context
 
 import (
+	"os"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -9,6 +10,11 @@ import (
 )
 
 func TestContext_ExtractKey(t *testing.T) {
+	if err := os.Setenv("TEST_PORT", "5000"); err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+	defer os.Unsetenv("TEST_PORT")
+
 	vars := map[string]string{
 		"foo": "bar",
 	}
@@ -38,12 +44,18 @@ func TestContext_ExtractKey(t *testing.T) {
 			query:  "response.foo",
 			expect: "bar",
 		},
+		"env": {
+			query:  "env.TEST_PORT",
+			expect: "5000",
+		},
 	}
 	for name, test := range tests {
 		test := test
 		t.Run(name, func(t *testing.T) {
 			ctx := New(reporter.FromT(t))
-			ctx = test.ctx(ctx)
+			if test.ctx != nil {
+				ctx = test.ctx(ctx)
+			}
 			q, err := query.ParseString(test.query)
 			if err != nil {
 				t.Fatalf("unexpected error: %s", err)

@@ -37,6 +37,13 @@ deps:
 		Deps []map[string]interface{} `yaml:"deps"`
 	}
 
+	t.Run("no assertion", func(t *testing.T) {
+		assertion := CreateAssertion(nil)
+		v := info{}
+		if err := assertion.Assert(v); err != nil {
+			t.Errorf("unexpected error: %s", err)
+		}
+	})
 	t.Run("ok", func(t *testing.T) {
 		v := info{
 			Deps: []map[string]interface{}{
@@ -84,7 +91,7 @@ deps:
 			}
 		}
 	})
-	t.Run("nil", func(t *testing.T) {
+	t.Run("assert nil", func(t *testing.T) {
 		err := assertion.Assert(nil)
 		if err == nil {
 			t.Fatalf("expected error but no error")

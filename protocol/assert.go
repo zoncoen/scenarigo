@@ -11,7 +11,10 @@ import (
 
 // CreateAssertion is a utility function to create Go value assertion from YAML.
 func CreateAssertion(expect interface{}) assert.Assertion {
-	assertions := createAssertions(query.New(), expect)
+	var assertions []assert.Assertion
+	if expect != nil {
+		assertions = createAssertions(query.New(), expect)
+	}
 	return assert.AssertionFunc(func(v interface{}) error {
 		var assertErr error
 		for _, assertion := range assertions {

@@ -2,7 +2,12 @@ package scenarigo
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/zoncoen/scenarigo/assert"
@@ -165,4 +170,82 @@ func TestRunner_Run(t *testing.T) {
 			})
 		}
 	})
+}
+
+func TestRunner_Run_Scenarios(t *testing.T) {
+	tests := map[string]struct {
+		scenario string
+		setup    func(*testing.T) func()
+	}{
+		"http": {
+			scenario: "testdata/scenarios/http.yaml",
+			setup: func(t *testing.T) func() {
+				t.Helper()
+				token := "XXXXX"
+				mux := http.NewServeMux()
+				mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusNotFound)
+				})
+				mux.HandleFunc("/echo", func(w http.ResponseWriter, r *http.Request) {
+					auth := r.Header.Get("Authorization")
+					if auth != fmt.Sprintf("Bearer %s", token) {
+						w.WriteHeader(http.StatusForbidden)
+						return
+					}
+					body := map[string]string{}
+					d := json.NewDecoder(r.Body)
+					defer r.Body.Close()
+					if err := d.Decode(&body); err != nil {
+						t.Fatalf("failed to decode request body: %s", err)
+					}
+					var msg string
+					if m, ok := body["message"]; ok {
+						msg = m
+					}
+					b, err := json.Marshal(map[string]string{
+						"message": msg,
+					})
+					if err != nil {
+						t.Fatalf("failed to marshal: %s", err)
+					}
+					w.Write(b)
+				})
+
+				s := httptest.NewServer(mux)
+				if err := os.Setenv("TEST_ADDR", s.URL); err != nil {
+					t.Fatalf("unexpected error: %s", err)
+				}
+				if err := os.Setenv("TEST_TOKEN", token); err != nil {
+					t.Fatalf("unexpected error: %s", err)
+				}
+
+				return func() {
+					defer s.Close()
+					defer os.Unsetenv("TEST_ADDR")
+					defer os.Unsetenv("TEST_TOKEN")
+				}
+			},
+		},
+	}
+
+	for name, test := range tests {
+		test := test
+		t.Run(name, func(t *testing.T) {
+			teardown := test.setup(t)
+			defer teardown()
+
+			r, err := NewRunner(WithScenarios(test.scenario))
+			if err != nil {
+				t.Fatalf("unexpected error: %s", err)
+			}
+
+			var b bytes.Buffer
+			ok := reporter.Run(func(rptr reporter.Reporter) {
+				r.Run(context.New(rptr))
+			}, reporter.WithWriter(&b))
+			if !ok {
+				t.Fatalf("scenario failed:\n%s", b.String())
+			}
+		})
+	}
 }

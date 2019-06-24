@@ -1,0 +1,46 @@
+---
+title: /echo
+steps:
+- title: POST /echo
+  vars:
+    message: hello
+  protocol: http
+  request:
+    method: POST
+    url: "{{env.TEST_ADDR}}/echo"
+    header:
+      Authorization:
+      - "Bearer {{env.TEST_TOKEN}}"
+    body:
+      message: "{{vars.message}}"
+  expect:
+    code: 200
+    body:
+      message: "{{request.message}}"
+
+---
+title: not found
+steps:
+- title: GET /invalid
+  protocol: http
+  request:
+    method: GET
+    url: "{{env.TEST_ADDR}}/invalid"
+  expect:
+    code: Not Found
+
+---
+title: forbidden
+steps:
+- title: POST /echo with invalid token
+  vars:
+    message: hello
+  protocol: http
+  request:
+    method: POST
+    url: "{{env.TEST_ADDR}}/echo"
+    header:
+      Authorization:
+      - "Bearer aaa"
+  expect:
+    code: Forbidden

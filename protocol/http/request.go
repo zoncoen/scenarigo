@@ -7,8 +7,10 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	yamljson "github.com/kubernetes-sigs/yaml"
 	"github.com/pkg/errors"
 	"github.com/zoncoen/scenarigo/context"
+	"github.com/zoncoen/yaml"
 )
 
 // Request represents a request.
@@ -91,11 +93,15 @@ func (r *Request) buildRequest(ctx *context.Context) (*http.Request, interface{}
 			return nil, nil, errors.Errorf("failed to create request: %s", err)
 		}
 		body = x
-		b, err := json.Marshal(x)
+		b, err := yaml.Marshal(body)
 		if err != nil {
 			return nil, nil, errors.Errorf("failed to marshal request body: %s", err)
 		}
-		reader = bytes.NewReader(b)
+		jb, err := yamljson.YAMLToJSON(b)
+		if err != nil {
+			return nil, nil, errors.Errorf("failed to marshal request body: %s", err)
+		}
+		reader = bytes.NewReader(jb)
 	}
 
 	req, err := http.NewRequest(method, url, reader)

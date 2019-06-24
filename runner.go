@@ -7,6 +7,10 @@ import (
 
 	"github.com/zoncoen/scenarigo/context"
 	"github.com/zoncoen/scenarigo/schema"
+
+	// register default protocols
+	_ "github.com/zoncoen/scenarigo/protocol/grpc"
+	_ "github.com/zoncoen/scenarigo/protocol/http"
 )
 
 // Runner represents a test runner.

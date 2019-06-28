@@ -38,12 +38,22 @@ func runScenario(ctx *context.Context, s *schema.Scenario) *context.Context {
 	for _, step := range s.Steps {
 		step := step
 		ok := scnCtx.Run(step.Title, func(ctx *context.Context) {
+			// print debug information if the step failed
+			var debug func()
+			defer func() {
+				if ctx.Reporter().Failed() {
+					if debug != nil {
+						debug()
+					}
+				}
+			}()
+
 			// following steps are skipped if the previous step failed
 			if failed {
 				ctx.Reporter().SkipNow()
 			}
 
-			ctx = runStep(ctx, step)
+			ctx = runStep(ctx, step, &debug)
 
 			// bind values to the scenario context for enable to access from following steps
 			if step.Bind.Vars != nil {

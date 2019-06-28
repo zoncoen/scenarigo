@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"runtime"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -279,6 +280,22 @@ func collectResult(r *reporter) result {
 	return res
 }
 
+func ignoreStackTrace(in result) result {
+	out := result{
+		Failed:  in.Failed,
+		Skipped: in.Skipped,
+	}
+	for _, l := range in.Logs {
+		if !strings.HasPrefix(l, "goroutine ") {
+			out.Logs = append(out.Logs, l)
+		}
+	}
+	for _, child := range in.Children {
+		out.Children = append(out.Children, ignoreStackTrace(child))
+	}
+	return out
+}
+
 func TestRun(t *testing.T) {
 	tests := map[string]struct {
 		maxParallel            int
@@ -451,7 +468,7 @@ func TestRun(t *testing.T) {
 					}
 				}, opts...)
 				duration := time.Since(start)
-				if diff := cmp.Diff(test.expect, collectResult(r)); diff != "" {
+				if diff := cmp.Diff(test.expect, ignoreStackTrace(collectResult(r))); diff != "" {
 					t.Errorf("result mismatch (-want +got):\n%s", diff)
 				}
 				if expect, got := test.expectSerialDuration, duration.Truncate(50*time.Millisecond); got != expect {
@@ -470,7 +487,7 @@ func TestRun(t *testing.T) {
 					}
 				}, opts...)
 				duration := time.Since(start)
-				if diff := cmp.Diff(test.expect, collectResult(r)); diff != "" {
+				if diff := cmp.Diff(test.expect, ignoreStackTrace(collectResult(r))); diff != "" {
 					t.Errorf("result mismatch (-want +got):\n%s", diff)
 				}
 				if expect, got := test.expectParallelDuration, duration.Truncate(50*time.Millisecond); got != expect {

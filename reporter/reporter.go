@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"runtime"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"sync"
@@ -252,6 +253,7 @@ func (r *reporter) run(f func(r Reporter)) {
 		if err != nil {
 			if !r.Failed() && !r.Skipped() {
 				r.Error(err)
+				r.Error(string(debug.Stack()))
 			}
 		}
 

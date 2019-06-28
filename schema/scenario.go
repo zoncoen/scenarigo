@@ -12,6 +12,7 @@ import (
 type Scenario struct {
 	Title       string                 `yaml:"title"`
 	Description string                 `yaml:"description"`
+	Plugins     map[string]string      `yaml:"plugins"`
 	Vars        map[string]interface{} `yaml:"vars"`
 	Steps       []*Step                `yaml:"steps"`
 

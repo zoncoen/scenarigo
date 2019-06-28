@@ -3,15 +3,19 @@ package context
 
 import (
 	"context"
+	"path/filepath"
+	"plugin"
 	"testing"
 
 	"github.com/zoncoen/scenarigo/reporter"
 )
 
 type (
-	keyVars     struct{}
-	keyRequest  struct{}
-	keyResponse struct{}
+	keyPluginDir struct{}
+	keyPlugins   struct{}
+	keyVars      struct{}
+	keyRequest   struct{}
+	keyResponse  struct{}
 )
 
 // Context represents a scenarigo context.
@@ -63,6 +67,51 @@ func (c *Context) Reporter() reporter.Reporter {
 	return c.reporter
 }
 
+// WithPluginDir returns a copy of c with plugin root directory.
+func (c *Context) WithPluginDir(path string) *Context {
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		c.Reporter().Fatalf("failed to get absolute path: %s", err)
+	}
+	return newContext(
+		context.WithValue(c.ctx, keyPluginDir{}, abs),
+		c.reqCtx,
+		c.reporter,
+	)
+}
+
+// PluginDir returns the plugins root directory.
+func (c *Context) PluginDir() string {
+	path, ok := c.ctx.Value(keyPluginDir{}).(string)
+	if ok {
+		return path
+	}
+	return ""
+}
+
+// WithPlugins returns a copy of c with ps.
+func (c *Context) WithPlugins(ps map[string]*plugin.Plugin) *Context {
+	if ps == nil {
+		return c
+	}
+	plugins, _ := c.ctx.Value(keyPlugins{}).(Plugins)
+	plugins = plugins.Append(ps)
+	return newContext(
+		context.WithValue(c.ctx, keyPlugins{}, plugins),
+		c.reqCtx,
+		c.reporter,
+	)
+}
+
+// Plugins returns the plugins.
+func (c *Context) Plugins() Plugins {
+	ps, ok := c.ctx.Value(keyPlugins{}).(Plugins)
+	if ok {
+		return ps
+	}
+	return nil
+}
+
 // WithVars returns a copy of c with v.
 func (c *Context) WithVars(v interface{}) *Context {
 	if v == nil {
@@ -78,8 +127,12 @@ func (c *Context) WithVars(v interface{}) *Context {
 }
 
 // Vars returns the context variables.
-func (c *Context) Vars() interface{} {
-	return c.ctx.Value(keyVars{})
+func (c *Context) Vars() Vars {
+	vs, ok := c.ctx.Value(keyVars{}).(Vars)
+	if ok {
+		return vs
+	}
+	return nil
 }
 
 // WithRequest returns a copy of c with request.

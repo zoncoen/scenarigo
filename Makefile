@@ -4,6 +4,8 @@ ROOT_DIR := $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 BIN_DIR := $(ROOT_DIR)/.bin
 PROTO_DIR := $(ROOT_DIR)/testdata/proto
 GEN_PB_DIR := $(ROOT_DIR)/testdata/gen/pb
+PLUGINS_DIR := $(ROOT_DIR)/testdata/plugins
+GEN_PLUGINS_DIR := $(ROOT_DIR)/testdata/gen/plugins
 
 PROTOC_OPTION := -I$(PROTO_DIR)
 PROTOC_GO_OPTION := $(PROTOC_OPTION) --plugin=${BIN_DIR}/protoc-gen-go --go_out=plugins=grpc:${GEN_PB_DIR}
@@ -25,7 +27,7 @@ ${BIN_DIR}/mockgen:
 	@go build -o ${BIN_DIR}/mockgen github.com/golang/mock/mockgen
 
 .PHONY: gen
-gen: gen-proto
+gen: gen-proto gen-plugins
 
 .PHONY: gen-proto
 gen-proto: ${BIN_DIR}/protoc-gen-go
@@ -47,4 +49,13 @@ gen-mock: ${BIN_DIR}/gotypenames ${BIN_DIR}/mockgen
 	@for file in $$(find $(GEN_PB_DIR) -name '*.pb.go'); do \
 		echo "generate mock for $$file"; \
 		${BIN_DIR}/gotypenames --filename $$file --only-exported --types interface | xargs -ISTRUCT -L1 -P8 ${BIN_DIR}/mockgen -source $$file -package $$(basename $$(dirname $$file)) -destination $$(dirname $$file)/$$(basename $${file%.pb.go})_mock.go; \
+	done
+
+.PHONY: gen-plugins
+gen-plugins:
+	@rm -rf $(GEN_PLUGINS_DIR)
+	@mkdir -p $(GEN_PLUGINS_DIR)
+	@for dir in $$(find $(PLUGINS_DIR) -name '*.go' | xargs -L1 -P8 dirname | sort | uniq); do \
+		echo "build plugin $$(basename $$dir).so"; \
+		go build -buildmode=plugin -o $(GEN_PLUGINS_DIR)/$$(basename $$dir).so $$dir; \
 	done

@@ -2,6 +2,7 @@ package context
 
 import (
 	"os"
+	"plugin"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -15,6 +16,11 @@ func TestContext_ExtractKey(t *testing.T) {
 	}
 	defer os.Unsetenv("TEST_PORT")
 
+	p, err := plugin.Open("../testdata/gen/plugins/simple.so")
+	if err != nil {
+		t.Fatalf("unexpected error: %s", err)
+	}
+
 	vars := map[string]string{
 		"foo": "bar",
 	}
@@ -23,6 +29,15 @@ func TestContext_ExtractKey(t *testing.T) {
 		query  string
 		expect interface{}
 	}{
+		"plugins": {
+			ctx: func(ctx *Context) *Context {
+				return ctx.WithPlugins(map[string]*plugin.Plugin{
+					"test": p,
+				})
+			},
+			query:  "plugins.test",
+			expect: (*plug)(p),
+		},
 		"vars": {
 			ctx: func(ctx *Context) *Context {
 				return ctx.WithVars(vars)
@@ -64,7 +79,7 @@ func TestContext_ExtractKey(t *testing.T) {
 			if err != nil {
 				t.Fatalf("unexpected error: %s", err)
 			}
-			if diff := cmp.Diff(test.expect, got); diff != "" {
+			if diff := cmp.Diff(test.expect, got, cmp.AllowUnexported(plug{})); diff != "" {
 				t.Errorf("differs: (-want +got)\n%s", diff)
 			}
 		})

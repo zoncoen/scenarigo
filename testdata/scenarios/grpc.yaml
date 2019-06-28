@@ -1,0 +1,40 @@
+---
+title: Echo
+plugins:
+  grpc: "grpc.so"
+steps:
+- title: Echo
+  vars:
+    id: xxx
+    message: hello
+  protocol: grpc
+  request:
+    client: '{{plugins.grpc.CreateClient(ctx, env.TEST_ADDR)}}'
+    method: Echo
+    metadata:
+      token:
+      - "{{env.TEST_TOKEN}}"
+    body:
+      messageId: "{{vars.id}}"
+      messageBody: "{{vars.message}}"
+  expect:
+    code: OK
+    body:
+      messageId: "{{request.messageId}}"
+      messageBody: "{{request.messageBody}}"
+
+---
+title: Unauthenticated
+plugins:
+  grpc: "grpc.so"
+steps:
+- title: Echo
+  protocol: grpc
+  request:
+    client: '{{plugins.grpc.CreateClient(ctx, env.TEST_ADDR)}}'
+    method: Echo
+    metadata:
+      token:
+      - aaa
+  expect:
+    code: Unauthenticated

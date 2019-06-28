@@ -40,6 +40,7 @@ func (r *Request) Invoke(ctx *context.Context) (*context.Context, interface{}, e
 		}
 		method = client.MethodByName(r.Method)
 		if method.IsValid() {
+			// method found
 			break
 		}
 		switch client.Kind() {

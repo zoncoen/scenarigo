@@ -15,12 +15,11 @@ func runStep(ctx *context.Context, s *schema.Step) *context.Context {
 		ctx = ctx.WithVars(vars)
 	}
 
-	var resp interface{}
-	var err error
-	ctx, resp, err = s.Request.Invoke(ctx)
+	newCtx, resp, err := s.Request.Invoke(ctx)
 	if err != nil {
 		ctx.Reporter().Fatal(err)
 	}
+	ctx = newCtx
 
 	assertion, err := s.Expect.Build(ctx)
 	if err != nil {

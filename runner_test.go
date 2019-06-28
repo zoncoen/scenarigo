@@ -2,9 +2,11 @@ package scenarigo
 
 import (
 	"bytes"
+	gocontext "context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -14,6 +16,11 @@ import (
 	"github.com/zoncoen/scenarigo/context"
 	"github.com/zoncoen/scenarigo/protocol"
 	"github.com/zoncoen/scenarigo/reporter"
+	"github.com/zoncoen/scenarigo/testdata/gen/pb/test"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 type testProtocol struct {
@@ -50,6 +57,28 @@ type builder func(*context.Context) (assert.Assertion, error)
 
 func (f builder) Build(ctx *context.Context) (assert.Assertion, error) {
 	return f(ctx)
+}
+
+type testGRPCServer struct {
+	users map[string]string
+}
+
+func (s *testGRPCServer) Echo(ctx gocontext.Context, req *test.EchoRequest) (*test.EchoResponse, error) {
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		return nil, status.Error(codes.Unauthenticated, "unauthenticated")
+	}
+	ts := md.Get("token")
+	if len(ts) == 0 {
+		return nil, status.Error(codes.Unauthenticated, "unauthenticated")
+	}
+	if _, ok := s.users[ts[0]]; !ok {
+		return nil, status.Error(codes.Unauthenticated, "unauthenticated")
+	}
+	return &test.EchoResponse{
+		MessageId:   req.MessageId,
+		MessageBody: req.MessageBody,
+	}, nil
 }
 
 func TestRunner_Run(t *testing.T) {
@@ -115,7 +144,7 @@ func TestRunner_Run(t *testing.T) {
 			"failed to invoke": {
 				scenario: "testdata/scenarios/simple.yaml",
 				invoker: func(ctx *context.Context) (*context.Context, interface{}, error) {
-					return ctx, nil, errors.New("some error occurred")
+					return nil, nil, errors.New("some error occurred")
 				},
 			},
 			"failed to build the assertion": {
@@ -174,11 +203,12 @@ func TestRunner_Run(t *testing.T) {
 
 func TestRunner_Run_Scenarios(t *testing.T) {
 	tests := map[string]struct {
-		scenario string
-		setup    func(*testing.T) func()
+		ok    string
+		ng    string
+		setup func(*testing.T) func()
 	}{
 		"http": {
-			scenario: "testdata/scenarios/http.yaml",
+			ok: "testdata/scenarios/http.yaml",
 			setup: func(t *testing.T) func() {
 				t.Helper()
 				token := "XXXXX"
@@ -220,31 +250,89 @@ func TestRunner_Run_Scenarios(t *testing.T) {
 				}
 
 				return func() {
-					defer s.Close()
-					defer os.Unsetenv("TEST_ADDR")
-					defer os.Unsetenv("TEST_TOKEN")
+					s.Close()
+					os.Unsetenv("TEST_ADDR")
+					os.Unsetenv("TEST_TOKEN")
+				}
+			},
+		},
+		"grpc": {
+			ok: "testdata/scenarios/grpc.yaml",
+			ng: "testdata/scenarios/grpc-ng.yaml",
+			setup: func(t *testing.T) func() {
+				t.Helper()
+
+				token := "XXXXX"
+				testServer := &testGRPCServer{
+					users: map[string]string{
+						token: "test user",
+					},
+				}
+				s := grpc.NewServer()
+				test.RegisterTestServer(s, testServer)
+
+				ln, err := net.Listen("tcp", ":0")
+				if err != nil {
+					t.Fatalf("unexpected error: %s", err)
+				}
+
+				if err := os.Setenv("TEST_ADDR", ln.Addr().String()); err != nil {
+					t.Fatalf("unexpected error: %s", err)
+				}
+				if err := os.Setenv("TEST_TOKEN", token); err != nil {
+					t.Fatalf("unexpected error: %s", err)
+				}
+
+				go func() {
+					s.Serve(ln)
+				}()
+
+				return func() {
+					s.Stop()
+					os.Unsetenv("TEST_ADDR")
+					os.Unsetenv("TEST_TOKEN")
 				}
 			},
 		},
 	}
 
-	for name, test := range tests {
-		test := test
+	for name, tc := range tests {
+		tc := tc
 		t.Run(name, func(t *testing.T) {
-			teardown := test.setup(t)
+			teardown := tc.setup(t)
 			defer teardown()
 
-			r, err := NewRunner(WithScenarios(test.scenario))
-			if err != nil {
-				t.Fatalf("unexpected error: %s", err)
+			if tc.ok != "" {
+				t.Run("ok", func(t *testing.T) {
+					r, err := NewRunner(WithScenarios(tc.ok))
+					if err != nil {
+						t.Fatalf("unexpected error: %s", err)
+					}
+
+					var b bytes.Buffer
+					ok := reporter.Run(func(rptr reporter.Reporter) {
+						r.Run(context.New(rptr).WithPluginDir("testdata/gen/plugins"))
+					}, reporter.WithWriter(&b))
+					if !ok {
+						t.Fatalf("scenario failed:\n%s", b.String())
+					}
+				})
 			}
 
-			var b bytes.Buffer
-			ok := reporter.Run(func(rptr reporter.Reporter) {
-				r.Run(context.New(rptr))
-			}, reporter.WithWriter(&b))
-			if !ok {
-				t.Fatalf("scenario failed:\n%s", b.String())
+			if tc.ng != "" {
+				t.Run("ng", func(t *testing.T) {
+					r, err := NewRunner(WithScenarios(tc.ng))
+					if err != nil {
+						t.Fatalf("unexpected error: %s", err)
+					}
+
+					ok := reporter.Run(func(rptr reporter.Reporter) {
+						r.Run(context.New(rptr).WithPluginDir("testdata/gen/plugins"))
+					})
+					if ok {
+						t.Fatalf("expect failure but no error")
+					}
+				})
 			}
 		})
 	}

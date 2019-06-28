@@ -1,0 +1,10 @@
+---
+title: Method not found
+plugins:
+  grpc: "grpc.so"
+steps:
+- title: Not found
+  protocol: grpc
+  request:
+    client: '{{plugins.grpc.CreateClient(ctx, env.TEST_ADDR)}}'
+    method: Invalid

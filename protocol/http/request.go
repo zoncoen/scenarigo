@@ -2,15 +2,14 @@ package http
 
 import (
 	"bytes"
-	"encoding/json"
 	"io"
 	"io/ioutil"
 	"net/http"
 
-	yamljson "github.com/kubernetes-sigs/yaml"
 	"github.com/pkg/errors"
 	"github.com/zoncoen/scenarigo/context"
-	"github.com/zoncoen/yaml"
+	"github.com/zoncoen/scenarigo/protocol/http/marshaler"
+	"github.com/zoncoen/scenarigo/protocol/http/unmarshaler"
 )
 
 // Request represents a request.
@@ -44,13 +43,15 @@ func (r *Request) Invoke(ctx *context.Context) (*context.Context, interface{}, e
 	if err != nil {
 		return ctx, nil, errors.Errorf("failed to read response body: %s", err)
 	}
+
 	var respBody interface{}
 	if len(b) > 0 {
-		if err := json.Unmarshal(b, &respBody); err != nil {
+		unmarshaler := unmarshaler.Get(resp.Header.Get("Content-Type"))
+		if err := unmarshaler.Unmarshal(b, &respBody); err != nil {
 			return ctx, nil, errors.Errorf(`failed to unmarshal response body "%s": %s`, string(b), err)
 		}
+		ctx = ctx.WithResponse(respBody)
 	}
-	ctx = ctx.WithResponse(respBody)
 
 	return ctx, newResult(resp, respBody), nil
 }
@@ -85,6 +86,24 @@ func (r *Request) buildRequest(ctx *context.Context) (*http.Request, interface{}
 		return nil, nil, errors.Errorf(`URL must be "string" but got "%T"`, x)
 	}
 
+	header := http.Header{}
+	if r.Header != nil {
+		x, err := ctx.ExecuteTemplate(r.Header)
+		if err != nil {
+			return nil, nil, errors.Errorf("failed to set header: %s", err)
+		}
+		hdr, ok := x.(map[string][]string)
+		if !ok {
+			return nil, nil, errors.Errorf(`failed to set header: header must be "map[string][]string" but got "%T"`, x)
+		}
+		for k, vs := range hdr {
+			vs := vs
+			for _, v := range vs {
+				header.Add(k, v)
+			}
+		}
+	}
+
 	var reader io.Reader
 	var body interface{}
 	if r.Body != nil {
@@ -93,15 +112,13 @@ func (r *Request) buildRequest(ctx *context.Context) (*http.Request, interface{}
 			return nil, nil, errors.Errorf("failed to create request: %s", err)
 		}
 		body = x
-		b, err := yaml.Marshal(body)
+
+		marshaler := marshaler.Get(header.Get("Content-Type"))
+		b, err := marshaler.Marshal(body)
 		if err != nil {
 			return nil, nil, errors.Errorf("failed to marshal request body: %s", err)
 		}
-		jb, err := yamljson.YAMLToJSON(b)
-		if err != nil {
-			return nil, nil, errors.Errorf("failed to marshal request body: %s", err)
-		}
-		reader = bytes.NewReader(jb)
+		reader = bytes.NewReader(b)
 	}
 
 	req, err := http.NewRequest(method, url, reader)
@@ -110,20 +127,10 @@ func (r *Request) buildRequest(ctx *context.Context) (*http.Request, interface{}
 	}
 	req = req.WithContext(ctx.RequestContext())
 
-	if r.Header != nil {
-		x, err := ctx.ExecuteTemplate(r.Header)
-		if err != nil {
-			return nil, nil, errors.Errorf("failed to set header: %s", err)
-		}
-		header, ok := x.(map[string][]string)
-		if !ok {
-			return nil, nil, errors.Errorf(`failed to set header: header must be "map[string][]string" but got "%T"`, x)
-		}
-		for k, vs := range header {
-			vs := vs
-			for _, v := range vs {
-				req.Header.Add(k, v)
-			}
+	for k, vs := range header {
+		vs := vs
+		for _, v := range vs {
+			req.Header.Add(k, v)
 		}
 	}
 

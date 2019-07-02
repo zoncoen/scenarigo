@@ -7,6 +7,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/zoncoen/query-go"
+	"github.com/zoncoen/scenarigo/query/extractor"
 	"github.com/zoncoen/scenarigo/template/ast"
 	"github.com/zoncoen/scenarigo/template/token"
 )
@@ -37,13 +38,13 @@ func buildQuery(q *query.Query, node ast.Node) (*query.Query, error) {
 	var err error
 	switch n := node.(type) {
 	case *ast.Ident:
-		return q.Key(n.Name), nil
+		return q.Append(extractor.Key(n.Name)), nil
 	case *ast.SelectorExpr:
 		q, err = buildQuery(q, n.X)
 		if err != nil {
 			return nil, err
 		}
-		return q.Key(n.Sel.Name), nil
+		return q.Append(extractor.Key(n.Sel.Name)), nil
 	case *ast.IndexExpr:
 		i, ok := n.Index.(*ast.BasicLit)
 		if !ok || i.Kind != token.INT {

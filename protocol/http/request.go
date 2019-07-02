@@ -50,7 +50,7 @@ func (r *Request) Invoke(ctx *context.Context) (*context.Context, interface{}, e
 	if len(b) > 0 {
 		unmarshaler := unmarshaler.Get(resp.Header.Get("Content-Type"))
 		if err := unmarshaler.Unmarshal(b, &respBody); err != nil {
-			return ctx, nil, errors.Errorf(`failed to unmarshal response body "%s": %s`, string(b), err)
+			return ctx, nil, errors.Errorf("failed to unmarshal response body as %s: %s: %s", unmarshaler.MediaType(), string(b), err)
 		}
 		ctx = ctx.WithResponse(respBody)
 	}
@@ -118,7 +118,7 @@ func (r *Request) buildRequest(ctx *context.Context) (*http.Request, interface{}
 		marshaler := marshaler.Get(header.Get("Content-Type"))
 		b, err := marshaler.Marshal(body)
 		if err != nil {
-			return nil, nil, errors.Errorf("failed to marshal request body: %s", err)
+			return nil, nil, errors.Errorf("failed to marshal request body as %s: %#v: %s", marshaler.MediaType(), body, err)
 		}
 		reader = bytes.NewReader(b)
 	}

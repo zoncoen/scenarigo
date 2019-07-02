@@ -222,23 +222,33 @@ func TestRunner_Run_Scenarios(t *testing.T) {
 						w.WriteHeader(http.StatusForbidden)
 						return
 					}
-					body := map[string]string{}
-					d := json.NewDecoder(r.Body)
-					defer r.Body.Close()
-					if err := d.Decode(&body); err != nil {
-						t.Fatalf("failed to decode request body: %s", err)
+					switch r.Header.Get("Content-Type") {
+					case "application/x-www-form-urlencoded":
+						if err := r.ParseForm(); err != nil {
+							t.Fatalf("failed to parse form: %s", err)
+						}
+						w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+						w.Write([]byte(r.Form.Get("message")))
+					default:
+						body := map[string]string{}
+						d := json.NewDecoder(r.Body)
+						defer r.Body.Close()
+						if err := d.Decode(&body); err != nil {
+							t.Fatalf("failed to decode request body: %s", err)
+						}
+						var msg string
+						if m, ok := body["message"]; ok {
+							msg = m
+						}
+						b, err := json.Marshal(map[string]string{
+							"message": msg,
+						})
+						if err != nil {
+							t.Fatalf("failed to marshal: %s", err)
+						}
+						w.Header().Set("Content-Type", "application/json")
+						w.Write(b)
 					}
-					var msg string
-					if m, ok := body["message"]; ok {
-						msg = m
-					}
-					b, err := json.Marshal(map[string]string{
-						"message": msg,
-					})
-					if err != nil {
-						t.Fatalf("failed to marshal: %s", err)
-					}
-					w.Write(b)
 				})
 
 				s := httptest.NewServer(mux)

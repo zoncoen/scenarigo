@@ -46,6 +46,7 @@ func TestRequest_Invoke(t *testing.T) {
 				w.Write([]byte(err.Error()))
 				return
 			}
+			w.Header().Set("Content-Type", "application/json")
 			w.Write([]byte(fmt.Sprintf(`{"message": "%s"}`, body["message"])))
 		})
 		srv := httptest.NewServer(m)

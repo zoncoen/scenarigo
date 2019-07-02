@@ -5,6 +5,10 @@ import (
 	"github.com/zoncoen/yaml"
 )
 
+func init() {
+	Register(&jsonMarshaler{})
+}
+
 type jsonMarshaler struct{}
 
 // MediaType implements RequestMarshaler interface.

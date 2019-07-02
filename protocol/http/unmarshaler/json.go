@@ -4,6 +4,10 @@ import (
 	"encoding/json"
 )
 
+func init() {
+	Register(&jsonUnmarshaler{})
+}
+
 type jsonUnmarshaler struct{}
 
 // MediaType implements ResponseUnmarshaler interface.

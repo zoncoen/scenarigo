@@ -33,6 +33,7 @@ type Step struct {
 	Request     Request                `yaml:"request"`
 	Expect      Expect                 `yaml:"expect"`
 	Include     string                 `yaml:"include"`
+	Ref         string                 `yaml:"ref"`
 	Bind        Bind                   `yaml:"bind"`
 }
 

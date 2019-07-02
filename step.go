@@ -4,6 +4,7 @@ import (
 	"github.com/k0kubun/pp"
 	"github.com/zoncoen/scenarigo/assert"
 	"github.com/zoncoen/scenarigo/context"
+	"github.com/zoncoen/scenarigo/plugin"
 	"github.com/zoncoen/scenarigo/schema"
 	"github.com/zoncoen/yaml"
 )
@@ -53,7 +54,20 @@ func runStep(ctx *context.Context, s *schema.Step, debug *func()) *context.Conte
 		if len(scenarios) != 1 {
 			ctx.Reporter().Fatalf(`failed to include "%s" as step: must be a scenario`, s.Include)
 		}
-		return runScenario(ctx, scenarios[0])
+		ctx = runScenario(ctx, scenarios[0])
+		return ctx
+	}
+	if s.Ref != "" {
+		x, err := ctx.ExecuteTemplate(s.Ref)
+		if err != nil {
+			ctx.Reporter().Fatalf(`failed to reference "%s" as step: %s`, s.Ref, err)
+		}
+		stp, ok := x.(plugin.Step)
+		if !ok {
+			ctx.Reporter().Fatalf(`failed to reference "%s" as step: not implement plugin.Step interface`, s.Ref)
+		}
+		ctx = stp.Run(ctx, s)
+		return ctx
 	}
 
 	newCtx, resp, err := s.Request.Invoke(ctx)

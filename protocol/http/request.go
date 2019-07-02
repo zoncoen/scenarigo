@@ -5,20 +5,22 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"reflect"
 
 	"github.com/pkg/errors"
 	"github.com/zoncoen/scenarigo/context"
+	"github.com/zoncoen/scenarigo/internal/reflectutil"
 	"github.com/zoncoen/scenarigo/protocol/http/marshaler"
 	"github.com/zoncoen/scenarigo/protocol/http/unmarshaler"
 )
 
 // Request represents a request.
 type Request struct {
-	Client string              `yaml:"client"`
-	Method string              `yaml:"method"`
-	URL    string              `yaml:"url"`
-	Header map[string][]string `yaml:"header"`
-	Body   interface{}         `yaml:"body"`
+	Client string      `yaml:"client"`
+	Method string      `yaml:"method"`
+	URL    string      `yaml:"url"`
+	Header interface{} `yaml:"header"`
+	Body   interface{} `yaml:"body"`
 }
 
 // Invoke implements protocol.Invoker interface.
@@ -92,9 +94,9 @@ func (r *Request) buildRequest(ctx *context.Context) (*http.Request, interface{}
 		if err != nil {
 			return nil, nil, errors.Errorf("failed to set header: %s", err)
 		}
-		hdr, ok := x.(map[string][]string)
-		if !ok {
-			return nil, nil, errors.Errorf(`failed to set header: header must be "map[string][]string" but got "%T"`, x)
+		hdr, err := reflectutil.ConvertStringsMap(reflect.ValueOf(x))
+		if err != nil {
+			return nil, nil, errors.Wrapf(err, "failed to set header")
 		}
 		for k, vs := range hdr {
 			vs := vs

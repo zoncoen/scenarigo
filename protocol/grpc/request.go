@@ -9,16 +9,17 @@ import (
 	yamljson "github.com/kubernetes-sigs/yaml"
 	"github.com/pkg/errors"
 	"github.com/zoncoen/scenarigo/context"
+	"github.com/zoncoen/scenarigo/internal/reflectutil"
 	"github.com/zoncoen/yaml"
 	"google.golang.org/grpc/metadata"
 )
 
 // Request represents a request.
 type Request struct {
-	Client   string              `yaml:"client"`
-	Method   string              `yaml:"method"`
-	Metadata map[string][]string `yaml:"metadata"`
-	Body     interface{}         `yaml:"body"`
+	Client   string      `yaml:"client"`
+	Method   string      `yaml:"method"`
+	Metadata interface{} `yaml:"metadata"`
+	Body     interface{} `yaml:"body"`
 }
 
 // Invoke implements protocol.Invoker interface.
@@ -61,10 +62,11 @@ func (r *Request) Invoke(ctx *context.Context) (*context.Context, interface{}, e
 		if err != nil {
 			return ctx, nil, errors.Errorf("failed to set metadata: %s", err)
 		}
-		md, ok := x.(map[string][]string)
-		if !ok {
-			return ctx, nil, errors.Errorf(`failed to set metadata: metadata must be "map[string][]string" but got "%T"`, x)
+		md, err := reflectutil.ConvertStringsMap(reflect.ValueOf(x))
+		if err != nil {
+			return nil, nil, errors.Wrapf(err, "failed to set metadata")
 		}
+
 		pairs := []string{}
 		for k, vs := range md {
 			vs := vs

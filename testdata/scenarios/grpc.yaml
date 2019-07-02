@@ -12,8 +12,7 @@ steps:
     client: '{{plugins.grpc.CreateClient(ctx, env.TEST_ADDR)}}'
     method: Echo
     metadata:
-      token:
-      - "{{env.TEST_TOKEN}}"
+      token: "{{env.TEST_TOKEN}}"
     body:
       messageId: "{{vars.id}}"
       messageBody: "{{vars.message}}"

@@ -9,8 +9,7 @@ steps:
     method: POST
     url: "{{env.TEST_ADDR}}/echo"
     header:
-      Authorization:
-      - "Bearer {{env.TEST_TOKEN}}"
+      Authorization: "Bearer {{env.TEST_TOKEN}}"
     body:
       message: "{{vars.message}}"
   expect:

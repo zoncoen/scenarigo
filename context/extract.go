@@ -7,6 +7,7 @@ const (
 	nameRequest  = "request"
 	nameResponse = "response"
 	nameEnv      = "env"
+	nameAssert   = "assert"
 )
 
 // ExtractByKey implements query.KeyExtractor interface.
@@ -36,6 +37,8 @@ func (c *Context) ExtractByKey(key string) (interface{}, bool) {
 		}
 	case nameEnv:
 		return env, true
+	case nameAssert:
+		return assertions, true
 	}
 	return nil, false
 }

@@ -45,6 +45,17 @@ func runStep(ctx *context.Context, s *schema.Step, debug *func()) *context.Conte
 		ctx = ctx.WithVars(vars)
 	}
 
+	if s.Include != "" {
+		scenarios, err := schema.LoadScenarios(s.Include)
+		if err != nil {
+			ctx.Reporter().Fatalf(`failed to include "%s" as step: %s`, s.Include, err)
+		}
+		if len(scenarios) != 1 {
+			ctx.Reporter().Fatalf(`failed to include "%s" as step: must be a scenario`, s.Include)
+		}
+		return runScenario(ctx, scenarios[0])
+	}
+
 	newCtx, resp, err := s.Request.Invoke(ctx)
 	if err != nil {
 		ctx.Reporter().Fatal(err)

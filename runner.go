@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/pkg/errors"
 	"github.com/zoncoen/scenarigo/context"
 	"github.com/zoncoen/scenarigo/schema"
 
@@ -15,7 +16,20 @@ import (
 
 // Runner represents a test runner.
 type Runner struct {
+	pluginDir     *string
 	scenarioFiles []string
+}
+
+// WithPluginDir returns a option which sets plugin root directory.
+func WithPluginDir(path string) func(*Runner) error {
+	return func(r *Runner) error {
+		abs, err := filepath.Abs(path)
+		if err != nil {
+			return errors.Wrapf(err, `failed to set plugin directory "%s"`, path)
+		}
+		r.pluginDir = &abs
+		return nil
+	}
 }
 
 // NewRunner returns a new test runner.
@@ -69,6 +83,9 @@ func getAllFiles(paths ...string) ([]string, error) {
 
 // Run runs all tests.
 func (r *Runner) Run(ctx *context.Context) {
+	if r.pluginDir != nil {
+		ctx = ctx.WithPluginDir(*r.pluginDir)
+	}
 	for _, f := range r.scenarioFiles {
 		ctx.Run(f, func(ctx *context.Context) {
 			scns, err := schema.LoadScenarios(f)

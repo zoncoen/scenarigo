@@ -16,6 +16,7 @@ require (
 	github.com/kubernetes-sigs/yaml v1.1.0
 	github.com/mattn/go-colorable v0.1.2 // indirect
 	github.com/pkg/errors v0.8.1
+	github.com/spf13/cobra v0.0.5
 	github.com/stretchr/testify v1.3.0 // indirect
 	github.com/zoncoen/goprotoyamltag v0.0.0-20190614090358-19b914992920
 	github.com/zoncoen/gotypenames v0.0.0-20181208050024-287fd4bbbaee
@@ -26,5 +27,4 @@ require (
 	golang.org/x/text v0.3.2 // indirect
 	golang.org/x/tools v0.0.0-20190624150748-8ea4f8e3e5bf // indirect
 	google.golang.org/grpc v1.21.1
-	gopkg.in/yaml.v2 v2.2.2 // indirect
 )

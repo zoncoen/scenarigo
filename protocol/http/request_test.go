@@ -1,6 +1,8 @@
 package http
 
 import (
+	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -49,6 +51,45 @@ func TestRequest_Invoke(t *testing.T) {
 			w.Header().Set("Content-Type", "application/json")
 			w.Write([]byte(fmt.Sprintf(`{"message": "%s"}`, body["message"])))
 		})
+		m.HandleFunc("/echo/gzipped", func(w http.ResponseWriter, req *http.Request) {
+			if req.Method != http.MethodPost {
+				w.WriteHeader(http.StatusMethodNotAllowed)
+				return
+			}
+			if req.Header.Get("Authorization") != auth {
+				w.WriteHeader(http.StatusForbidden)
+				return
+			}
+			if req.Header.Get("Accept-Encoding") != "gzip" {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			d := json.NewDecoder(req.Body)
+			defer req.Body.Close()
+			body := map[string]string{}
+			if err := d.Decode(&body); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				w.Write([]byte(err.Error()))
+				return
+			}
+			res := []byte(fmt.Sprintf(`{"message": "%s"}`, body["message"]))
+			gz := new(bytes.Buffer)
+			ww := gzip.NewWriter(gz)
+			if _, err := ww.Write(res); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			if err := ww.Close(); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			w.Header().Set("Content-Encoding", "gzip")
+			w.Header().Set("Content-Type", "application/json")
+			if _, err := gz.WriteTo(w); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+		})
 		srv := httptest.NewServer(m)
 
 		tests := map[string]struct {
@@ -70,6 +111,21 @@ func TestRequest_Invoke(t *testing.T) {
 					URL:    srv.URL + "/echo",
 					Header: map[string][]string{"Authorization": []string{auth}},
 					Body:   map[string]string{"message": "hey"},
+				},
+				result: &result{
+					status: "200 OK",
+					body:   map[string]interface{}{"message": "hey"},
+				},
+			},
+			"Post (gzipped)": {
+				request: &Request{
+					Method: http.MethodPost,
+					URL:    srv.URL + "/echo/gzipped",
+					Header: map[string][]string{
+						"Authorization":   []string{auth},
+						"Accept-Encoding": []string{"gzip"},
+					},
+					Body: map[string]string{"message": "hey"},
 				},
 				result: &result{
 					status: "200 OK",

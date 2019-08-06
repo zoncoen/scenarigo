@@ -1,0 +1,17 @@
+---
+title: /echo
+steps:
+- title: POST /echo
+  vars:
+    message: hello
+  protocol: http
+  request:
+    method: POST
+    url: "{{env.TEST_ADDR}}/echo"
+    body:
+      message: "{{vars.message}}"
+  expect:
+    code: 200
+    body:
+      message: "{{request.message}}"
+

@@ -1,0 +1,16 @@
+---
+title: /echo
+description: failure scenario
+steps:
+- title: POST /echo
+  protocol: http
+  request:
+    method: POST
+    url: "{{env.TEST_ADDR}}/echo"
+    body:
+      message: "request"
+  expect:
+    code: 200
+    body:
+      message: "response"
+

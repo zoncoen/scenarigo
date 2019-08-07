@@ -2,12 +2,14 @@ package http
 
 import (
 	"bytes"
+	"compress/gzip"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"reflect"
 
 	"github.com/pkg/errors"
+
 	"github.com/zoncoen/scenarigo/context"
 	"github.com/zoncoen/scenarigo/internal/reflectutil"
 	"github.com/zoncoen/scenarigo/protocol/http/marshaler"
@@ -41,7 +43,20 @@ func (r *Request) Invoke(ctx *context.Context) (*context.Context, interface{}, e
 	}
 	defer resp.Body.Close()
 
-	b, err := ioutil.ReadAll(resp.Body)
+	var reader io.ReadCloser
+	switch resp.Header.Get("Content-Encoding") {
+	case "gzip":
+		var err error
+		reader, err = gzip.NewReader(resp.Body)
+		if err != nil {
+			return ctx, nil, errors.Errorf("failed to read response body: %s", err)
+		}
+		defer reader.Close()
+	default:
+		reader = resp.Body
+	}
+
+	b, err := ioutil.ReadAll(reader)
 	if err != nil {
 		return ctx, nil, errors.Errorf("failed to read response body: %s", err)
 	}

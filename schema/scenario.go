@@ -16,6 +16,11 @@ type Scenario struct {
 	Vars        map[string]interface{} `yaml:"vars"`
 	Steps       []*Step                `yaml:"steps"`
 
+	// The strict YAML decoder fails to decode if finds an unknown field.
+	// Anchors is the field for enabling to define YAML anchors by avoiding the error.
+	// This field doesn't need to hold some data because anchors expand by the decoder.
+	Anchors anchors `yaml:"anchors"`
+
 	filepath string // YAML filepath
 }
 
@@ -114,4 +119,11 @@ func (e *Expect) UnmarshalYAML(unmarshal func(interface{}) error) error {
 // Bind represents bindings of variables.
 type Bind struct {
 	Vars map[string]interface{} `yaml:"vars"`
+}
+
+type anchors struct{}
+
+// UnmarshalYAML implements yaml.Unmarshaler interface.
+func (a anchors) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	return nil
 }

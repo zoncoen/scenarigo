@@ -61,6 +61,32 @@ func TestLoadScenarios(t *testing.T) {
 					"body": map[interface{}]interface{}{"message": "{{request.body}}"},
 				},
 			},
+			"anchor": {
+				path: "testdata/valid-anchor.yaml",
+
+				scenarios: []*Scenario{
+					{
+						Title:       "echo-service",
+						Description: "check echo-service",
+						Vars:        map[string]interface{}{"message": "hello"},
+						Steps: []*Step{
+							{
+								Title:       "POST /say",
+								Description: "check to respond same message",
+								Vars:        nil,
+								Protocol:    "test",
+							},
+						},
+						filepath: "testdata/valid-anchor.yaml",
+					},
+				},
+				request: map[interface{}]interface{}{
+					"body": map[interface{}]interface{}{"message": "{{vars.message}}"},
+				},
+				expect: map[interface{}]interface{}{
+					"body": map[interface{}]interface{}{"message": "{{request.body}}"},
+				},
+			},
 		}
 		for name, test := range tests {
 			test := test

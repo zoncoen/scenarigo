@@ -25,6 +25,14 @@ func NewParser(r io.Reader) *Parser {
 // Parse parses the template string and returns the corresponding ast.Node.
 func (p *Parser) Parse() (ast.Node, error) {
 	p.next()
+	if p.tok == token.EOF {
+		// empty string
+		return &ast.BasicLit{
+			ValuePos: 0,
+			Kind:     token.STRING,
+			Value:    "",
+		}, nil
+	}
 	return p.parseExpr(), p.errors.Err()
 }
 

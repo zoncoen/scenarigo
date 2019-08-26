@@ -44,6 +44,10 @@ func TestTemplate_Execute(t *testing.T) {
 			str:    "1",
 			expect: "1",
 		},
+		"empty string": {
+			str:    "",
+			expect: "",
+		},
 		"empty parameter": {
 			str:    "{{}}",
 			expect: "",

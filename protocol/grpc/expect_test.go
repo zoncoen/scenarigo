@@ -5,6 +5,9 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/golang/protobuf/proto"
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
+
 	"github.com/zoncoen/scenarigo/context"
 	"github.com/zoncoen/scenarigo/testdata/gen/pb/test"
 	"github.com/zoncoen/yaml"
@@ -64,6 +67,45 @@ func TestExpect_Build(t *testing.T) {
 						MessageBody: "hello",
 					}),
 					reflect.Zero(reflect.TypeOf((*error)(nil)).Elem()),
+				},
+			},
+			"assert in case of error": {
+				expect: &Expect{
+					Status: ExpectStatus{
+						Code:    "InvalidArgument",
+						Message: "invalid argument",
+						Details: []map[string]yaml.MapSlice{
+							{
+								"google.rpc.LocalizedMessage": yaml.MapSlice{
+									yaml.MapItem{
+										Key:   "locale",
+										Value: "ja-JP",
+									},
+								},
+							},
+							{
+								"google.rpc.DebugInfo": yaml.MapSlice{
+									yaml.MapItem{
+										Key:   "detail",
+										Value: "debug",
+									},
+								},
+							},
+						},
+					},
+				},
+				v: []reflect.Value{
+					reflect.Zero(reflect.TypeOf(&test.EchoResponse{})),
+					reflect.ValueOf(mustWithDetails(
+						status.New(codes.InvalidArgument, "invalid argument"),
+						&errdetails.LocalizedMessage{
+							Locale:  "ja-JP",
+							Message: "エラー",
+						},
+						&errdetails.DebugInfo{
+							Detail: "debug",
+						},
+					).Err()),
 				},
 			},
 			"with vars": {
@@ -198,6 +240,91 @@ func TestExpect_Build(t *testing.T) {
 				},
 				expectBuildError: true,
 			},
+			"wrong status code": {
+				expect: &Expect{
+					Status: ExpectStatus{
+						Code: "Invalid Argument",
+					},
+				},
+				v: []reflect.Value{
+					reflect.Zero(reflect.TypeOf(&test.EchoResponse{})),
+					reflect.ValueOf(status.Error(codes.NotFound, "not found")),
+				},
+				expectAssertError: true,
+			},
+			"wrong status message": {
+				expect: &Expect{
+					Status: ExpectStatus{
+						Code:    "NotFound",
+						Message: "foo",
+					},
+				},
+				v: []reflect.Value{
+					reflect.Zero(reflect.TypeOf(&test.EchoResponse{})),
+					reflect.ValueOf(status.Error(codes.NotFound, "not found")),
+				},
+				expectAssertError: true,
+			},
+			"wrong status details: name is wrong": {
+				expect: &Expect{
+					Status: ExpectStatus{
+						Details: []map[string]yaml.MapSlice{
+							{
+								"google.rpc.Invalid": yaml.MapSlice{
+									yaml.MapItem{
+										Key:   "detail",
+										Value: "debug",
+									},
+								},
+							},
+						},
+					},
+				},
+				v: []reflect.Value{
+					reflect.Zero(reflect.TypeOf(&test.EchoResponse{})),
+					reflect.ValueOf(mustWithDetails(
+						status.New(codes.InvalidArgument, "invalid argument"),
+						&errdetails.LocalizedMessage{
+							Locale:  "ja-JP",
+							Message: "エラー",
+						},
+						&errdetails.DebugInfo{
+							Detail: "debug",
+						},
+					).Err()),
+				},
+				expectAssertError: true,
+			},
+			"wrong status details: value is wrong": {
+				expect: &Expect{
+					Status: ExpectStatus{
+						Details: []map[string]yaml.MapSlice{
+							{
+								"google.rpc.DebugInfo": yaml.MapSlice{
+									yaml.MapItem{
+										Key:   "detail",
+										Value: "unknown",
+									},
+								},
+							},
+						},
+					},
+				},
+				v: []reflect.Value{
+					reflect.Zero(reflect.TypeOf(&test.EchoResponse{})),
+					reflect.ValueOf(mustWithDetails(
+						status.New(codes.InvalidArgument, "invalid argument"),
+						&errdetails.LocalizedMessage{
+							Locale:  "ja-JP",
+							Message: "エラー",
+						},
+						&errdetails.DebugInfo{
+							Detail: "debug",
+						},
+					).Err()),
+				},
+				expectAssertError: true,
+			},
 		}
 		for name, test := range tests {
 			test := test
@@ -224,4 +351,12 @@ func TestExpect_Build(t *testing.T) {
 			})
 		}
 	})
+}
+
+func mustWithDetails(s *status.Status, details ...proto.Message) *status.Status {
+	ss, err := s.WithDetails(details...)
+	if err != nil {
+		panic(err)
+	}
+	return ss
 }

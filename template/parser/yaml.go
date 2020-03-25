@@ -4,6 +4,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/goccy/go-yaml/lexer"
 	"github.com/goccy/go-yaml/printer"
 	yamltoken "github.com/goccy/go-yaml/token"
 
@@ -14,6 +15,7 @@ type yamlScanner struct {
 	printer printer.Printer
 	tokens  yamltoken.Tokens
 	pos     int
+	trail   string
 
 	child         *scanner
 	childPos      int
@@ -21,6 +23,27 @@ type yamlScanner struct {
 	childLit      string
 	preChildLit   string
 	afterChildPos int
+}
+
+func newYAMLScanner(s string, pos int) *yamlScanner {
+	// avoid to lost trailling spaces and linebreaks
+	runes := []rune(s)
+	trail := []rune{}
+	for i := len(runes) - 1; i >= 0; i-- {
+		switch ch := runes[i]; ch {
+		case ' ', '\n':
+			trail = append([]rune{ch}, trail...)
+			runes = runes[:i]
+			continue
+		}
+		break
+	}
+
+	return &yamlScanner{
+		tokens: lexer.Tokenize(string(runes)),
+		pos:    pos,
+		trail:  string(trail),
+	}
 }
 
 func (s *yamlScanner) scan() (int, token.Token, string) {
@@ -34,8 +57,7 @@ func (s *yamlScanner) scan() (int, token.Token, string) {
 	}
 
 	if len(s.tokens) == 0 {
-		suf := s.suffix()
-		return s.pos - len(suf), token.EOF, suf
+		return s.pos, token.EOF, s.trail
 	}
 
 	tokens := make([]*yamltoken.Token, 0, len(s.tokens))
@@ -58,6 +80,7 @@ L:
 				pos++
 			}
 			s.child = newScanner(strings.NewReader(str))
+			s.child.indicator = tok.Indicator
 			s.child.pos = pos
 
 			s.afterChildPos = s.pos + runesLen(tok.Origin)
@@ -101,21 +124,9 @@ func (s *yamlScanner) next() {
 	s.childPos, s.childTok, s.childLit = s.child.scan()
 }
 
-func (s *yamlScanner) suffix() string {
-	lastLit := []rune(s.preChildLit)
-	l := len(lastLit)
-	var suffix []rune
-L:
-	for i := 1; i <= l; i++ {
-		switch ch := lastLit[l-i]; ch {
-		case ' ':
-			suffix = append([]rune{ch}, suffix...)
-		case '\n':
-			suffix = append([]rune{ch}, suffix...)
-			break L
-		default:
-			break L
-		}
+func (s *yamlScanner) quoted() bool {
+	if s.child != nil {
+		return s.child.quoted()
 	}
-	return string(suffix)
+	return false
 }

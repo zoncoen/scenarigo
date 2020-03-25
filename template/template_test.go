@@ -85,7 +85,7 @@ func TestTemplate_Execute(t *testing.T) {
 				"f": func(s string) string { return s }},
 			expect: "ok",
 		},
-		"function call with YAML arg": {
+		"left arrow func": {
 			str: strings.Trim(`
 {{echo <-}}:
   message: '{{message}}'
@@ -96,20 +96,7 @@ func TestTemplate_Execute(t *testing.T) {
 			},
 			expect: "hello",
 		},
-		"function call with YAML arg (nest)": {
-			str: strings.Trim(`
-{{echo <-}}:
-  message: |
-    {{echo <-}}:
-      message: '{{message}}'
-`, "\n"),
-			data: map[string]interface{}{
-				"echo":    &echoFunc{},
-				"message": "hello",
-			},
-			expect: "hello",
-		},
-		"function call with YAML arg (complex)": {
+		"left arrow func (nest)": {
 			str: strings.Trim(`
 {{join <-}}:
   prefix: preout-
@@ -122,9 +109,42 @@ func TestTemplate_Execute(t *testing.T) {
 `, "\n"),
 			data: map[string]interface{}{
 				"join": &joinFunc{},
+				"call": &callFunc{},
+				"f":    func(s string) string { return s },
 				"text": "test",
 			},
 			expect: "preout-prein-test-sufin-sufout",
+		},
+		"left arrow func with the arg which contains non-string variable": {
+			str: strings.Trim(`
+{{echo <-}}:
+  message: |-
+    {{echo <-}}:
+      message: '{{message}}'
+`, "\n"),
+			data: map[string]interface{}{
+				"echo":    &echoFunc{},
+				"message": 0,
+			},
+			expect: "0",
+		},
+		"left arrow func (complex)": {
+			str: strings.Trim(`
+{{join <-}}:
+  prefix: pre-
+  text: |-
+    {{call <-}}:
+      f: '{{f}}'
+      arg: '{{text}}'
+  suffix: -suf
+`, "\n"),
+			data: map[string]interface{}{
+				"join": &joinFunc{},
+				"call": &callFunc{},
+				"f":    func(s string) string { return s },
+				"text": "test",
+			},
+			expect: "pre-test-suf",
 		},
 		"not found": {
 			str:         "{{a.b[1]}}",
@@ -194,6 +214,33 @@ func (_ *joinFunc) Exec(in interface{}) (interface{}, error) {
 
 func (_ *joinFunc) UnmarshalArg(unmarshal func(interface{}) error) (interface{}, error) {
 	var arg joinArg
+	if err := unmarshal(&arg); err != nil {
+		return nil, err
+	}
+	return &arg, nil
+}
+
+type callFunc struct{}
+
+type callArg struct {
+	F   interface{} `yaml:"f"`
+	Arg string      `yaml:"arg"`
+}
+
+func (_ *callFunc) Exec(in interface{}) (interface{}, error) {
+	arg, ok := in.(*callArg)
+	if !ok {
+		return nil, errors.New("arg must be a callArg")
+	}
+	f, ok := arg.F.(func(string) string)
+	if !ok {
+		return nil, errors.New("arg.f must be a func(string) string")
+	}
+	return f(arg.Arg), nil
+}
+
+func (_ *callFunc) UnmarshalArg(unmarshal func(interface{}) error) (interface{}, error) {
+	var arg callArg
 	if err := unmarshal(&arg); err != nil {
 		return nil, err
 	}

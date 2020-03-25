@@ -1,14 +1,14 @@
-package context
+package template
 
 import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/zoncoen/scenarigo/reporter"
 	"github.com/zoncoen/yaml"
 )
 
-func TestContext_ExecuteTemplate(t *testing.T) {
+func TestExecute(t *testing.T) {
+	var iface interface{} = `{{"test"}}`
 	tests := map[string]struct {
 		in       interface{}
 		expected interface{}
@@ -19,7 +19,7 @@ func TestContext_ExecuteTemplate(t *testing.T) {
 			expected: "test",
 		},
 		"template string": {
-			in:       "{{vars.test}}",
+			in:       "{{test}}",
 			expected: "test",
 			vars: map[string]string{
 				"test": "test",
@@ -113,15 +113,15 @@ func TestContext_ExecuteTemplate(t *testing.T) {
 				},
 			},
 		},
+		"pointer to interface{}": {
+			in:       &iface,
+			expected: "test",
+		},
 	}
 	for name, test := range tests {
 		test := test
 		t.Run(name, func(t *testing.T) {
-			ctx := New(reporter.FromT(t))
-			if test.vars != nil {
-				ctx = ctx.WithVars(test.vars)
-			}
-			got, err := ctx.ExecuteTemplate(test.in)
+			got, err := Execute(test.in, test.vars)
 			if err != nil {
 				t.Fatalf("unexpected error: %s", err)
 			}

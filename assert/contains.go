@@ -12,12 +12,12 @@ import (
 func Contains(assertion Assertion) func(*query.Query) Assertion {
 	return func(q *query.Query) Assertion {
 		return assertFunc(q, func(v interface{}) error {
-			ok, err := contains(assertion, q, v)
+			vv, err := arrayOrSlice(v)
 			if err != nil {
-				return err
+				return errors.Wrap(err, q.String())
 			}
-			if !ok {
-				return errors.Errorf("%s: doesn't contain expected value", q.String())
+			if err := contains(assertion, q, vv); err != nil {
+				return errors.Wrapf(err, "%s: doesn't contain expected value", q.String())
 			}
 			return nil
 		})
@@ -28,11 +28,11 @@ func Contains(assertion Assertion) func(*query.Query) Assertion {
 func NotContains(assertion Assertion) func(*query.Query) Assertion {
 	return func(q *query.Query) Assertion {
 		return assertFunc(q, func(v interface{}) error {
-			ok, err := contains(assertion, q, v)
+			vv, err := arrayOrSlice(v)
 			if err != nil {
-				return err
+				return errors.Wrap(err, q.String())
 			}
-			if ok {
+			if err := contains(assertion, q, vv); err == nil {
 				return errors.Errorf("%s: contains the value", q.String())
 			}
 			return nil
@@ -40,19 +40,26 @@ func NotContains(assertion Assertion) func(*query.Query) Assertion {
 	}
 }
 
-func contains(assertion Assertion, q *query.Query, v interface{}) (bool, error) {
+func arrayOrSlice(v interface{}) (reflect.Value, error) {
 	vv := reflectutil.Elem(reflect.ValueOf(v))
 	switch vv.Kind() {
 	case reflect.Array, reflect.Slice:
 	default:
-		return false, errors.Errorf("%s: expected an array or slice", q.String())
+		return reflect.Value{}, errors.New("expected an array")
+	}
+	return vv, nil
+}
+
+func contains(assertion Assertion, q *query.Query, v reflect.Value) error {
+	if v.Len() == 0 {
+		return errors.New("empty")
 	}
 	var err error
-	for i := 0; i < vv.Len(); i++ {
-		e := vv.Index(i).Interface()
+	for i := 0; i < v.Len(); i++ {
+		e := v.Index(i).Interface()
 		if err = assertion.Assert(e); err == nil {
-			return true, nil
+			return nil
 		}
 	}
-	return false, nil
+	return errors.Wrap(err, "last error")
 }

@@ -78,7 +78,6 @@ func TestEqual(t *testing.T) {
 }
 
 func TestConvert(t *testing.T) {
-	type myString string
 	tests := []struct {
 		expected interface{}
 		got      interface{}
@@ -96,6 +95,7 @@ func TestConvert(t *testing.T) {
 		},
 	}
 	for i, test := range tests {
+		test := test
 		t.Run(fmt.Sprint(i), func(t *testing.T) {
 			_, err := convert(test.expected, reflect.TypeOf(test.got))
 			if test.ok && err != nil {

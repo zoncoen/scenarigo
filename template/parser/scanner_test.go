@@ -453,7 +453,7 @@ func TestScanner_Scan(t *testing.T) {
 					},
 					{
 						pos: 48,
-						tok: token.LINE_BREAK,
+						tok: token.LINEBREAK,
 						lit: "",
 					},
 				},
@@ -524,7 +524,7 @@ func TestScanner_Scan(t *testing.T) {
 					},
 					{
 						pos: 53,
-						tok: token.LINE_BREAK,
+						tok: token.LINEBREAK,
 						lit: "\n  ",
 					},
 					{
@@ -534,7 +534,7 @@ func TestScanner_Scan(t *testing.T) {
 					},
 					{
 						pos: 60,
-						tok: token.LINE_BREAK,
+						tok: token.LINEBREAK,
 						lit: "",
 					},
 				},
@@ -571,6 +571,7 @@ func TestScanner_Scan(t *testing.T) {
 			},
 		}
 		for name, test := range tests {
+			test := test
 			t.Run(name, func(t *testing.T) {
 				s := newScanner(strings.NewReader(test.src))
 				for i, e := range test.expected {
@@ -616,6 +617,7 @@ func TestScanner_Scan(t *testing.T) {
 			},
 		}
 		for name, test := range tests {
+			test := test
 			t.Run(name, func(t *testing.T) {
 				s := newScanner(strings.NewReader(test.src))
 				for {

@@ -49,11 +49,11 @@ func TestRequest_Invoke(t *testing.T) {
 			body := map[string]string{}
 			if err := d.Decode(&body); err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
-				w.Write([]byte(err.Error()))
+				_, _ = w.Write([]byte(err.Error()))
 				return
 			}
 			w.Header().Set("Content-Type", "application/json")
-			w.Write([]byte(fmt.Sprintf(`{"message": "%s", "id": "%s"}`, body["message"], req.URL.Query().Get("id"))))
+			_, _ = w.Write([]byte(fmt.Sprintf(`{"message": "%s", "id": "%s"}`, body["message"], req.URL.Query().Get("id"))))
 		})
 		m.HandleFunc("/echo/gzipped", func(w http.ResponseWriter, req *http.Request) {
 			if req.Method != http.MethodPost {
@@ -73,7 +73,7 @@ func TestRequest_Invoke(t *testing.T) {
 			body := map[string]string{}
 			if err := d.Decode(&body); err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
-				w.Write([]byte(err.Error()))
+				_, _ = w.Write([]byte(err.Error()))
 				return
 			}
 			res := []byte(fmt.Sprintf(`{"message": "%s", "id": "%s"}`, body["message"], req.URL.Query().Get("id")))
@@ -115,7 +115,7 @@ func TestRequest_Invoke(t *testing.T) {
 					Method: http.MethodPost,
 					URL:    srv.URL + "/echo",
 					Query:  url.Values{"id": []string{"123"}},
-					Header: map[string][]string{"Authorization": []string{auth}},
+					Header: map[string][]string{"Authorization": {auth}},
 					Body:   map[string]string{"message": "hey"},
 				},
 				result: &result{
@@ -129,8 +129,8 @@ func TestRequest_Invoke(t *testing.T) {
 					URL:    srv.URL + "/echo/gzipped",
 					Query:  url.Values{"id": []string{"123"}},
 					Header: map[string][]string{
-						"Authorization":   []string{auth},
-						"Accept-Encoding": []string{"gzip"},
+						"Authorization":   {auth},
+						"Accept-Encoding": {"gzip"},
 					},
 					Body: map[string]string{"message": "hey"},
 				},
@@ -150,7 +150,7 @@ func TestRequest_Invoke(t *testing.T) {
 					Method: http.MethodPost,
 					URL:    "{{vars.url}}",
 					Query:  map[string]string{"id": "{{vars.id}}"},
-					Header: map[string][]string{"Authorization": []string{"{{vars.auth}}"}},
+					Header: map[string][]string{"Authorization": {"{{vars.auth}}"}},
 					Body:   map[string]string{"message": "{{vars.message}}"},
 				},
 				result: &result{
@@ -266,11 +266,11 @@ func TestRequest_Invoke_Log(t *testing.T) {
 			body := map[string]string{}
 			if err := d.Decode(&body); err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
-				w.Write([]byte(err.Error()))
+				_, _ = w.Write([]byte(err.Error()))
 				return
 			}
 			w.Header().Set("Content-Type", "application/json")
-			w.Write([]byte(fmt.Sprintf(`{"message": "%s"}`, body["message"])))
+			_, _ = w.Write([]byte(fmt.Sprintf(`{"message": "%s"}`, body["message"])))
 		})
 		srv := httptest.NewServer(m)
 		defer srv.Close()
@@ -365,10 +365,7 @@ func TestRequest_buildRequest(t *testing.T) {
 				t.Fatalf("unexpected error: %s", err)
 			}
 			if diff := cmp.Diff(test.expectReq(t), req, cmp.FilterPath(func(path cmp.Path) bool {
-				if path.String() == "ctx" {
-					return true
-				}
-				return false
+				return path.String() == "ctx"
 			}, cmp.Ignore())); diff != "" {
 				t.Errorf("request differs (-want +got):\n%s", diff)
 			}

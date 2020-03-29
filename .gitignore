@@ -2,3 +2,4 @@ vendor
 .envrc
 .bin
 gen
+coverage.out

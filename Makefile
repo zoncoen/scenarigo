@@ -87,3 +87,10 @@ test/unit:
 .PHONY: test/e2e
 test/e2e: # can't use -race flug with plugin.Plugin
 	@go test ./$(E2E_TEST_TARGETS)/...
+
+.PHONY: test/ci
+test/ci: coverage test/e2e
+
+.PHONY: coverage
+coverage:
+	@go test -race $(TEST_TARGETS) -coverprofile=coverage.out -covermode=atomic

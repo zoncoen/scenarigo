@@ -24,7 +24,7 @@ func TestTestContext(t *testing.T) {
 		done := make(chan struct{})
 		go func() {
 			time.Sleep(duration)
-			if expect, got := 1, ctx.numWaiting; got != expect {
+			if expect, got := int64(1), ctx.waitings(); got != expect {
 				t.Errorf("expected %d but got %d", expect, got)
 			}
 			ctx.release()
@@ -35,7 +35,7 @@ func TestTestContext(t *testing.T) {
 		if expect, got := duration, time.Since(now).Truncate(10*time.Millisecond); got != expect {
 			t.Errorf("expected %s but got %s", expect, got)
 		}
-		if expect, got := 0, ctx.numWaiting; got != expect {
+		if expect, got := int64(0), ctx.waitings(); got != expect {
 			t.Errorf("expected %d but got %d", expect, got)
 		}
 
@@ -52,7 +52,7 @@ func TestTestContext(t *testing.T) {
 		done := make(chan struct{})
 		go func() {
 			time.Sleep(duration)
-			if expect, got := 0, ctx.numWaiting; got != expect {
+			if expect, got := int64(0), ctx.waitings(); got != expect {
 				t.Errorf("expected %d but got %d", expect, got)
 			}
 			ctx.release()
@@ -63,7 +63,7 @@ func TestTestContext(t *testing.T) {
 		if expect, got := time.Duration(0), time.Since(now).Truncate(10*time.Millisecond); got != expect {
 			t.Errorf("expected %s but got %s", expect, got)
 		}
-		if expect, got := 0, ctx.numWaiting; got != expect {
+		if expect, got := int64(0), ctx.waitings(); got != expect {
 			t.Errorf("expected %d but got %d", expect, got)
 		}
 

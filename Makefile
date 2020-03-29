@@ -2,16 +2,18 @@ SHELL := /bin/bash
 
 ROOT_DIR := $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
 BIN_DIR := $(ROOT_DIR)/.bin
-PROTO_DIR := $(ROOT_DIR)/testdata/proto
-GEN_PB_DIR := $(ROOT_DIR)/testdata/gen/pb
-PLUGINS_DIR := $(ROOT_DIR)/testdata/plugins
-GEN_PLUGINS_DIR := $(ROOT_DIR)/testdata/gen/plugins
+E2E_TEST_TARGETS := test/e2e
+TEST_TARGETS := $(shell go list ./... | grep -v $(E2E_TEST_TARGETS))
+
+PROTO_DIR := $(ROOT_DIR)/internal/testutil/testdata/proto
+GEN_PB_DIR := $(ROOT_DIR)/internal/testutil/gen/pb
+PLUGINS_DIR := $(ROOT_DIR)/test/e2e/testdata/plugins
+GEN_PLUGINS_DIR := $(ROOT_DIR)/test/e2e/testdata/gen/plugins
 
 OS := $(shell ./tools/scripts/os.sh)
 PROTOC_VERSION := 3.11.4
 PROTOC_ZIP := protoc-$(PROTOC_VERSION)-$(OS)-x86_64.zip
 PROTOC_OPTION := -I$(PROTO_DIR)
-# PROTOC_GO_OPTION := $(PROTOC_OPTION) --plugin=${BIN_DIR}/protoc-gen-go --go_out=plugins=grpc:${ROOT_DIR}
 PROTOC_GO_OPTION := $(PROTOC_OPTION) --plugin=${BIN_DIR}/protoc-gen-go --go_out=plugins=grpc,paths=source_relative:$(GEN_PB_DIR)
 
 .PHONY: all
@@ -76,5 +78,12 @@ gen-plugins:
 	done
 
 .PHONY: test
-test: $(ROOT_DIR)/testdata/gen
-	@go test ./...
+test: test/unit test/e2e
+
+.PHONY: test/unit
+test/unit:
+	@go test -race $(TEST_TARGETS)
+
+.PHONY: test/e2e
+test/e2e: # can't use -race flug with plugin.Plugin
+	@go test ./$(E2E_TEST_TARGETS)/...

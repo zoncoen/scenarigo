@@ -12,7 +12,7 @@ require (
 	github.com/goccy/go-yaml v1.2.0
 	github.com/golang/mock v1.4.3
 	github.com/golang/protobuf v1.3.5
-	github.com/google/go-cmp v0.3.0
+	github.com/google/go-cmp v0.4.0
 	github.com/hashicorp/go-multierror v1.0.0
 	github.com/lestrrat-go/backoff v1.0.0
 	github.com/mattn/go-isatty v0.0.12 // indirect

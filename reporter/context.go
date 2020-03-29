@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"sync"
+	"sync/atomic"
 )
 
 // Option represents an option for test reporter.
@@ -44,7 +45,7 @@ type testContext struct {
 	running int
 
 	// numWaiting is the number tests waiting to be run in parallel.
-	numWaiting int
+	numWaiting int64
 
 	// maxParallel is a copy of the parallel flag.
 	maxParallel int
@@ -73,19 +74,23 @@ func (c *testContext) waitParallel() {
 		c.m.Unlock()
 		return
 	}
-	c.numWaiting++
+	atomic.AddInt64(&c.numWaiting, 1)
 	c.m.Unlock()
 	<-c.startParallel
 }
 
+func (c *testContext) waitings() int64 {
+	return atomic.LoadInt64(&c.numWaiting)
+}
+
 func (c *testContext) release() {
 	c.m.Lock()
-	if c.numWaiting == 0 {
+	if c.waitings() == 0 {
 		c.running--
 		c.m.Unlock()
 		return
 	}
-	c.numWaiting--
+	atomic.AddInt64(&c.numWaiting, -1)
 	c.m.Unlock()
 	c.startParallel <- true // Pick a waiting test to be run.
 }

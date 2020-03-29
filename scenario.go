@@ -3,6 +3,7 @@ package scenarigo
 import (
 	"path/filepath"
 	"plugin"
+	"reflect"
 
 	"github.com/zoncoen/scenarigo/context"
 	"github.com/zoncoen/scenarigo/schema"
@@ -10,17 +11,17 @@ import (
 
 func runScenario(ctx *context.Context, s *schema.Scenario) *context.Context {
 	if s.Plugins != nil {
-		plugs := map[string]*plugin.Plugin{}
+		plugs := map[string]interface{}{}
 		for name, path := range s.Plugins {
 			path := path
 			if root := ctx.PluginDir(); root != "" {
 				path = filepath.Join(root, path)
 			}
-			plug, err := plugin.Open(path)
+			p, err := plugin.Open(path)
 			if err != nil {
 				ctx.Reporter().Fatalf("failed to open plugin: %s", err)
 			}
-			plugs[name] = plug
+			plugs[name] = &plug{p}
 		}
 		ctx = ctx.WithPlugins(plugs)
 	}
@@ -63,4 +64,26 @@ func runScenario(ctx *context.Context, s *schema.Scenario) *context.Context {
 	}
 
 	return scnCtx
+}
+
+// lookupper is an interface wrapper around *plugin.Plugin.
+// NOTE: If we use plugin.Plugin in tests, go test with -race flag will fail.
+type lookupper interface {
+	Lookup(string) (plugin.Symbol, error)
+}
+
+type plug struct {
+	lookupper
+}
+
+// ExtractByKey implements query.KeyExtractor interface.
+func (p *plug) ExtractByKey(key string) (interface{}, bool) {
+	if sym, err := p.Lookup(key); err == nil {
+		// If sym is a pointer to a variable, return the actual variable for convenience.
+		if v := reflect.ValueOf(sym); v.Kind() == reflect.Ptr {
+			return v.Elem().Interface(), true
+		}
+		return sym, true
+	}
+	return nil, false
 }

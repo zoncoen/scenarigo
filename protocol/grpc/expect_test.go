@@ -9,7 +9,7 @@ import (
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 
 	"github.com/zoncoen/scenarigo/context"
-	"github.com/zoncoen/scenarigo/testdata/gen/pb/test"
+	"github.com/zoncoen/scenarigo/internal/testutil/gen/pb/test"
 	"github.com/zoncoen/yaml"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"

@@ -1,4 +1,5 @@
 vendor
 .envrc
 .bin
-*.so
+gen
+coverage.out

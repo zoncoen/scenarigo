@@ -4,7 +4,6 @@ package context
 import (
 	"context"
 	"path/filepath"
-	"plugin"
 	"testing"
 
 	"github.com/zoncoen/scenarigo/reporter"
@@ -91,7 +90,7 @@ func (c *Context) PluginDir() string {
 }
 
 // WithPlugins returns a copy of c with ps.
-func (c *Context) WithPlugins(ps map[string]*plugin.Plugin) *Context {
+func (c *Context) WithPlugins(ps map[string]interface{}) *Context {
 	if ps == nil {
 		return c
 	}

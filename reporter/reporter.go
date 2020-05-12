@@ -68,6 +68,8 @@ type reporter struct {
 
 	barrier chan bool // To signal parallel subtests they may start.
 	done    chan bool // To signal a test is done.
+
+	disableAddDuration bool // for testing
 }
 
 func new() *reporter {
@@ -179,7 +181,7 @@ func (r *reporter) Parallel() {
 		panic("reporter: Reporter.Parallel called multiple times")
 	}
 	r.isParallel = true
-	r.duration += time.Since(r.start)
+	r.addDuration(time.Since(r.start))
 	r.m.Unlock()
 
 	if r.context.verbose {
@@ -238,6 +240,7 @@ func (r *reporter) Run(name string, f func(t Reporter)) bool {
 	child.parent = r
 	child.name = name
 	child.depth = r.depth + 1
+	child.disableAddDuration = r.disableAddDuration
 	if r.context.verbose {
 		r.context.printf("=== RUN   %s\n", child.name)
 	}
@@ -253,7 +256,7 @@ func (r *reporter) Run(name string, f func(t Reporter)) bool {
 func (r *reporter) run(f func(r Reporter)) {
 	var finished bool
 	defer func() {
-		r.duration += time.Since(r.start)
+		r.addDuration(time.Since(r.start))
 		err := recover()
 		if !finished && err == nil {
 			err = errors.New("test executed panic(nil) or runtime.Goexit")
@@ -298,6 +301,12 @@ func (r *reporter) run(f func(r Reporter)) {
 	r.start = time.Now()
 	f(r)
 	finished = true
+}
+
+func (r *reporter) addDuration(delta time.Duration) {
+	if !r.disableAddDuration {
+		r.duration += delta
+	}
 }
 
 func print(r *reporter) {

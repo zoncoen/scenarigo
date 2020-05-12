@@ -1,6 +1,7 @@
 package assert
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"testing"
@@ -61,6 +62,21 @@ func TestEqual(t *testing.T) {
 			expected: test.UserType_CUSTOMER.String(),
 			ok:       test.UserType_CUSTOMER,
 			ng:       test.UserType_USER_TYPE_UNSPECIFIED,
+		},
+		"json.Number (string)": {
+			expected: "100",
+			ok:       json.Number("100"),
+			ng:       json.Number("0.01"),
+		},
+		"json.Number (int)": {
+			expected: 100,
+			ok:       json.Number("100"),
+			ng:       json.Number("0.01"),
+		},
+		"json.Number (float)": {
+			expected: 0.01,
+			ok:       json.Number("0.01"),
+			ng:       json.Number("100"),
 		},
 	}
 	for name, tc := range tests {

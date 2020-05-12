@@ -1,6 +1,7 @@
 package assert
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 
@@ -11,6 +12,21 @@ import (
 // Equal returns an assertion to ensure a value equals the expected value.
 func Equal(q *query.Query, expected interface{}) Assertion {
 	return assertFunc(q, func(v interface{}) error {
+		if n, ok := v.(json.Number); ok {
+			switch expected.(type) {
+			case int, int8, int16, int32, int64:
+				i, err := n.Int64()
+				if err == nil {
+					v = i
+				}
+			case float32, float64:
+				f, err := n.Float64()
+				if err == nil {
+					v = f
+				}
+			}
+		}
+
 		if reflect.DeepEqual(v, expected) {
 			return nil
 		}

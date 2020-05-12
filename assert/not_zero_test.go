@@ -1,6 +1,7 @@
 package assert
 
 import (
+	"encoding/json"
 	"fmt"
 	"testing"
 
@@ -35,6 +36,14 @@ func TestNotZero(t *testing.T) {
 		{
 			ok: &myStruct{},
 			ng: nil,
+		},
+		{
+			ok: json.Number("1"),
+			ng: json.Number("0"),
+		},
+		{
+			ok: json.Number("1.0"),
+			ng: json.Number("0.0"),
 		},
 	}
 	for i, test := range tests {

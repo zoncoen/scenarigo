@@ -1,6 +1,7 @@
 package unmarshaler
 
 import (
+	"bytes"
 	"encoding/json"
 )
 
@@ -19,5 +20,7 @@ func (um *jsonUnmarshaler) MediaType() string {
 
 // Unmarshal implements ResponseUnmarshaler interface.
 func (um *jsonUnmarshaler) Unmarshal(data []byte, v interface{}) error {
-	return json.Unmarshal(data, &v)
+	d := json.NewDecoder(bytes.NewReader(data))
+	d.UseNumber()
+	return d.Decode(v)
 }

@@ -451,6 +451,7 @@ FAIL
 			var b bytes.Buffer
 			Run(func(r Reporter) {
 				rptr := pr(t, r)
+				rptr.disableAddDuration = true
 				test.f(t, rptr)
 			}, WithWriter(&b))
 			if diff := cmp.Diff(test.expect, "\n"+b.String()); diff != "" {

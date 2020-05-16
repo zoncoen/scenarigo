@@ -3,3 +3,4 @@ vendor
 .bin
 gen
 coverage.out
+.CHANGELOG.md

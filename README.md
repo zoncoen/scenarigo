@@ -15,8 +15,8 @@ scenarigo is an end-to-end scenario testing tool for HTTP/gRPC server.
 It is written in Go, enable to customize by [the plugin package of Go](https://golang.org/pkg/plugin/).
 You can write test scenarios as YAML files and executes them.
 
-```yaml example.yaml
-title: check scenarigo GitHub page
+```yaml github.yaml
+title: get scenarigo repository
 steps:
 - title: GET https://api.github.com/repos/zoncoen/scenarigo
   vars:
@@ -32,9 +32,39 @@ steps:
       name: "{{vars.repo}}"
 ```
 
+#### Use as CLI tool
+
 ```shell
-$ scenarigo run example.yaml
-ok      example.yaml    0.000s
+$ scenarigo run github.yaml
+```
+
+#### Use as Go package
+
+```go main_test.go
+package main
+
+import (
+	"testing"
+
+	"github.com/zoncoen/scenarigo"
+	"github.com/zoncoen/scenarigo/context"
+)
+
+func TestGitHub(t *testing.T) {
+	r, err := scenarigo.NewRunner(
+		scenarigo.WithScenarios(
+			"testdata/github.yaml",
+		),
+	)
+	if err != nil {
+		t.Fatalf("failed to create a test runner: %s", err)
+	}
+	r.Run(context.FromT(t))
+}
+```
+
+```shell
+$ go test . -run "TestGitHub"
 ```
 
 ## Features
@@ -49,7 +79,7 @@ Go to the [releases page](https://github.com/zoncoen/scenarigo/releases) and dow
 
 ## Usage
 
-```shell
+```
 scenarigo is a scenario testing tool for APIs.
 
 Usage:
@@ -72,7 +102,7 @@ This project uses the Makefile as a task runner.
 
 ### Available commands
 
-```shell
+```
 test                           run tests
 coverage                       measure test coverage
 gen                            generate necessary files for testing

@@ -124,12 +124,16 @@ gen/plugins:
 	done
 
 .PHONY: release
-release: $(GOBUMP) ## release new version
+release: $(GOBUMP) $(GIT_CHGLOG) ## release new version
 	@$(CURDIR)/scripts/release.sh
 
 .PHONY: changelog
 changelog: $(GIT_CHGLOG) ## generate CHANGELOG.md
 	@git-chglog -o $(CURDIR)/CHANGELOG.md
+
+.PHONY: changelog/ci
+changelog/ci: $(GIT_CHGLOG) $(GOBUMP)
+	@git-chglog v$$(gobump show -r $(CURDIR)/version) > $(CURDIR)/.CHANGELOG.md
 
 .PHONY: credits
 credits: $(GO_LICENSES) $(GOCREDITS) ## generate CREDITS

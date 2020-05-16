@@ -13,10 +13,12 @@ jobs:
         go-version: 1.14
     - name: Checkout code
       uses: actions/checkout@v2
+    - name: Generate CHANGELOG
+      run: echo "::set-env name=CHANGELOG::$(make changelog/ci)"
     - name: Run GoReleaser
       uses: goreleaser/goreleaser-action@v2
       with:
         version: latest
-        args: release --rm-dist
+        args: release --rm-dist --release-notes .CHANGELOG.md
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

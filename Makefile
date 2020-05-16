@@ -44,6 +44,22 @@ MOCKGEN := $(BIN_DIR)/mockgen
 $(MOCKGEN): | $(BIN_DIR)
 	@go build -o $(MOCKGEN) github.com/golang/mock/mockgen
 
+GOBUMP := $(BIN_DIR)/gobump
+$(GOBUMP): | $(BIN_DIR)
+	@go build -o $(GOBUMP) github.com/x-motemen/gobump/cmd/gobump
+
+GIT_CHGLOG := $(BIN_DIR)/git-chglog
+$(GIT_CHGLOG): | $(BIN_DIR)
+	@go build -o $(GIT_CHGLOG) github.com/git-chglog/git-chglog/cmd/git-chglog
+
+GO_LICENSES := $(BIN_DIR)/go-licenses
+$(GO_LICENSES): | $(BIN_DIR)
+	@go build -o $(GO_LICENSES) github.com/google/go-licenses
+
+GOCREDITS := $(BIN_DIR)/gocredits
+$(GOCREDITS): | $(BIN_DIR)
+	@go build -o $(GOCREDITS) github.com/Songmu/gocredits/cmd/gocredits
+
 .PHONY: test
 E2E_TEST_TARGETS := test/e2e
 TEST_TARGETS := $(shell go list ./... | grep -v $(E2E_TEST_TARGETS))
@@ -63,6 +79,12 @@ test/ci: coverage test/e2e
 .PHONY: coverage
 coverage: ## measure test coverage
 	@go test -race $(TEST_TARGETS) -coverprofile=coverage.out -covermode=atomic
+
+.PHONY: lint/ci
+lint/ci: $(GOLANGCI_LINT)
+	@make credits
+	@git add --all
+	@git diff --cached --quiet || (echo '"make credits" required'; exit 1)
 
 .PHONY: gen
 gen: gen/proto gen/plugins ## generate necessary files for testing
@@ -100,6 +122,20 @@ gen/plugins:
 		echo "build plugin $$(basename $$dir).so"; \
 		go build -buildmode=plugin -o $(GEN_PLUGINS_DIR)/$$(basename $$dir).so $$dir; \
 	done
+
+.PHONY: release
+release: $(GOBUMP) ## release new version
+	@$(CURDIR)/scripts/release.sh
+
+.PHONY: changelog
+changelog: $(GIT_CHGLOG) ## generate CHANGELOG.md
+	@git-chglog -o $(CURDIR)/CHANGELOG.md
+
+.PHONY: credits
+credits: $(GO_LICENSES) $(GOCREDITS) ## generate CREDITS
+	@go mod download
+	@go-licenses check ./...
+	@gocredits . > CREDITS
 
 .PHONY: help
 help: ## print help

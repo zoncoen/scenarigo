@@ -11,12 +11,12 @@ func TestString(t *testing.T) {
 		"with revision": {
 			version:  "1.0.0",
 			revision: "beta",
-			expect:   "1.0.0-beta",
+			expect:   "v1.0.0-beta",
 		},
 		"without revision": {
 			version:  "1.0.0",
 			revision: "",
-			expect:   "1.0.0",
+			expect:   "v1.0.0",
 		},
 	}
 	for name, test := range tests {

@@ -345,7 +345,7 @@ func collectOutput(r *reporter) []string {
 			)
 		} else {
 			if r.context.verbose {
-				results = append(results, fmt.Sprintf("PASS"))
+				results = append(results, "PASS")
 			}
 			results = append(results,
 				fmt.Sprintf("ok  \t%s\t%.3fs", r.name, r.duration.Seconds()),

@@ -22,7 +22,7 @@ type Expect struct {
 	Status ExpectStatus                    `yaml:"status"`
 }
 
-// ExpectStatus represents expected gRPC status
+// ExpectStatus represents expected gRPC status.
 type ExpectStatus struct {
 	Code    string                     `yaml:"code"`
 	Message string                     `yaml:"message"`

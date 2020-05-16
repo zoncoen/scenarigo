@@ -1,75 +1,99 @@
 SHELL := /bin/bash
+.DEFAULT_GOAL := test
 
-ROOT_DIR := $(realpath $(dir $(lastword $(MAKEFILE_LIST))))
-BIN_DIR := $(ROOT_DIR)/.bin
-E2E_TEST_TARGETS := test/e2e
-TEST_TARGETS := $(shell go list ./... | grep -v $(E2E_TEST_TARGETS))
+BIN_DIR := $(CURDIR)/.bin
+PATH := $(abspath $(BIN_DIR)):$(PATH)
 
-PROTO_DIR := $(ROOT_DIR)/internal/testutil/testdata/proto
-GEN_PB_DIR := $(ROOT_DIR)/internal/testutil/gen/pb
-PLUGINS_DIR := $(ROOT_DIR)/test/e2e/testdata/plugins
-GEN_PLUGINS_DIR := $(ROOT_DIR)/test/e2e/testdata/gen/plugins
+UNAME_OS := $(shell uname -s)
+UNAME_ARCH := $(shell uname -m)
 
-OS := $(shell ./tools/scripts/os.sh)
-PROTOC_VERSION := 3.11.4
-PROTOC_ZIP := protoc-$(PROTOC_VERSION)-$(OS)-x86_64.zip
-PROTOC_OPTION := -I$(PROTO_DIR)
-PROTOC_GO_OPTION := $(PROTOC_OPTION) --plugin=${BIN_DIR}/protoc-gen-go --go_out=plugins=grpc,paths=source_relative:$(GEN_PB_DIR)
+PROTO_DIR := $(CURDIR)/internal/testutil/testdata/proto
+GEN_PB_DIR := $(CURDIR)/internal/testutil/gen/pb
+PLUGINS_DIR := $(CURDIR)/test/e2e/testdata/plugins
+GEN_PLUGINS_DIR := $(CURDIR)/test/e2e/testdata/gen/plugins
 
-.PHONY: all
-all: test
-
-$(BIN_DIR)/protoc:
+$(BIN_DIR):
 	@mkdir -p $(BIN_DIR)
-	curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v$(PROTOC_VERSION)/$(PROTOC_ZIP)
-	unzip -j -o $(PROTOC_ZIP) -d $(BIN_DIR) bin/protoc
-	unzip -o $(PROTOC_ZIP) -d $(BIN_DIR) 'include/*'
+
+PROTOC := $(BIN_DIR)/protoc
+PROTOC_VERSION := 3.11.4
+PROTOC_ZIP := protoc-$(PROTOC_VERSION)-$(UNAME_OS)-$(UNAME_ARCH).zip
+ifeq "$(UNAME_OS)" "Darwin"
+	PROTOC_ZIP=protoc-$(PROTOC_VERSION)-osx-$(UNAME_ARCH).zip
+endif
+$(PROTOC): | $(BIN_DIR)
+	@curl -sSOL \
+		"https://github.com/protocolbuffers/protobuf/releases/download/v$(PROTOC_VERSION)/$(PROTOC_ZIP)"
+	@unzip -j -o $(PROTOC_ZIP) -d $(BIN_DIR) bin/protoc
+	@unzip -o $(PROTOC_ZIP) -d $(BIN_DIR) "include/*"
 	@rm -f $(PROTOC_ZIP)
 
-$(BIN_DIR)/protoc-gen-go:
-	@mkdir -p $(BIN_DIR)
-	@go build -o ${BIN_DIR}/protoc-gen-go github.com/golang/protobuf/protoc-gen-go
+PROTOC_GEN_GO := $(BIN_DIR)/protoc-gen-go
+$(PROTOC_GEN_GO): | $(BIN_DIR)
+	@go build -o $(PROTOC_GEN_GO) github.com/golang/protobuf/protoc-gen-go
 
-$(BIN_DIR)/goprotoyamltag:
-	@mkdir -p $(BIN_DIR)
-	@go build -o ${BIN_DIR}/goprotoyamltag github.com/zoncoen/goprotoyamltag
+GOPROTOYAMLTAG := $(BIN_DIR)/goprotoyamltag
+$(GOPROTOYAMLTAG): | $(BIN_DIR)
+	@go build -o $(GOPROTOYAMLTAG) github.com/zoncoen/goprotoyamltag
 
-$(BIN_DIR)/gotypenames:
-	@mkdir -p $(BIN_DIR)
-	@go build -o ${BIN_DIR}/gotypenames github.com/zoncoen/gotypenames
+GOTYPENAMES := $(BIN_DIR)/gotypenames
+$(GOTYPENAMES): | $(BIN_DIR)
+	@go build -o $(GOTYPENAMES) github.com/zoncoen/gotypenames
 
-$(BIN_DIR)/mockgen:
-	@mkdir -p $(BIN_DIR)
-	@go build -o $(BIN_DIR)/mockgen github.com/golang/mock/mockgen
+MOCKGEN := $(BIN_DIR)/mockgen
+$(MOCKGEN): | $(BIN_DIR)
+	@go build -o $(MOCKGEN) github.com/golang/mock/mockgen
+
+.PHONY: test
+E2E_TEST_TARGETS := test/e2e
+TEST_TARGETS := $(shell go list ./... | grep -v $(E2E_TEST_TARGETS))
+test: test/unit test/e2e ## run tests
+
+.PHONY: test/unit
+test/unit:
+	@go test -race $(TEST_TARGETS)
+
+.PHONY: test/e2e
+test/e2e:
+	@go test ./$(E2E_TEST_TARGETS)/... # can't use -race flug with plugin.Plugin
+
+.PHONY: test/ci
+test/ci: coverage test/e2e
+
+.PHONY: coverage
+coverage: ## measure test coverage
+	@go test -race $(TEST_TARGETS) -coverprofile=coverage.out -covermode=atomic
 
 .PHONY: gen
-gen: gen-proto gen-plugins
+gen: gen/proto gen/plugins ## generate necessary files for testing
 
-.PHONY: gen-proto
-gen-proto: $(BIN_DIR)/protoc $(BIN_DIR)/protoc-gen-go
+.PHONY: gen/proto
+PROTOC_OPTION := -I$(PROTO_DIR)
+PROTOC_GO_OPTION := $(PROTOC_OPTION) --plugin=${BIN_DIR}/protoc-gen-go --go_out=plugins=grpc,paths=source_relative:$(GEN_PB_DIR)
+gen/proto: $(PROTOC) $(PROTOC_GEN_GO)
 	@rm -rf $(GEN_PB_DIR)
 	@mkdir -p $(GEN_PB_DIR)
-	@find $(PROTO_DIR) -name '*.proto' | xargs -P8 $(BIN_DIR)/protoc $(PROTOC_GO_OPTION)
+	@find $(PROTO_DIR) -name '*.proto' | xargs -P8 protoc $(PROTOC_GO_OPTION)
 	@make add-yaml-tag
-	@make gen-mock
+	@make gen/mock
 
 .PHONY: add-yaml-tag
-add-yaml-tag: $(BIN_DIR)/goprotoyamltag
+add-yaml-tag: $(GOPROTOYAMLTAG)
 	@for file in $$(find $(GEN_PB_DIR) -name '*.pb.go'); do \
 		echo "add yaml tag $$file"; \
-		${BIN_DIR}/goprotoyamltag --filename $$file -w; \
+		goprotoyamltag --filename $$file -w; \
 	done
 
-.PHONY: gen-mock
-gen-mock: $(BIN_DIR)/gotypenames $(BIN_DIR)/mockgen
+.PHONY: gen/mock
+gen/mock: $(GOTYPENAMES) $(MOCKGEN)
 	@for file in $$(find $(GEN_PB_DIR) -name '*.pb.go'); do \
 		package=$$(basename $$(dirname $$file)); \
 		echo "generate mock for $$file"; \
-		${BIN_DIR}/gotypenames --filename $$file --only-exported --types interface | xargs -ISTRUCT -L1 -P8 ${BIN_DIR}/mockgen -source $$file -package $$package -self_package $(GEN_PB_DIR)/$$package -destination $$(dirname $$file)/$$(basename $${file%.pb.go})_mock.go; \
+		gotypenames --filename $$file --only-exported --types interface | xargs -ISTRUCT -L1 -P8 mockgen -source $$file -package $$package -self_package $(GEN_PB_DIR)/$$package -destination $$(dirname $$file)/$$(basename $${file%.pb.go})_mock.go; \
 	done
 
-.PHONY: gen-plugins
-gen-plugins:
+.PHONY: gen/plugins
+gen/plugins:
 	@rm -rf $(GEN_PLUGINS_DIR)
 	@mkdir -p $(GEN_PLUGINS_DIR)
 	@for dir in $$(find $(PLUGINS_DIR) -name '*.go' | xargs -L1 -P8 dirname | sort | uniq); do \
@@ -77,20 +101,6 @@ gen-plugins:
 		go build -buildmode=plugin -o $(GEN_PLUGINS_DIR)/$$(basename $$dir).so $$dir; \
 	done
 
-.PHONY: test
-test: test/unit test/e2e
-
-.PHONY: test/unit
-test/unit:
-	@go test -race $(TEST_TARGETS)
-
-.PHONY: test/e2e
-test/e2e: # can't use -race flug with plugin.Plugin
-	@go test ./$(E2E_TEST_TARGETS)/...
-
-.PHONY: test/ci
-test/ci: coverage test/e2e
-
-.PHONY: coverage
-coverage:
-	@go test -race $(TEST_TARGETS) -coverprofile=coverage.out -covermode=atomic
+.PHONY: help
+help: ## print help
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'

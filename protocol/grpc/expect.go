@@ -6,20 +6,24 @@ import (
 	"strconv"
 	"strings"
 
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
 	"github.com/zoncoen/scenarigo/assert"
 	"github.com/zoncoen/scenarigo/context"
+	"github.com/zoncoen/scenarigo/internal/reflectutil"
 	"github.com/zoncoen/yaml"
 )
 
 // Expect represents expected response values.
 type Expect struct {
-	Code   string                          `yaml:"code"`
-	Body   yaml.KeyOrderPreservedInterface `yaml:"body"`
-	Status ExpectStatus                    `yaml:"status"`
+	Code    string                          `yaml:"code"`
+	Body    yaml.KeyOrderPreservedInterface `yaml:"body"`
+	Status  ExpectStatus                    `yaml:"status"`
+	Header  map[string]interface{}          `yaml:"header"`
+	Trailer map[string]interface{}          `yaml:"trailer"`
 }
 
 // ExpectStatus represents expected gRPC status.
@@ -38,8 +42,15 @@ func (e *Expect) Build(ctx *context.Context) (assert.Assertion, error) {
 	assertion := assert.Build(expectBody)
 
 	return assert.AssertionFunc(func(v interface{}) error {
-		message, stErr, err := extract(v)
+		resp, ok := v.(response)
+		if !ok {
+			return errors.Errorf(`failed to convert to response type. type is %s`, reflect.TypeOf(v))
+		}
+		message, stErr, err := extract(resp)
 		if err != nil {
+			return err
+		}
+		if err := e.assertMetadata(resp.Header, resp.Trailer); err != nil {
 			return err
 		}
 		if err := e.assertStatusCode(stErr); err != nil {
@@ -56,6 +67,28 @@ func (e *Expect) Build(ctx *context.Context) (assert.Assertion, error) {
 		}
 		return nil
 	}), nil
+}
+
+func (e *Expect) assertMetadata(header, trailer metadata.MD) error {
+	if len(e.Header) > 0 {
+		headerMap, err := reflectutil.ConvertStringsMap(reflect.ValueOf(e.Header))
+		if err != nil {
+			return errors.Errorf(`failed to convert strings map from expected header: %v`, e.Header)
+		}
+		if err := assert.Build(headerMap).Assert(header); err != nil {
+			return err
+		}
+	}
+	if len(e.Trailer) > 0 {
+		trailerMap, err := reflectutil.ConvertStringsMap(reflect.ValueOf(e.Trailer))
+		if err != nil {
+			return errors.Errorf(`failed to convert strings map from expected trailer: %v`, e.Trailer)
+		}
+		if err := assert.Build(trailerMap).Assert(trailer); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (e *Expect) assertStatusCode(sts *status.Status) error {
@@ -152,11 +185,8 @@ func detailsString(sts *status.Status) string {
 	return strings.Join(details, ", ")
 }
 
-func extract(v interface{}) (proto.Message, *status.Status, error) {
-	vs, ok := v.([]reflect.Value)
-	if !ok {
-		return nil, nil, errors.Errorf("expected []reflect.Value but got %T", v)
-	}
+func extract(v response) (proto.Message, *status.Status, error) {
+	vs := v.rvalues
 	if len(vs) != 2 {
 		return nil, nil, errors.Errorf("expected return value length of method call is 2 but %d", len(vs))
 	}

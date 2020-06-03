@@ -2,7 +2,7 @@ package version
 
 import "fmt"
 
-var version string = "0.1.0"
+var version string = "0.2.0"
 var revision string = "dev"
 
 // String returns scenarigo version as string.

@@ -1,8 +1,10 @@
 package schema
 
 import (
+	"bytes"
 	"testing"
 
+	"github.com/goccy/go-yaml"
 	"github.com/google/go-cmp/cmp"
 	"github.com/zoncoen/scenarigo/protocol"
 )
@@ -14,15 +16,15 @@ type testProtocol struct {
 
 func (p *testProtocol) Name() string { return p.name }
 
-func (p *testProtocol) UnmarshalRequest(f func(interface{}) error) (protocol.Invoker, error) {
-	if err := f(&p.request); err != nil {
+func (p *testProtocol) UnmarshalRequest(b []byte) (protocol.Invoker, error) {
+	if err := yaml.Unmarshal(b, &p.request); err != nil {
 		return nil, err
 	}
 	return nil, nil
 }
 
-func (p *testProtocol) UnmarshalExpect(f func(interface{}) error) (protocol.AssertionBuilder, error) {
-	if err := f(&p.expect); err != nil {
+func (p *testProtocol) UnmarshalExpect(b []byte) (protocol.AssertionBuilder, error) {
+	if err := yaml.NewDecoder(bytes.NewBuffer(b), yaml.UseOrderedMap()).Decode(&p.expect); err != nil {
 		return nil, err
 	}
 	return nil, nil
@@ -54,11 +56,21 @@ func TestLoadScenarios(t *testing.T) {
 						filepath: "testdata/valid.yaml",
 					},
 				},
-				request: map[interface{}]interface{}{
-					"body": map[interface{}]interface{}{"message": "{{vars.message}}"},
+				request: map[string]interface{}{
+					"body": map[string]interface{}{
+						"message": "{{vars.message}}",
+					},
 				},
-				expect: map[interface{}]interface{}{
-					"body": map[interface{}]interface{}{"message": "{{request.body}}"},
+				expect: yaml.MapSlice{
+					{
+						Key: "body",
+						Value: yaml.MapSlice{
+							{
+								Key:   "message",
+								Value: "{{request.body}}",
+							},
+						},
+					},
 				},
 			},
 			"anchor": {
@@ -80,11 +92,21 @@ func TestLoadScenarios(t *testing.T) {
 						filepath: "testdata/valid-anchor.yaml",
 					},
 				},
-				request: map[interface{}]interface{}{
-					"body": map[interface{}]interface{}{"message": "{{vars.message}}"},
+				request: map[string]interface{}{
+					"body": map[string]interface{}{
+						"message": "{{vars.message}}",
+					},
 				},
-				expect: map[interface{}]interface{}{
-					"body": map[interface{}]interface{}{"message": "{{request.body}}"},
+				expect: yaml.MapSlice{
+					{
+						Key: "body",
+						Value: yaml.MapSlice{
+							{
+								Key:   "message",
+								Value: "{{request.body}}",
+							},
+						},
+					},
 				},
 			},
 		}

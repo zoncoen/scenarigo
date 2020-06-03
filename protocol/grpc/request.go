@@ -4,14 +4,13 @@ import (
 	"bytes"
 	"reflect"
 
+	"github.com/goccy/go-yaml"
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/golang/protobuf/proto"
 	"github.com/pkg/errors"
-	"github.com/zoncoen/yaml"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
-	yamljson "sigs.k8s.io/yaml"
 
 	"github.com/zoncoen/scenarigo/context"
 	"github.com/zoncoen/scenarigo/internal/reflectutil"
@@ -180,17 +179,13 @@ func buildRequestBody(ctx *context.Context, req interface{}, src interface{}) er
 	if err != nil {
 		return err
 	}
-	b, err := yaml.Marshal(x)
-	if err != nil {
-		return err
-	}
-	jb, err := yamljson.YAMLToJSON(b)
-	if err != nil {
+	var buf bytes.Buffer
+	if err := yaml.NewEncoder(&buf, yaml.JSON()).Encode(x); err != nil {
 		return err
 	}
 	message, ok := req.(proto.Message)
 	if ok {
-		r := bytes.NewReader(jb)
+		r := bytes.NewReader(buf.Bytes())
 		if err := jsonpb.Unmarshal(r, message); err != nil {
 			return err
 		}

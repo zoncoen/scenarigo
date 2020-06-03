@@ -7,9 +7,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/goccy/go-yaml"
 	"github.com/pkg/errors"
-	"github.com/zoncoen/yaml"
-
 	"github.com/zoncoen/scenarigo/internal/reflectutil"
 	"github.com/zoncoen/scenarigo/template/ast"
 	"github.com/zoncoen/scenarigo/template/parser"
@@ -165,19 +164,25 @@ func (t *Template) executeFuncCall(call *ast.CallExpr, data interface{}) (interf
 	if err != nil {
 		return nil, err
 	}
+	funv := reflect.ValueOf(fun)
+	if funv.Kind() != reflect.Func {
+		return nil, errors.Errorf("not function")
+	}
+
 	args := make([]reflect.Value, len(call.Args))
 	for i, arg := range call.Args {
 		a, err := t.executeExpr(arg, data)
 		if err != nil {
 			return nil, err
 		}
-		args[i] = reflect.ValueOf(a)
+		requiredType := funv.Type().In(i)
+		v := reflect.ValueOf(a)
+		if v.IsValid() && v.Type().ConvertibleTo(requiredType) {
+			v = v.Convert(requiredType)
+		}
+		args[i] = v
 	}
 
-	funv := reflect.ValueOf(fun)
-	if funv.Kind() != reflect.Func {
-		return nil, errors.Errorf("not function")
-	}
 	vs := funv.Call(args)
 	if len(vs) != 1 || !vs[0].IsValid() {
 		return nil, errors.Errorf("function should return a value")
@@ -204,7 +209,7 @@ func (t *Template) executeLeftArrowExpr(e *ast.LeftArrowExpr, data interface{}) 
 		return nil, errors.Errorf(`expect string but got %T`, v)
 	}
 	arg, err := f.UnmarshalArg(func(v interface{}) error {
-		if err := yaml.Unmarshal([]byte(argStr), v); err != nil {
+		if err := yaml.NewDecoder(strings.NewReader(argStr), yaml.UseOrderedMap()).Decode(v); err != nil {
 			return err
 		}
 		_, err = Execute(v, t.argFuncs)

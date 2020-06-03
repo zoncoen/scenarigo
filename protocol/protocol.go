@@ -42,8 +42,8 @@ func Get(name string) Protocol {
 // Protocol is the interface that creates Invoker and AssertionBuilder from YAML.
 type Protocol interface {
 	Name() string
-	UnmarshalRequest(func(interface{}) error) (Invoker, error)
-	UnmarshalExpect(func(interface{}) error) (AssertionBuilder, error)
+	UnmarshalRequest([]byte) (Invoker, error)
+	UnmarshalExpect([]byte) (AssertionBuilder, error)
 }
 
 // Invoker is the interface that sends the request and returns response sent from the server.

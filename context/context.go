@@ -6,15 +6,18 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/goccy/go-yaml/ast"
 	"github.com/zoncoen/scenarigo/reporter"
 )
 
 type (
-	keyPluginDir struct{}
-	keyPlugins   struct{}
-	keyVars      struct{}
-	keyRequest   struct{}
-	keyResponse  struct{}
+	keyPluginDir    struct{}
+	keyPlugins      struct{}
+	keyVars         struct{}
+	keyRequest      struct{}
+	keyResponse     struct{}
+	keyYAMLNode     struct{}
+	keyEnabledColor struct{}
 )
 
 // Context represents a scenarigo context.
@@ -167,6 +170,45 @@ func (c *Context) WithResponse(resp interface{}) *Context {
 // Response returns the response.
 func (c *Context) Response() interface{} {
 	return c.ctx.Value(keyResponse{})
+}
+
+// WithNode returns a copy of c with ast.Node
+func (c *Context) WithNode(node ast.Node) *Context {
+	if node == nil {
+		return c
+	}
+	return newContext(
+		context.WithValue(c.ctx, keyYAMLNode{}, node),
+		c.reqCtx,
+		c.reporter,
+	)
+}
+
+// Node returns the ast.Node.
+func (c *Context) Node() ast.Node {
+	node, ok := c.ctx.Value(keyYAMLNode{}).(ast.Node)
+	if !ok {
+		return nil
+	}
+	return node
+}
+
+// WithEnabledColor returns a copy of c with enabledColor flag
+func (c *Context) WithEnabledColor(enabledColor bool) *Context {
+	return newContext(
+		context.WithValue(c.ctx, keyEnabledColor{}, enabledColor),
+		c.reqCtx,
+		c.reporter,
+	)
+}
+
+// EnabledColor returns whether color output is enabled
+func (c *Context) EnabledColor() bool {
+	enabledColor, ok := c.ctx.Value(keyEnabledColor{}).(bool)
+	if ok {
+		return enabledColor
+	}
+	return false
 }
 
 // Run runs f as a subtest of c called name.

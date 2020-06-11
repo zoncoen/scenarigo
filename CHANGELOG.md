@@ -1,5 +1,10 @@
 # CHANGELOG
 
+<a name="v0.3.0"></a>
+## [v0.3.0] - 2020-06-11
+### Features
+- **core:** support to output error with YAML ([#33](https://github.com/zoncoen/scenarigo/issues/33))
+
 <a name="v0.2.0"></a>
 ## [v0.2.0] - 2020-06-03
 ### Code Refactoring
@@ -19,4 +24,5 @@ change protocl.Protocol interface
 - first release
 
 
+[v0.3.0]: https://github.com/zoncoen/scenarigo/compare/v0.2.0...v0.3.0
 [v0.2.0]: https://github.com/zoncoen/scenarigo/compare/v0.1.0...v0.2.0

@@ -1,5 +1,11 @@
 # CHANGELOG
 
+<a name="v0.3.1"></a>
+## [v0.3.1] - 2020-06-12
+### Bug Fixes
+- **core:** fix ctx.Response() for http protocol ([#35](https://github.com/zoncoen/scenarigo/issues/35))
+- **errors:** fix incorrect line number in YAML source ([#38](https://github.com/zoncoen/scenarigo/issues/38))
+
 <a name="v0.3.0"></a>
 ## [v0.3.0] - 2020-06-11
 ### Features
@@ -24,5 +30,6 @@ change protocl.Protocol interface
 - first release
 
 
+[v0.3.1]: https://github.com/zoncoen/scenarigo/compare/v0.3.0...v0.3.1
 [v0.3.0]: https://github.com/zoncoen/scenarigo/compare/v0.2.0...v0.3.0
 [v0.2.0]: https://github.com/zoncoen/scenarigo/compare/v0.1.0...v0.2.0

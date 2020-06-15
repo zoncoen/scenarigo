@@ -1,5 +1,10 @@
 # CHANGELOG
 
+<a name="v0.3.2"></a>
+## [v0.3.2] - 2020-06-15
+### Bug Fixes
+- **deps:** update YAML library to fix a bug ( v1.7.8 => v1.7.9 ) ([#39](https://github.com/zoncoen/scenarigo/issues/39))
+
 <a name="v0.3.1"></a>
 ## [v0.3.1] - 2020-06-12
 ### Bug Fixes
@@ -30,6 +35,7 @@ change protocl.Protocol interface
 - first release
 
 
+[v0.3.2]: https://github.com/zoncoen/scenarigo/compare/v0.3.1...v0.3.2
 [v0.3.1]: https://github.com/zoncoen/scenarigo/compare/v0.3.0...v0.3.1
 [v0.3.0]: https://github.com/zoncoen/scenarigo/compare/v0.2.0...v0.3.0
 [v0.2.0]: https://github.com/zoncoen/scenarigo/compare/v0.1.0...v0.2.0

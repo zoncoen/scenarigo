@@ -1,5 +1,14 @@
 # CHANGELOG
 
+<a name="v0.3.3"></a>
+## [v0.3.3] - 2020-06-17
+### Bug Fixes
+- **core:** add generated files to avoid the import error ([#41](https://github.com/zoncoen/scenarigo/issues/41))
+- **deps:** update YAML library ( v1.7.12 => v1.7.15 ) ([#47](https://github.com/zoncoen/scenarigo/issues/47))
+- **deps:** update YAML library ( v1.7.10 => v1.7.11 ) ([#42](https://github.com/zoncoen/scenarigo/issues/42))
+- **deps:** update YAML library to fix a bug ( v1.7.9 => v1.7.10 ) ([#40](https://github.com/zoncoen/scenarigo/issues/40))
+- **template:** fix processing for variadic arguments of function ([#48](https://github.com/zoncoen/scenarigo/issues/48))
+
 <a name="v0.3.2"></a>
 ## [v0.3.2] - 2020-06-15
 ### Bug Fixes
@@ -35,6 +44,7 @@ change protocl.Protocol interface
 - first release
 
 
+[v0.3.3]: https://github.com/zoncoen/scenarigo/compare/v0.3.2...v0.3.3
 [v0.3.2]: https://github.com/zoncoen/scenarigo/compare/v0.3.1...v0.3.2
 [v0.3.1]: https://github.com/zoncoen/scenarigo/compare/v0.3.0...v0.3.1
 [v0.3.0]: https://github.com/zoncoen/scenarigo/compare/v0.2.0...v0.3.0

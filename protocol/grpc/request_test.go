@@ -213,7 +213,7 @@ func TestRequest_Invoke_Log(t *testing.T) {
 	expect := `
 === RUN   test.yaml
 --- PASS: test.yaml (0.00s)
-    request:
+        request:
         method: Echo
         metadata:
           version:
@@ -221,7 +221,7 @@ func TestRequest_Invoke_Log(t *testing.T) {
         body:
           messageId: "1"
           messageBody: hello
-    response:
+        response:
         body:
           messageId: "1"
           messageBody: hello

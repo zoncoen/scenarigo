@@ -304,7 +304,7 @@ func TestRequest_Invoke_Log(t *testing.T) {
 		expect := fmt.Sprintf(`
 === RUN   test.yaml
 --- PASS: test.yaml (0.00s)
-    request:
+        request:
         method: POST
         url: %s/echo?query=hello
         header:
@@ -312,7 +312,7 @@ func TestRequest_Invoke_Log(t *testing.T) {
           - %s
         body:
           message: hey
-    response:
+        response:
         header:
           Content-Length:
           - "18"

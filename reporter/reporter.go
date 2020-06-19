@@ -357,10 +357,13 @@ func collectOutput(r *reporter) []string {
 
 func pad(s string, padding string) string {
 	s = strings.Trim(s, "\n")
+	indent := strings.Repeat(" ", 4)
 	var b strings.Builder
 	for i, l := range strings.Split(s, "\n") {
-		if i != 0 {
-			b.WriteString("\n    ")
+		if i == 0 {
+			b.WriteString(indent)
+		} else {
+			b.WriteString("\n" + indent)
 		}
 		b.WriteString(padding)
 		b.WriteString(l)

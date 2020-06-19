@@ -329,7 +329,7 @@ ok  	a	1.234s
 			},
 			expect: `
 --- FAIL: a (1.23s)
-    error!
+        error!
 FAIL
 FAIL	a	1.234s
 FAIL
@@ -365,7 +365,7 @@ ok  	a	0.000s
 --- FAIL: a (0.00s)
     --- FAIL: a/b (0.00s)
         --- FAIL: a/b/c (1.23s)
-            error!
+                error!
 FAIL
 FAIL	a	0.000s
 FAIL
@@ -389,7 +389,7 @@ FAIL
 --- PASS: a (0.00s)
     --- PASS: a/b (0.00s)
         --- PASS: a/b/c (0.00s)
-            ok!
+                ok!
 PASS
 ok  	a	0.000s
 `,
@@ -414,7 +414,7 @@ ok  	a	0.000s
 --- FAIL: a (0.00s)
     --- FAIL: a/b (0.00s)
         --- FAIL: a/b/c (1.23s)
-            error!
+                error!
 FAIL
 FAIL	a	0.000s
 FAIL
@@ -436,7 +436,7 @@ FAIL
 --- FAIL: a (0.00s)
     --- FAIL: a/b (0.00s)
         --- FAIL: a/b/c (0.00s)
-            1
+                1
                 2
                 3
 FAIL

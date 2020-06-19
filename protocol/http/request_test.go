@@ -305,21 +305,23 @@ func TestRequest_Invoke_Log(t *testing.T) {
 === RUN   test.yaml
 --- PASS: test.yaml (0.00s)
         request:
-        method: POST
-        url: %s/echo?query=hello
-        header:
-          User-Agent:
-          - %s
-        body:
-          message: hey
+          method: POST
+          url: %s/echo?query=hello
+          header:
+            User-Agent:
+            - %s
+          body:
+            message: hey
+          
         response:
-        header:
-          Content-Length:
-          - "18"
-          Content-Type:
-          - application/json
-        body:
-          message: hey
+          header:
+            Content-Length:
+            - "18"
+            Content-Type:
+            - application/json
+          body:
+            message: hey
+          
 PASS
 ok  	test.yaml	0.000s
 `, srv.URL, defaultUserAgent)

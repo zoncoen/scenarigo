@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"reflect"
+	"strings"
 
 	"github.com/goccy/go-yaml"
 	"github.com/zoncoen/scenarigo/context"
@@ -37,6 +38,19 @@ type response struct {
 	status string              `yaml:"-"` // http.Response.Status format e.g. "200 OK"
 }
 
+const (
+	indentNum = 2
+)
+
+func (r *Request) addIndent(s string, indentNum int) string {
+	indent := strings.Repeat(" ", indentNum)
+	lines := []string{}
+	for _, line := range strings.Split(s, "\n") {
+		lines = append(lines, fmt.Sprintf("%s%s", indent, line))
+	}
+	return strings.Join(lines, "\n")
+}
+
 // Invoke implements protocol.Invoker interface.
 func (r *Request) Invoke(ctx *context.Context) (*context.Context, interface{}, error) {
 	client, err := r.buildClient(ctx)
@@ -55,7 +69,7 @@ func (r *Request) Invoke(ctx *context.Context) (*context.Context, interface{}, e
 		Header: req.Header,
 		Body:   reqBody,
 	}); err == nil {
-		ctx.Reporter().Logf("request:\n%s", string(b))
+		ctx.Reporter().Logf("request:\n%s", r.addIndent(string(b), indentNum))
 	} else {
 		ctx.Reporter().Logf("failed to dump request:\n%s", err)
 	}
@@ -97,7 +111,7 @@ func (r *Request) Invoke(ctx *context.Context) (*context.Context, interface{}, e
 		rvalue.Body = respBody
 		ctx = ctx.WithResponse(respBody)
 		if b, err := yaml.Marshal(rvalue); err == nil {
-			ctx.Reporter().Logf("response:\n%s", string(b))
+			ctx.Reporter().Logf("response:\n%s", r.addIndent(string(b), indentNum))
 		} else {
 			ctx.Reporter().Logf("failed to dump response:\n%s", err)
 		}

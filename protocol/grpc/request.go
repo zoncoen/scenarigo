@@ -2,7 +2,9 @@ package grpc
 
 import (
 	"bytes"
+	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/goccy/go-yaml"
 	"github.com/golang/protobuf/jsonpb"
@@ -29,6 +31,19 @@ type response struct {
 	Trailer metadata.MD     `yaml:"trailer,omitempty"`
 	Body    interface{}     `yaml:"body,omitempty"`
 	rvalues []reflect.Value `yaml:"-"`
+}
+
+const (
+	indentNum = 2
+)
+
+func (r *Request) addIndent(s string, indentNum int) string {
+	indent := strings.Repeat(" ", indentNum)
+	lines := []string{}
+	for _, line := range strings.Split(s, "\n") {
+		lines = append(lines, fmt.Sprintf("%s%s", indent, line))
+	}
+	return strings.Join(lines, "\n")
 }
 
 // Invoke implements protocol.Invoker interface.
@@ -104,7 +119,7 @@ func (r *Request) Invoke(ctx *context.Context) (*context.Context, interface{}, e
 				Metadata: reqMD,
 				Body:     req,
 			}); err == nil {
-				ctx.Reporter().Logf("request:\n%s", string(b))
+				ctx.Reporter().Logf("request:\n%s", r.addIndent(string(b), indentNum))
 			} else {
 				ctx.Reporter().Logf("failed to dump request:\n%s", err)
 			}
@@ -129,7 +144,7 @@ func (r *Request) Invoke(ctx *context.Context) (*context.Context, interface{}, e
 	}
 	ctx = ctx.WithResponse(body)
 	if b, err := yaml.Marshal(resp); err == nil {
-		ctx.Reporter().Logf("response:\n%s", string(b))
+		ctx.Reporter().Logf("response:\n%s", r.addIndent(string(b), indentNum))
 	} else {
 		ctx.Reporter().Logf("failed to dump response:\n%s", err)
 	}

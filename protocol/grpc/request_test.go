@@ -214,17 +214,19 @@ func TestRequest_Invoke_Log(t *testing.T) {
 === RUN   test.yaml
 --- PASS: test.yaml (0.00s)
         request:
-        method: Echo
-        metadata:
-          version:
-          - 1.0.0
-        body:
-          messageId: "1"
-          messageBody: hello
+          method: Echo
+          metadata:
+            version:
+            - 1.0.0
+          body:
+            messageId: "1"
+            messageBody: hello
+          
         response:
-        body:
-          messageId: "1"
-          messageBody: hello
+          body:
+            messageId: "1"
+            messageBody: hello
+          
 PASS
 ok  	test.yaml	0.000s
 `

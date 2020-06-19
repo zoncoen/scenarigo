@@ -3,21 +3,26 @@ package reporter
 import (
 	"fmt"
 	"reflect"
+	"sync"
 	"testing"
 	"unsafe"
 )
 
 // FromT creates Reporter from t.
 func FromT(t *testing.T) Reporter {
-	return &testReporter{t}
+	return &testReporter{T: t}
 }
 
 // testReporter is a wrapper to provide Reporter interface for *testing.T.
 type testReporter struct {
 	*testing.T
+	mu sync.Mutex
 }
 
 func (r *testReporter) addBufferDirectly(b []byte) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
 	t := reflect.ValueOf(r.T).Elem()
 	common := t.FieldByName("common")
 	if !common.IsValid() {

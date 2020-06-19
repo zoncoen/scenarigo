@@ -1,6 +1,11 @@
 package reporter
 
-import "testing"
+import (
+	"fmt"
+	"reflect"
+	"testing"
+	"unsafe"
+)
 
 // FromT creates Reporter from t.
 func FromT(t *testing.T) Reporter {
@@ -10,6 +15,93 @@ func FromT(t *testing.T) Reporter {
 // testReporter is a wrapper to provide Reporter interface for *testing.T.
 type testReporter struct {
 	*testing.T
+}
+
+func (r *testReporter) addBufferDirectly(b []byte) bool {
+	t := reflect.ValueOf(r.T).Elem()
+	common := t.FieldByName("common")
+	if !common.IsValid() {
+		return false
+	}
+	output := common.FieldByName("output")
+	if !output.IsValid() {
+		return false
+	}
+	if output.Type().Kind() != reflect.Slice {
+		return false
+	}
+	if output.Type().Elem().Kind() != reflect.Uint8 {
+		return false
+	}
+	rawOutput := (*[]byte)(unsafe.Pointer(output.UnsafeAddr()))
+	*rawOutput = append(*rawOutput, b...)
+	return true
+}
+
+func (r *testReporter) logBuffer(s string) []byte {
+	return append([]byte(pad(s, "")), '\n')
+}
+
+func (r *testReporter) log(log string) {
+	if ok := r.addBufferDirectly(r.logBuffer(log)); !ok {
+		r.T.Log(log)
+	}
+}
+
+func (r *testReporter) fatal(log string) {
+	if ok := r.addBufferDirectly(r.logBuffer(log)); !ok {
+		r.T.Fatal(log)
+	} else {
+		r.T.FailNow()
+	}
+}
+
+// Log formats its arguments using default formatting, analogous to fmt.Print,
+// and records the text in the log.
+// The text will be printed only if the test fails or the --verbose flag is set.
+func (r *testReporter) Log(args ...interface{}) {
+	r.log(fmt.Sprint(args...))
+}
+
+// Logf formats its arguments according to the format, analogous to fmt.Printf, and
+// records the text in the log.
+// The text will be printed only if the test fails or the --verbose flag is set.
+func (r *testReporter) Logf(format string, args ...interface{}) {
+	r.log(fmt.Sprintf(format, args...))
+}
+
+// Error is equivalent to Log followed by Fail.
+func (r *testReporter) Error(args ...interface{}) {
+	r.Fail()
+	r.Log(args...)
+}
+
+// Errorf is equivalent to Logf followed by Fail.
+func (r *testReporter) Errorf(format string, args ...interface{}) {
+	r.Fail()
+	r.Logf(format, args...)
+}
+
+// Fatal is equivalent to Log followed by FailNow.
+func (r *testReporter) Fatal(args ...interface{}) {
+	r.fatal(fmt.Sprint(args...))
+}
+
+// Fatalf is equivalent to Logf followed by FailNow.
+func (r *testReporter) Fatalf(format string, args ...interface{}) {
+	r.fatal(fmt.Sprintf(format, args...))
+}
+
+// Skip is equivalent to Log followed by SkipNow.
+func (r *testReporter) Skip(args ...interface{}) {
+	r.Log(args...)
+	r.SkipNow()
+}
+
+// Skipf is equivalent to Logf followed by SkipNow.
+func (r *testReporter) Skipf(format string, args ...interface{}) {
+	r.Logf(format, args...)
+	r.SkipNow()
 }
 
 // Run runs f as a subtest of r called name.

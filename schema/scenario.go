@@ -56,6 +56,7 @@ func (s *Step) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		if s.Request.bytes != nil || s.Expect.bytes != nil {
 			return errors.Errorf("unknown protocol: %s", s.Protocol)
 		}
+		return nil
 	}
 	if s.Request.bytes != nil {
 		invoker, err := p.UnmarshalRequest(s.Request.bytes)

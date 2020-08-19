@@ -109,6 +109,25 @@ func TestLoadScenarios(t *testing.T) {
 					},
 				},
 			},
+			"without protocol": {
+				path: "testdata/valid-without-protocol.yaml",
+
+				scenarios: []*Scenario{
+					{
+						Title:       "echo-service",
+						Description: "check echo-service",
+						Vars:        map[string]interface{}{"message": "hello"},
+						Steps: []*Step{
+							{
+								Include: "./valid.yaml",
+							},
+						},
+						filepath: "testdata/valid-without-protocol.yaml",
+					},
+				},
+				request: map[interface{}]interface{}{},
+				expect:  map[interface{}]interface{}{},
+			},
 		}
 		for name, test := range tests {
 			test := test

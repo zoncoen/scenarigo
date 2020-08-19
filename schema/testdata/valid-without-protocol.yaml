@@ -1,0 +1,6 @@
+title: echo-service
+description: check echo-service
+vars:
+  message: hello
+steps:
+  - include: ./valid.yaml

@@ -26,6 +26,9 @@ func (p *testProtocol) UnmarshalRequest(b []byte) (protocol.Invoker, error) {
 }
 
 func (p *testProtocol) UnmarshalExpect(b []byte) (protocol.AssertionBuilder, error) {
+	if b == nil {
+		return &testAssertionBuilder{}, nil
+	}
 	if err := yaml.NewDecoder(bytes.NewBuffer(b), yaml.UseOrderedMap()).Decode(&p.expect); err != nil {
 		return nil, err
 	}
@@ -141,6 +144,36 @@ func TestLoadScenarios(t *testing.T) {
 				},
 				request: map[interface{}]interface{}{},
 				expect:  map[interface{}]interface{}{},
+			},
+			"without expect": {
+				path: "testdata/valid-without-expect.yaml",
+
+				scenarios: []*Scenario{
+					{
+						Title:       "echo-service",
+						Description: "check echo-service",
+						Vars:        map[string]interface{}{"message": "hello"},
+						Steps: []*Step{
+							{
+								Title:       "POST /say",
+								Description: "check to respond same message",
+								Vars:        nil,
+								Protocol:    "test",
+								Expect: Expect{
+									AssertionBuilder: &testAssertionBuilder{},
+									bytes:            nil,
+								},
+							},
+						},
+						filepath: "testdata/valid-without-expect.yaml",
+					},
+				},
+				request: map[string]interface{}{
+					"body": map[string]interface{}{
+						"message": "{{vars.message}}",
+					},
+				},
+				expect: map[interface{}]interface{}{},
 			},
 		}
 		for name, test := range tests {

@@ -247,6 +247,16 @@ func TestExpect_Build(t *testing.T) {
 				},
 				expectAssertError: true,
 			},
+			"wrong code in case of default": {
+				expect: &Expect{},
+				v: response{
+					rvalues: []reflect.Value{
+						reflect.Zero(reflect.TypeOf(&test.EchoResponse{})),
+						reflect.ValueOf(status.New(codes.InvalidArgument, "invalid argument").Err()),
+					},
+				},
+				expectAssertError: true,
+			},
 			"wrong code": {
 				expect: &Expect{
 					Code: "OK",

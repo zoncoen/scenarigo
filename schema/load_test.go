@@ -6,6 +6,8 @@ import (
 
 	"github.com/goccy/go-yaml"
 	"github.com/google/go-cmp/cmp"
+	"github.com/zoncoen/scenarigo/assert"
+	"github.com/zoncoen/scenarigo/context"
 	"github.com/zoncoen/scenarigo/protocol"
 )
 
@@ -24,18 +26,25 @@ func (p *testProtocol) UnmarshalRequest(b []byte) (protocol.Invoker, error) {
 }
 
 func (p *testProtocol) UnmarshalExpect(b []byte) (protocol.AssertionBuilder, error) {
+	if b == nil {
+		return &testAssertionBuilder{}, nil
+	}
 	if err := yaml.NewDecoder(bytes.NewBuffer(b), yaml.UseOrderedMap()).Decode(&p.expect); err != nil {
 		return nil, err
 	}
-	return nil, nil
+	return &testAssertionBuilder{}, nil
 }
+
+type testAssertionBuilder struct{}
+
+func (*testAssertionBuilder) Build(_ *context.Context) (assert.Assertion, error) { return nil, nil }
 
 func TestLoadScenarios(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		tests := map[string]struct {
-			path            string
-			scenarios       []*Scenario
-			request, expect interface{}
+			path                              string
+			scenarios                         []*Scenario
+			request, expect, assertionBuilder interface{}
 		}{
 			"valid": {
 				path: "testdata/valid.yaml",
@@ -51,6 +60,10 @@ func TestLoadScenarios(t *testing.T) {
 								Description: "check to respond same message",
 								Vars:        nil,
 								Protocol:    "test",
+								Expect: Expect{
+									AssertionBuilder: &testAssertionBuilder{},
+									bytes:            nil,
+								},
 							},
 						},
 						filepath: "testdata/valid.yaml",
@@ -87,6 +100,10 @@ func TestLoadScenarios(t *testing.T) {
 								Description: "check to respond same message",
 								Vars:        nil,
 								Protocol:    "test",
+								Expect: Expect{
+									AssertionBuilder: &testAssertionBuilder{},
+									bytes:            nil,
+								},
 							},
 						},
 						filepath: "testdata/valid-anchor.yaml",
@@ -108,6 +125,55 @@ func TestLoadScenarios(t *testing.T) {
 						},
 					},
 				},
+			},
+			"without protocol": {
+				path: "testdata/valid-without-protocol.yaml",
+
+				scenarios: []*Scenario{
+					{
+						Title:       "echo-service",
+						Description: "check echo-service",
+						Vars:        map[string]interface{}{"message": "hello"},
+						Steps: []*Step{
+							{
+								Include: "./valid.yaml",
+							},
+						},
+						filepath: "testdata/valid-without-protocol.yaml",
+					},
+				},
+				request: map[interface{}]interface{}{},
+				expect:  map[interface{}]interface{}{},
+			},
+			"without expect": {
+				path: "testdata/valid-without-expect.yaml",
+
+				scenarios: []*Scenario{
+					{
+						Title:       "echo-service",
+						Description: "check echo-service",
+						Vars:        map[string]interface{}{"message": "hello"},
+						Steps: []*Step{
+							{
+								Title:       "POST /say",
+								Description: "check to respond same message",
+								Vars:        nil,
+								Protocol:    "test",
+								Expect: Expect{
+									AssertionBuilder: &testAssertionBuilder{},
+									bytes:            nil,
+								},
+							},
+						},
+						filepath: "testdata/valid-without-expect.yaml",
+					},
+				},
+				request: map[string]interface{}{
+					"body": map[string]interface{}{
+						"message": "{{vars.message}}",
+					},
+				},
+				expect: map[interface{}]interface{}{},
 			},
 		}
 		for name, test := range tests {
@@ -134,7 +200,7 @@ func TestLoadScenarios(t *testing.T) {
 						if s == "Steps.Request" {
 							return true
 						}
-						if s == "Steps.Expect" {
+						if s == "Steps.Expect.bytes" {
 							return true
 						}
 						return false

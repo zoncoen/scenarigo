@@ -31,6 +31,9 @@ func (p *GRPC) UnmarshalRequest(b []byte) (protocol.Invoker, error) {
 // UnmarshalExpect implements protocol.Protocol interface.
 func (p *GRPC) UnmarshalExpect(b []byte) (protocol.AssertionBuilder, error) {
 	var e Expect
+	if b == nil {
+		return &e, nil
+	}
 	if err := yaml.NewDecoder(bytes.NewBuffer(b), yaml.UseOrderedMap()).Decode(&e); err != nil {
 		return nil, err
 	}

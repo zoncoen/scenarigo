@@ -9,6 +9,9 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
+	// Register proto messages to unmarshal com.google.protobuf.Any.
+	_ "google.golang.org/genproto/googleapis/rpc/errdetails"
+
 	"github.com/goccy/go-yaml"
 	"github.com/golang/protobuf/proto"
 	"github.com/zoncoen/scenarigo/assert"

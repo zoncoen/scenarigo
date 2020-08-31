@@ -70,9 +70,9 @@ $(GOCREDITS): | $(BIN_DIR)
 		go build -o $(GOCREDITS) github.com/Songmu/gocredits/cmd/gocredits
 
 GOLANGCI_LINT := $(BIN_DIR)/golangci-lint
+GOLANGCI_LINT_VERSION := v1.30.0
 $(GOLANGCI_LINT): | $(BIN_DIR)
-	@cd $(TOOLS_DIR) && \
-		go build -o $(GOLANGCI_LINT) github.com/golangci/golangci-lint/cmd/golangci-lint
+	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(BIN_DIR) $(GOLANCI_LINT_VERSION)
 
 .PHONY: test
 E2E_TEST_TARGETS := test/e2e
@@ -104,6 +104,10 @@ lint/ci:
 	@git add --all
 	@git diff --cached --quiet || (echo '"make credits" required'; exit 1)
 
+.PHONY: clean
+clean: ## remove generated files
+	@rm -rf $(BIN_DIR) $(GEN_PB_DIR) $(GEN_PLUGINS_DIR)
+
 .PHONY: gen
 gen: gen/proto gen/plugins ## generate necessary files for testing
 
@@ -131,7 +135,7 @@ gen/mock: $(GOTYPENAMES) $(MOCKGEN)
 		echo "generate mock for $$file"; \
 		dstfile=$$(dirname $$file)/$$(basename $${file%.pb.go})_mock.go; \
 		gotypenames --filename $$file --only-exported --types interface | xargs -ISTRUCT -L1 -P8 mockgen -source $$file -package $$package -self_package $(GEN_PB_DIR)/$$package -destination $$dstfile; \
-		sed -i '' -e '/\/\/ Source: /d' $$dstfile || (echo "failed to delete generated marker about source path ( Source: /path/to/name.pb.go )"); \
+		sed -i -e '/\/\/ Source: /d' $$dstfile || (echo "failed to delete generated marker about source path ( Source: /path/to/name.pb.go )"); \
 	done
 
 .PHONY: gen/plugins

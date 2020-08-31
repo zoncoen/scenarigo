@@ -2,8 +2,10 @@ package version
 
 import "fmt"
 
-var version string = "0.3.3"
-var revision string = "dev"
+var (
+	version  string = "0.3.3"
+	revision string = "dev"
+)
 
 // String returns scenarigo version as string.
 func String() string {

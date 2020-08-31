@@ -84,6 +84,7 @@ func convertString(v reflect.Value) (string, error) {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
 		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		return fmt.Sprintf("%d", v.Interface()), nil
+	default:
+		return "", errors.Errorf("expected string but got %T", v.Interface())
 	}
-	return "", errors.Errorf("expected string but got %T", v.Interface())
 }

@@ -17,6 +17,8 @@ linters:
     - goerr113
     - maligned
     - nestif
+    - nlreturn
+    - gci
   skip-dirs:
     - gen
 
@@ -25,6 +27,11 @@ issues:
     - path: _test.go
       linters:
         - goconst
+        - noctx
     - linters:
         - stylecheck
       text: "ST1016:"
+
+linters-settings:
+  exhaustive:
+    default-signifies-exhaustive: true

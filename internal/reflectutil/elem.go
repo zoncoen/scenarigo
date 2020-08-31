@@ -8,6 +8,7 @@ func Elem(v reflect.Value) reflect.Value {
 	switch v.Kind() {
 	case reflect.Interface, reflect.Ptr:
 		return Elem(v.Elem())
+	default:
+		return v
 	}
-	return v
 }

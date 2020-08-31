@@ -29,6 +29,8 @@ const (
 // String returns t as string.
 func (t Token) String() string {
 	switch t {
+	case ILLEGAL:
+		return "illegal"
 	case EOF:
 		return "EOF"
 	case STRING:
@@ -59,8 +61,9 @@ func (t Token) String() string {
 		return "<-"
 	case LINEBREAK:
 		return "line break"
+	default:
+		return "unknown"
 	}
-	return "illegal"
 }
 
 // A set of constants for precedence-based expression parsing.
@@ -77,6 +80,7 @@ func (t Token) Precedence() int {
 	switch t {
 	case ADD, LARROW, LDBRACE, STRING:
 		return 1
+	default:
+		return LowestPrec
 	}
-	return LowestPrec
 }

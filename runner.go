@@ -11,10 +11,11 @@ import (
 	"github.com/goccy/go-yaml/parser"
 	"github.com/mattn/go-isatty"
 	"github.com/pkg/errors"
+
 	"github.com/zoncoen/scenarigo/context"
 	"github.com/zoncoen/scenarigo/schema"
 
-	// register default protocols
+	// Register default protocols.
 	_ "github.com/zoncoen/scenarigo/protocol/grpc"
 	_ "github.com/zoncoen/scenarigo/protocol/http"
 )
@@ -75,9 +76,7 @@ func WithOptionsFromEnv(isEnv bool) func(*Runner) error {
 	}
 }
 
-var (
-	yamlPattern = regexp.MustCompile(`(?i)\.ya?ml$`)
-)
+var yamlPattern = regexp.MustCompile(`(?i)\.ya?ml$`)
 
 func looksLikeYAML(path string) bool {
 	return yamlPattern.MatchString(path)

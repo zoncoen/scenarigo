@@ -103,6 +103,7 @@ func execute(v reflect.Value, data interface{}) (reflect.Value, error) {
 			return reflect.Value{}, err
 		}
 		return reflect.ValueOf(x), nil
+	default:
 	}
 	return v, nil
 }
@@ -111,6 +112,7 @@ func isNil(v reflect.Value) bool {
 	switch v.Kind() {
 	case reflect.Chan, reflect.Func, reflect.Map, reflect.Ptr, reflect.UnsafePointer, reflect.Interface, reflect.Slice:
 		return v.IsNil()
+	default:
+		return false
 	}
-	return false
 }

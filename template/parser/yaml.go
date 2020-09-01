@@ -109,10 +109,11 @@ L:
 			}
 
 			break L
-		}
 
-		tokens = append(tokens, tok)
-		s.pos += runesLen(tok.Origin)
+		default:
+			tokens = append(tokens, tok)
+			s.pos += runesLen(tok.Origin)
+		}
 	}
 
 	str := s.printer.PrintTokens(tokens)

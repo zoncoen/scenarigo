@@ -83,7 +83,8 @@ func TestTemplate_Execute(t *testing.T) {
 		"function call": {
 			str: `{{f("ok")}}`,
 			data: map[string]func(string) string{
-				"f": func(s string) string { return s }},
+				"f": func(s string) string { return s },
+			},
 			expect: "ok",
 		},
 		"call function that have argument required cast": {
@@ -91,7 +92,8 @@ func TestTemplate_Execute(t *testing.T) {
 			data: map[string]func(int, int8, int16, int32, int64) int{
 				"f": func(a0 int, a1 int8, a2 int16, a3 int32, a4 int64) int {
 					return a0 + int(a1) + int(a2) + int(a3) + int(a4)
-				}},
+				},
+			},
 			expect: 15,
 		},
 		"call function that have variadic arguments": {
@@ -103,7 +105,8 @@ func TestTemplate_Execute(t *testing.T) {
 						sum += int(a)
 					}
 					return sum
-				}},
+				},
+			},
 			expect: 15,
 		},
 
@@ -125,7 +128,8 @@ func TestTemplate_Execute(t *testing.T) {
 						sum += int(a)
 					}
 					return sum
-				}},
+				},
+			},
 			expectError: true,
 		},
 		"left arrow func": {

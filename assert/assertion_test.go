@@ -9,7 +9,7 @@ import (
 )
 
 func TestBuild(t *testing.T) {
-	var str = `
+	str := `
 deps:
 - name: scenarigo
   version:

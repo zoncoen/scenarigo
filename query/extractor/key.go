@@ -87,6 +87,7 @@ func (e *keyExtractor) extract(v reflect.Value) (reflect.Value, bool) {
 				}
 			}
 		}
+	default:
 	}
 	return reflect.Value{}, false
 }

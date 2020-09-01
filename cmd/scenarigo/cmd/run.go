@@ -10,14 +10,10 @@ import (
 	"github.com/zoncoen/scenarigo/reporter"
 )
 
-var (
-	// ErrTestFailed is the error returned when the test failed.
-	ErrTestFailed = errors.New("test failed")
-)
+// ErrTestFailed is the error returned when the test failed.
+var ErrTestFailed = errors.New("test failed")
 
-var (
-	verbose bool
-)
+var verbose bool
 
 func init() {
 	runCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "print verbose log")

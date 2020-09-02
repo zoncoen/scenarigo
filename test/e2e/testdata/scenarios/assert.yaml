@@ -5,6 +5,8 @@ steps:
   request:
     method: GET
     url: '{{env.TEST_ADDR}}'
+    header:
+      content-type: application/json
     body:
       message: 'hello'
   expect:
@@ -19,6 +21,8 @@ steps:
   request:
     method: GET
     url: '{{env.TEST_ADDR}}'
+    header:
+      content-type: application/json
     body:
       users:
         - id: 1

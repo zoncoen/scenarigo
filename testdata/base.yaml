@@ -11,6 +11,8 @@ steps:
   request:
     method: POST
     url: "{{env.TEST_ADDR}}/echo"
+    header:
+      content-type: application/json
     body:
       message: "{{vars.message}}"
   expect:

@@ -3,7 +3,7 @@ package version
 import "fmt"
 
 var (
-	version  string = "0.3.3"
+	version  string = "0.4.0"
 	revision string = "dev"
 )
 

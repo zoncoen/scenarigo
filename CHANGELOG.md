@@ -1,5 +1,15 @@
 # CHANGELOG
 
+<a name="v0.4.0"></a>
+## [v0.4.0] - 2020-09-02
+### Bug Fixes
+- register errdetails proto messages to unmarshal Any
+- **expect:** use the default assertion if no expect ([#55](https://github.com/zoncoen/scenarigo/issues/55))
+- **template:** avoid to panic ([#54](https://github.com/zoncoen/scenarigo/issues/54))
+
+### Features
+- **cmd:** add list sub-command ([#51](https://github.com/zoncoen/scenarigo/issues/51))
+
 <a name="v0.3.3"></a>
 ## [v0.3.3] - 2020-06-17
 ### Bug Fixes
@@ -44,6 +54,7 @@ change protocl.Protocol interface
 - first release
 
 
+[v0.4.0]: https://github.com/zoncoen/scenarigo/compare/v0.3.3...v0.4.0
 [v0.3.3]: https://github.com/zoncoen/scenarigo/compare/v0.3.2...v0.3.3
 [v0.3.2]: https://github.com/zoncoen/scenarigo/compare/v0.3.1...v0.3.2
 [v0.3.1]: https://github.com/zoncoen/scenarigo/compare/v0.3.0...v0.3.1

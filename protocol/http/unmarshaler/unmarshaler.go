@@ -9,7 +9,7 @@ import (
 )
 
 // Default is the default response unmarshaler.
-var Default = &jsonUnmarshaler{}
+var Default = &binaryUnmarshaler{}
 
 var (
 	resm        sync.Mutex

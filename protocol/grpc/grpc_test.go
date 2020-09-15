@@ -37,4 +37,27 @@ func TestGRPC_UnmarshalExpect(t *testing.T) {
 			})
 		}
 	})
+
+	t.Run("ng", func(t *testing.T) {
+		tests := map[string]struct {
+			bytes []byte
+		}{
+			"unknown field": {
+				bytes: []byte(`a: b`),
+			},
+			"duplicated field": {
+				bytes: []byte("code: InvalidArgument\ncode: InvalidArgument"),
+			},
+		}
+		for name, test := range tests {
+			test := test
+			t.Run(name, func(t *testing.T) {
+				p := &GRPC{}
+				_, err := p.UnmarshalExpect(test.bytes)
+				if err == nil {
+					t.Fatalf("expected an error, got nil")
+				}
+			})
+		}
+	})
 }

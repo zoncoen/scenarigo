@@ -34,7 +34,8 @@ func (p *GRPC) UnmarshalExpect(b []byte) (protocol.AssertionBuilder, error) {
 	if b == nil {
 		return &e, nil
 	}
-	if err := yaml.NewDecoder(bytes.NewBuffer(b), yaml.UseOrderedMap()).Decode(&e); err != nil {
+	decoder := yaml.NewDecoder(bytes.NewBuffer(b), yaml.UseOrderedMap(), yaml.Strict())
+	if err := decoder.Decode(&e); err != nil {
 		return nil, err
 	}
 	return &e, nil

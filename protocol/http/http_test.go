@@ -37,4 +37,27 @@ func TestHTTP_UnmarshalExpect(t *testing.T) {
 			})
 		}
 	})
+
+	t.Run("ng", func(t *testing.T) {
+		tests := map[string]struct {
+			bytes []byte
+		}{
+			"unknown field": {
+				bytes: []byte(`a: b`),
+			},
+			"duplicated field": {
+				bytes: []byte("code: 404\ncode: 404"),
+			},
+		}
+		for name, test := range tests {
+			test := test
+			t.Run(name, func(t *testing.T) {
+				p := &HTTP{}
+				_, err := p.UnmarshalExpect(test.bytes)
+				if err == nil {
+					t.Fatalf("expected an error, got nil")
+				}
+			})
+		}
+	})
 }

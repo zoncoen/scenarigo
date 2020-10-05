@@ -1,5 +1,13 @@
 # CHANGELOG
 
+<a name="v0.5.0"></a>
+## [v0.5.0] - 2020-10-05
+### Features
+- **assert:** add "or" function
+- **expect:** enable strict option when decoding yaml for expect to prevent field misplacement ([#59](https://github.com/zoncoen/scenarigo/issues/59))
+- **grpc:** allow using a template as code and msg
+- **http:** allow using a template as code
+
 <a name="v0.4.0"></a>
 ## [v0.4.0] - 2020-09-02
 ### Bug Fixes
@@ -54,6 +62,7 @@ change protocl.Protocol interface
 - first release
 
 
+[v0.5.0]: https://github.com/zoncoen/scenarigo/compare/v0.4.0...v0.5.0
 [v0.4.0]: https://github.com/zoncoen/scenarigo/compare/v0.3.3...v0.4.0
 [v0.3.3]: https://github.com/zoncoen/scenarigo/compare/v0.3.2...v0.3.3
 [v0.3.2]: https://github.com/zoncoen/scenarigo/compare/v0.3.1...v0.3.2

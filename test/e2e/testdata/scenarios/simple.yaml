@@ -11,4 +11,3 @@ steps:
   expect:
     body:
       message: "hello"
-

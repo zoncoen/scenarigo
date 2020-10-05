@@ -38,11 +38,35 @@ type ExpectStatus struct {
 
 // Build implements protocol.AssertionBuilder interface.
 func (e *Expect) Build(ctx *context.Context) (assert.Assertion, error) {
+	codePath := "code"
+	expectCode := "OK"
+	if e.Code != "" {
+		expectCode = e.Code
+	}
+	if e.Status.Code != "" {
+		codePath = "status.code"
+		expectCode = e.Status.Code
+	}
+	executedCode, err := ctx.ExecuteTemplate(expectCode)
+	if err != nil {
+		return nil, errors.WrapPathf(err, codePath, "invalid expect response: %s", err)
+	}
+	codeAssertion := assert.Build(executedCode)
+
+	var msgAssertion assert.Assertion
+	if e.Status.Message != "" {
+		executedMsg, err := ctx.ExecuteTemplate(e.Status.Message)
+		if err != nil {
+			return nil, errors.WrapPathf(err, "message", "invalid expect response: %s", err)
+		}
+		msgAssertion = assert.Build(executedMsg)
+	}
+
 	expectBody, err := ctx.ExecuteTemplate(e.Body)
 	if err != nil {
 		return nil, errors.WrapPathf(err, "body", "invalid expect response: %s", err)
 	}
-	assertion := assert.Build(expectBody)
+	bodyAssertion := assert.Build(expectBody)
 
 	return assert.AssertionFunc(func(v interface{}) error {
 		resp, ok := v.(response)
@@ -56,16 +80,16 @@ func (e *Expect) Build(ctx *context.Context) (assert.Assertion, error) {
 		if err := e.assertMetadata(resp.Header, resp.Trailer); err != nil {
 			return err
 		}
-		if err := e.assertStatusCode(stErr); err != nil {
-			return errors.WithPath(err, "code")
+		if err := assertStatusCode(codeAssertion, stErr); err != nil {
+			return errors.WithPath(err, codePath)
 		}
-		if err := e.assertStatusMessage(stErr); err != nil {
-			return errors.WithPath(err, "message")
+		if err := e.assertStatusMessage(msgAssertion, stErr); err != nil {
+			return errors.WithPath(err, "status.message")
 		}
 		if err := e.assertStatusDetails(stErr); err != nil {
-			return errors.WithPath(err, "details")
+			return errors.WithPath(err, "status.details")
 		}
-		if err := assertion.Assert(message); err != nil {
+		if err := bodyAssertion.Assert(message); err != nil {
 			return errors.WithPath(err, "body")
 		}
 		return nil
@@ -94,35 +118,36 @@ func (e *Expect) assertMetadata(header, trailer metadata.MD) error {
 	return nil
 }
 
-func (e *Expect) assertStatusCode(sts *status.Status) error {
-	expectedCode := "OK"
-	if e.Code != "" {
-		expectedCode = e.Code
-	}
-	if e.Status.Code != "" {
-		expectedCode = e.Status.Code
-	}
-
-	if got, expected := sts.Code().String(), expectedCode; got == expected {
+func assertStatusCode(assertion assert.Assertion, sts *status.Status) error {
+	err := assertion.Assert(sts.Code().String())
+	if err == nil {
 		return nil
 	}
-	if got, expected := strconv.Itoa(int(int32(sts.Code()))), expectedCode; got == expected {
+	err = assertion.Assert(strconv.Itoa(int(sts.Code())))
+	if err == nil {
 		return nil
 	}
-
-	return errors.Errorf(`expected code is "%s" but got "%s": message="%s": details=[ %s ]`, expectedCode, sts.Code().String(), sts.Message(), detailsString(sts))
+	return errors.Errorf(
+		`%s: message="%s"%s`,
+		err,
+		sts.Message(),
+		appendDetailsString(sts),
+	)
 }
 
-func (e *Expect) assertStatusMessage(sts *status.Status) error {
+func (e *Expect) assertStatusMessage(assertion assert.Assertion, sts *status.Status) error {
 	if e.Status.Message == "" {
 		return nil
 	}
-
-	if sts.Message() == e.Status.Message {
+	err := assertion.Assert(sts.Message())
+	if err == nil {
 		return nil
 	}
-
-	return errors.Errorf(`expected status.message is "%s" but got "%s": code="%s": details=[ %s ]`, e.Status.Message, sts.Message(), sts.Code().String(), detailsString(sts))
+	return errors.Errorf(
+		`%s%s`,
+		err,
+		appendDetailsString(sts),
+	)
 }
 
 func (e *Expect) assertStatusDetails(sts *status.Status) error {
@@ -134,7 +159,7 @@ func (e *Expect) assertStatusDetails(sts *status.Status) error {
 
 	for i, expecteDetailMap := range e.Status.Details {
 		if i >= len(actualDetails) {
-			return errors.Errorf(`expected status.details[%d] is not found: details=[ %s ]`, i, detailsString(sts))
+			return errors.Errorf(`expected status.details[%d] is not found%s`, i, appendDetailsString(sts))
 		}
 
 		if len(expecteDetailMap) != 1 {
@@ -156,7 +181,7 @@ func (e *Expect) assertStatusDetails(sts *status.Status) error {
 		}
 
 		if name := proto.MessageName(actual); name != expectName {
-			return errors.Errorf(`expected status.details[%d] is "%s" but got detail is "%s": details=[ %s ]`, i, expectName, name, detailsString(sts))
+			return errors.Errorf(`expected status.details[%d] is "%s" but got detail is "%s"%s`, i, expectName, name, appendDetailsString(sts))
 		}
 
 		if err := assert.Build(expectDetail).Assert(actual); err != nil {
@@ -167,7 +192,7 @@ func (e *Expect) assertStatusDetails(sts *status.Status) error {
 	return nil
 }
 
-func detailsString(sts *status.Status) string {
+func appendDetailsString(sts *status.Status) string {
 	format := "%s: {%s}"
 	var details []string
 
@@ -185,7 +210,10 @@ func detailsString(sts *status.Status) string {
 		details = append(details, fmt.Sprintf(format, "<non proto message>", fmt.Sprintf("{%#v}", i)))
 	}
 
-	return strings.Join(details, ", ")
+	if len(details) == 0 {
+		return ""
+	}
+	return fmt.Sprintf(": details=[ %s ]", strings.Join(details, ", "))
 }
 
 func extract(v response) (proto.Message, *status.Status, error) {

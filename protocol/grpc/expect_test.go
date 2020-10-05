@@ -54,6 +54,17 @@ func TestExpect_Build(t *testing.T) {
 					},
 				},
 			},
+			"code template string": {
+				expect: &Expect{
+					Code: `{{"InvalidArgument"}}`,
+				},
+				v: response{
+					rvalues: []reflect.Value{
+						reflect.Zero(reflect.TypeOf(&test.EchoResponse{})),
+						reflect.ValueOf(status.New(codes.InvalidArgument, "invalid argument").Err()),
+					},
+				},
+			},
 			"assert body": {
 				expect: &Expect{
 					Code: "OK",
@@ -159,6 +170,22 @@ func TestExpect_Build(t *testing.T) {
 							&errdetails.DebugInfo{
 								Detail: "debug",
 							},
+						).Err()),
+					},
+				},
+			},
+			"assert in case of error with template string": {
+				expect: &Expect{
+					Status: ExpectStatus{
+						Code:    `{{"InvalidArgument"}}`,
+						Message: `{{"invalid argument"}}`,
+					},
+				},
+				v: response{
+					rvalues: []reflect.Value{
+						reflect.Zero(reflect.TypeOf(&test.EchoResponse{})),
+						reflect.ValueOf(mustWithDetails(
+							status.New(codes.InvalidArgument, "invalid argument"),
 						).Err()),
 					},
 				},

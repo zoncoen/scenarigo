@@ -36,6 +36,14 @@ func TestExpect_Build(t *testing.T) {
 					status: "404 Not Found",
 				},
 			},
+			"status code (template)": {
+				expect: &Expect{
+					Code: `{{"Not Found"}}`,
+				},
+				response: response{
+					status: "404 Not Found",
+				},
+			},
 			"header": {
 				expect: &Expect{
 					Header: yaml.MapSlice{

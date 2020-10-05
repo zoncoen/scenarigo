@@ -10,6 +10,7 @@ steps:
     body:
       message: 'hello'
   expect:
+    code: '{{assert.or("OK")}}'
     body:
       message: '{{assert.or("hello", "bye")}}'
 
@@ -25,6 +26,9 @@ steps:
     body:
       message: 'hello'
   expect:
+    code: |-
+      {{assert.or <-}}:
+        - '200'
     body:
       message: |-
         {{assert.or <-}}:

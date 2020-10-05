@@ -51,6 +51,9 @@ func Build(expect interface{}) Assertion {
 			}
 		}
 		if len(errs) > 0 {
+			if len(errs) == 1 {
+				return errs[0]
+			}
 			return errors.Errors(errs...)
 		}
 		return nil

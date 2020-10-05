@@ -54,7 +54,13 @@ func Equal(q *query.Query, expected interface{}) Assertion {
 					return nil
 				}
 			}
+			if q.String() == "" {
+				return errors.Errorf("expected %T (%+v) but got %T (%+v)", expected, expected, v, v)
+			}
 			return errors.Errorf("%s: expected %T (%+v) but got %T (%+v)", q.String(), expected, expected, v, v)
+		}
+		if q.String() == "" {
+			return errors.Errorf("expected %+v but got %+v", expected, v)
 		}
 		return errors.Errorf("%s: expected %+v but got %+v", q.String(), expected, v)
 	})

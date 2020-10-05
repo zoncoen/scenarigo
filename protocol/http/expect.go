@@ -19,6 +19,16 @@ type Expect struct {
 
 // Build implements protocol.AssertionBuilder interface.
 func (e *Expect) Build(ctx *context.Context) (assert.Assertion, error) {
+	expectCode := "200"
+	if e.Code != "" {
+		expectCode = e.Code
+	}
+	executedCode, err := ctx.ExecuteTemplate(expectCode)
+	if err != nil {
+		return nil, errors.WrapPathf(err, "code", "invalid expect response: %s", err)
+	}
+	codeAssertion := assert.Build(executedCode)
+
 	expectBody, err := ctx.ExecuteTemplate(e.Body)
 	if err != nil {
 		return nil, errors.WrapPathf(err, "body", "invalid expect response")
@@ -30,7 +40,7 @@ func (e *Expect) Build(ctx *context.Context) (assert.Assertion, error) {
 		if !ok {
 			return errors.Errorf("expected response but got %T", v)
 		}
-		if err := e.assertCode(res.status); err != nil {
+		if err := assertCode(codeAssertion, res.status); err != nil {
 			return errors.WithPath(err, "code")
 		}
 		if err := e.assertHeader(res.Header); err != nil {
@@ -57,20 +67,17 @@ func (e *Expect) assertHeader(header map[string][]string) error {
 	return nil
 }
 
-func (e *Expect) assertCode(status string) error {
-	expectedCode := "200"
-	if e.Code != "" {
-		expectedCode = e.Code
-	}
+func assertCode(assertion assert.Assertion, status string) error {
 	strs := strings.SplitN(status, " ", 2)
 	if len(strs) != 2 {
 		return errors.Errorf(`unexpected response status string: "%s"`, status)
 	}
-	if got, expected := strs[0], expectedCode; got == expected {
+	if err := assertion.Assert(strs[0]); err == nil {
 		return nil
 	}
-	if got, expected := strs[1], expectedCode; got == expected {
+	err := assertion.Assert(strs[1])
+	if err == nil {
 		return nil
 	}
-	return errors.Errorf(`expected code is "%s" but got "%s"`, expectedCode, status)
+	return err
 }

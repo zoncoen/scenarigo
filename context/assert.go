@@ -8,6 +8,7 @@ import (
 )
 
 var assertions = map[string]interface{}{
+	"and":         listArgsLeftArrowFunc(listArgsAssertion(assert.And)),
 	"or":          listArgsLeftArrowFunc(listArgsAssertion(assert.Or)),
 	"notZero":     assert.NotZero,
 	"contains":    leftArrowFunc(assert.Contains),

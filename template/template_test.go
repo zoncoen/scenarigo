@@ -1,12 +1,13 @@
 package template
 
 import (
-	"errors"
+	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/goccy/go-yaml"
 	"github.com/google/go-cmp/cmp"
+	"github.com/pkg/errors"
 )
 
 func TestNew(t *testing.T) {
@@ -140,6 +141,16 @@ func TestTemplate_Execute(t *testing.T) {
 			data: map[string]interface{}{
 				"echo":    &echoFunc{},
 				"message": "hello",
+			},
+			expect: "hello",
+		},
+		"left arrow func (function in argument)": {
+			str: strings.Trim(`
+{{exec <-}}: '{{f}}'
+`, "\n"),
+			data: map[string]interface{}{
+				"exec": &execFunc{},
+				"f":    func() string { return "hello" },
 			},
 			expect: "hello",
 		},
@@ -300,6 +311,36 @@ func (*echoFunc) Exec(in interface{}) (interface{}, error) {
 
 func (*echoFunc) UnmarshalArg(unmarshal func(interface{}) error) (interface{}, error) {
 	var arg echoArg
+	if err := unmarshal(&arg); err != nil {
+		return nil, err
+	}
+	return arg, nil
+}
+
+var _ Func = &execFunc{}
+
+type execFunc struct{}
+
+func (*execFunc) Exec(in interface{}) (interface{}, error) {
+	v := reflect.ValueOf(in)
+	if !v.IsValid() {
+		return nil, errors.New("invalid value")
+	}
+	if v.Kind() != reflect.Func {
+		return nil, errors.Errorf("arg must be a function: %v", in)
+	}
+	t := v.Type()
+	if n := t.NumIn(); n != 0 {
+		return nil, errors.Errorf("number of arguments must be 0 but got %d", n)
+	}
+	if n := t.NumOut(); n != 1 {
+		return nil, errors.Errorf("number of arguments must be 1 but got %d", n)
+	}
+	return v.Call(nil)[0].Interface(), nil
+}
+
+func (*execFunc) UnmarshalArg(unmarshal func(interface{}) error) (interface{}, error) {
+	var arg interface{}
 	if err := unmarshal(&arg); err != nil {
 		return nil, err
 	}

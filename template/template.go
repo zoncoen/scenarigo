@@ -246,8 +246,17 @@ func (t *Template) executeLeftArrowExpr(e *ast.LeftArrowExpr, data interface{}) 
 		if err := yaml.NewDecoder(strings.NewReader(argStr), yaml.UseOrderedMap()).Decode(v); err != nil {
 			return err
 		}
-		_, err = Execute(v, t.argFuncs)
-		return err
+
+		// Restore functions that are replaced into strings.
+		// See the "HACK" comment of *Template.executeParameterExpr method.
+		executed, err := Execute(v, t.argFuncs)
+		if err != nil {
+			return err
+		}
+		// NOTE: Decode method ensures that v is a pointer.
+		reflect.ValueOf(v).Elem().Set(reflect.ValueOf(executed))
+
+		return nil
 	})
 	if err != nil {
 		return nil, err

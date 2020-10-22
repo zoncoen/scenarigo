@@ -1,4 +1,41 @@
 ---
+title: and
+steps:
+- protocol: http
+  request:
+    method: GET
+    url: '{{env.TEST_ADDR}}'
+    header:
+      content-type: application/json
+    body:
+      message: 'hello'
+  expect:
+    code: '{{assert.and("OK")}}'
+    body:
+      message: '{{assert.and("hello", assert.notZero)}}'
+
+---
+title: and <-
+steps:
+- protocol: http
+  request:
+    method: GET
+    url: '{{env.TEST_ADDR}}'
+    header:
+      content-type: application/json
+    body:
+      message: 'hello'
+  expect:
+    code: |-
+      {{assert.and <-}}:
+        - '200'
+    body:
+      message: |-
+        {{assert.and <-}}:
+          - hello
+          - '{{assert.notZero}}'
+
+---
 title: or
 steps:
 - protocol: http

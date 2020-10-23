@@ -1,5 +1,13 @@
 # CHANGELOG
 
+<a name="v0.5.1"></a>
+## [v0.5.1] - 2020-10-22
+### Bug Fixes
+- **template:** restore funcs in args of left arrow function
+
+### Features
+- **assert:** add "and" function
+
 <a name="v0.5.0"></a>
 ## [v0.5.0] - 2020-10-05
 ### Features
@@ -62,6 +70,7 @@ change protocl.Protocol interface
 - first release
 
 
+[v0.5.1]: https://github.com/zoncoen/scenarigo/compare/v0.5.0...v0.5.1
 [v0.5.0]: https://github.com/zoncoen/scenarigo/compare/v0.4.0...v0.5.0
 [v0.4.0]: https://github.com/zoncoen/scenarigo/compare/v0.3.3...v0.4.0
 [v0.3.3]: https://github.com/zoncoen/scenarigo/compare/v0.3.2...v0.3.3

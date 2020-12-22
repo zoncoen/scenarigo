@@ -52,7 +52,7 @@ steps:
     code: 200
     body: "123, hello, true"
     header:
-      Content-Type: 'text/plain; charset=utf-8'
+      Content-Type: '{{assert.notZero}}'
 
 ---
 title: not found

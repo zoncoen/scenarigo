@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"strings"
 
-	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
 	// Register proto messages to unmarshal com.google.protobuf.Any.
@@ -17,7 +16,7 @@ import (
 	"github.com/zoncoen/scenarigo/assert"
 	"github.com/zoncoen/scenarigo/context"
 	"github.com/zoncoen/scenarigo/errors"
-	"github.com/zoncoen/scenarigo/internal/maputil"
+	"github.com/zoncoen/scenarigo/internal/assertutil"
 )
 
 // Expect represents expected response values.
@@ -62,6 +61,15 @@ func (e *Expect) Build(ctx *context.Context) (assert.Assertion, error) {
 		msgAssertion = assert.Build(executedMsg)
 	}
 
+	headerAssertion, err := assertutil.BuildHeaderAssertion(ctx, e.Header)
+	if err != nil {
+		return nil, errors.WrapPathf(err, "header", "invalid expect header")
+	}
+	trailerAssertion, err := assertutil.BuildHeaderAssertion(ctx, e.Trailer)
+	if err != nil {
+		return nil, errors.WrapPathf(err, "trailer", "invalid expect trailer")
+	}
+
 	expectBody, err := ctx.ExecuteTemplate(e.Body)
 	if err != nil {
 		return nil, errors.WrapPathf(err, "body", "invalid expect response: %s", err)
@@ -77,9 +85,6 @@ func (e *Expect) Build(ctx *context.Context) (assert.Assertion, error) {
 		if err != nil {
 			return err
 		}
-		if err := e.assertMetadata(resp.Header, resp.Trailer); err != nil {
-			return err
-		}
 		if err := assertStatusCode(codeAssertion, stErr); err != nil {
 			return errors.WithPath(err, codePath)
 		}
@@ -89,33 +94,17 @@ func (e *Expect) Build(ctx *context.Context) (assert.Assertion, error) {
 		if err := e.assertStatusDetails(stErr); err != nil {
 			return errors.WithPath(err, "status.details")
 		}
+		if err := headerAssertion.Assert(resp.Header); err != nil {
+			return errors.WithPath(err, "header")
+		}
+		if err := trailerAssertion.Assert(resp.Trailer); err != nil {
+			return errors.WithPath(err, "trailer")
+		}
 		if err := bodyAssertion.Assert(message); err != nil {
 			return errors.WithPath(err, "body")
 		}
 		return nil
 	}), nil
-}
-
-func (e *Expect) assertMetadata(header, trailer metadata.MD) error {
-	if len(e.Header) > 0 {
-		headerMap, err := maputil.ConvertStringsMapSlice(e.Header)
-		if err != nil {
-			return errors.Errorf(`failed to convert strings map from expected header: %v`, e.Header)
-		}
-		if err := assert.Build(headerMap).Assert(header); err != nil {
-			return errors.WithPath(err, "header")
-		}
-	}
-	if len(e.Trailer) > 0 {
-		trailerMap, err := maputil.ConvertStringsMapSlice(e.Trailer)
-		if err != nil {
-			return errors.Errorf(`failed to convert strings map from expected trailer: %v`, e.Trailer)
-		}
-		if err := assert.Build(trailerMap).Assert(trailer); err != nil {
-			return errors.WithPath(err, "trailer")
-		}
-	}
-	return nil
 }
 
 func assertStatusCode(assertion assert.Assertion, sts *status.Status) error {

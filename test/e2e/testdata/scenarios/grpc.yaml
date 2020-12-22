@@ -26,8 +26,7 @@ steps:
       messageBody: "{{request.messageBody}}"
       nullableString: null
     header:
-      content-type:
-        - application/grpc
+      content-type: '{{assert.notZero}}'
 
 ---
 title: Unauthenticated

@@ -114,6 +114,29 @@ func TestExpect_Build(t *testing.T) {
 			expectBuildError  bool
 			expectAssertError bool
 		}{
+			"failed to execute template": {
+				expect: &Expect{
+					Body: yaml.MapSlice{
+						yaml.MapItem{
+							Key:   "foo",
+							Value: "{{vars.foo}}",
+						},
+					},
+				},
+				expectBuildError: true,
+			},
+			"invalid header assertion": {
+				expect: &Expect{
+					Header: yaml.MapSlice{
+						yaml.MapItem{
+							Key:   nil,
+							Value: "value",
+						},
+					},
+				},
+				expectBuildError: true,
+			},
+
 			"wrong status code": {
 				expect: &Expect{},
 				response: response{
@@ -172,17 +195,6 @@ func TestExpect_Build(t *testing.T) {
 					status: "200 OK",
 				},
 				expectAssertError: true,
-			},
-			"failed to execute template": {
-				expect: &Expect{
-					Body: yaml.MapSlice{
-						yaml.MapItem{
-							Key:   "foo",
-							Value: "{{vars.foo}}",
-						},
-					},
-				},
-				expectBuildError: true,
 			},
 		}
 		for name, test := range tests {

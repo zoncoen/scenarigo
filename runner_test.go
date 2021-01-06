@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/zoncoen/scenarigo/context"
@@ -48,6 +49,7 @@ func TestRunnerWithOptionsFromEnv(t *testing.T) {
 func TestRunner(t *testing.T) {
 	tests := map[string]struct {
 		path  string
+		yaml  string
 		setup func(*testing.T) func()
 	}{
 		"run step with include": {
@@ -73,11 +75,59 @@ func TestRunner(t *testing.T) {
 				}
 			},
 		},
+		"run with yaml": {
+			yaml: `
+---
+title: /echo
+steps:
+- title: POST /echo
+  vars:
+    message: hello
+  protocol: http
+  request:
+    method: POST
+    url: "{{env.TEST_ADDR}}/echo"
+    body:
+      message: "{{vars.message}}"
+  expect:
+    code: 200
+    body:
+      message: "{{request.message}}"
+`,
+			setup: func(t *testing.T) func() {
+				t.Helper()
+
+				mux := http.NewServeMux()
+				mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+					defer r.Body.Close()
+					w.Header().Set("Content-Type", r.Header.Get("Content-Type"))
+					_, _ = io.Copy(w, r.Body)
+				})
+
+				s := httptest.NewServer(mux)
+				if err := os.Setenv("TEST_ADDR", s.URL); err != nil {
+					t.Fatalf("unexpected error: %s", err)
+				}
+
+				return func() {
+					s.Close()
+					os.Unsetenv("TEST_ADDR")
+				}
+			},
+		},
 	}
 	for _, test := range tests {
 		teardown := test.setup(t)
 		defer teardown()
-		runner, err := NewRunner(WithScenarios(test.path))
+
+		var opts []func(*Runner) error
+		if test.path != "" {
+			opts = append(opts, WithScenarios(test.path))
+		}
+		if test.yaml != "" {
+			opts = append(opts, WithScenariosFromReader(strings.NewReader(test.yaml)))
+		}
+		runner, err := NewRunner(opts...)
 		if err != nil {
 			t.Fatal(err)
 		}

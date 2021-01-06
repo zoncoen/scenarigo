@@ -210,14 +210,11 @@ func (r *Runner) Run(ctx *context.Context) {
 			}
 		})
 	}
-
 	for _, reader := range r.scenarioReaders {
-
 		buf := new(bytes.Buffer)
 		if _, err := buf.ReadFrom(reader); err != nil {
 			ctx.Reporter().Fatalf("failed to read from io.Reader: %s", err)
 		}
-
 		scns, err := schema.LoadScenariosFromReader(bytes.NewBuffer(buf.Bytes()))
 		if err != nil {
 			ctx.Reporter().Fatalf("failed to load scenarios: %s", err)

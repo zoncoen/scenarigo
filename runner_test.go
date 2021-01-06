@@ -58,9 +58,9 @@ func TestRunner(t *testing.T) {
 				t.Helper()
 
 				mux := http.NewServeMux()
-				mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+				mux.HandleFunc("/echo", func(w http.ResponseWriter, r *http.Request) {
 					defer r.Body.Close()
-					w.Header().Set("Content-Type", r.Header.Get("Content-Type"))
+					w.Header().Set("Content-Type", "application/json")
 					_, _ = io.Copy(w, r.Body)
 				})
 
@@ -81,26 +81,24 @@ func TestRunner(t *testing.T) {
 title: /echo
 steps:
 - title: POST /echo
-  vars:
-    message: hello
   protocol: http
   request:
     method: POST
     url: "{{env.TEST_ADDR}}/echo"
     body:
-      message: "{{vars.message}}"
+      message: "hello"
   expect:
     code: 200
     body:
-      message: "{{request.message}}"
+      message: "hello"
 `,
 			setup: func(t *testing.T) func() {
 				t.Helper()
 
 				mux := http.NewServeMux()
-				mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+				mux.HandleFunc("/echo", func(w http.ResponseWriter, r *http.Request) {
 					defer r.Body.Close()
-					w.Header().Set("Content-Type", r.Header.Get("Content-Type"))
+					w.Header().Set("Content-Type", "application/json")
 					_, _ = io.Copy(w, r.Body)
 				})
 

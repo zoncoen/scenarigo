@@ -7,7 +7,6 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/zoncoen/scenarigo/context"
@@ -49,7 +48,6 @@ func TestRunnerWithOptionsFromEnv(t *testing.T) {
 func TestRunner(t *testing.T) {
 	tests := map[string]struct {
 		path  string
-		yaml  string
 		setup func(*testing.T) func()
 	}{
 		"run step with include": {
@@ -58,47 +56,9 @@ func TestRunner(t *testing.T) {
 				t.Helper()
 
 				mux := http.NewServeMux()
-				mux.HandleFunc("/echo", func(w http.ResponseWriter, r *http.Request) {
+				mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 					defer r.Body.Close()
-					w.Header().Set("Content-Type", "application/json")
-					_, _ = io.Copy(w, r.Body)
-				})
-
-				s := httptest.NewServer(mux)
-				if err := os.Setenv("TEST_ADDR", s.URL); err != nil {
-					t.Fatalf("unexpected error: %s", err)
-				}
-
-				return func() {
-					s.Close()
-					os.Unsetenv("TEST_ADDR")
-				}
-			},
-		},
-		"run with yaml": {
-			yaml: `
----
-title: /echo
-steps:
-- title: POST /echo
-  protocol: http
-  request:
-    method: POST
-    url: "{{env.TEST_ADDR}}/echo"
-    body:
-      message: "hello"
-  expect:
-    code: 200
-    body:
-      message: "hello"
-`,
-			setup: func(t *testing.T) func() {
-				t.Helper()
-
-				mux := http.NewServeMux()
-				mux.HandleFunc("/echo", func(w http.ResponseWriter, r *http.Request) {
-					defer r.Body.Close()
-					w.Header().Set("Content-Type", "application/json")
+					w.Header().Set("Content-Type", r.Header.Get("Content-Type"))
 					_, _ = io.Copy(w, r.Body)
 				})
 
@@ -117,15 +77,7 @@ steps:
 	for _, test := range tests {
 		teardown := test.setup(t)
 		defer teardown()
-
-		var opts []func(*Runner) error
-		if test.path != "" {
-			opts = append(opts, WithScenarios(test.path))
-		}
-		if test.yaml != "" {
-			opts = append(opts, WithScenariosFromReader(strings.NewReader(test.yaml)))
-		}
-		runner, err := NewRunner(opts...)
+		runner, err := NewRunner(WithScenarios(test.path))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -142,7 +94,6 @@ steps:
 func TestRunnerFail(t *testing.T) {
 	tests := map[string]struct {
 		path  string
-		yaml  string
 		setup func(*testing.T) func()
 	}{
 		"include invalid yaml": {
@@ -168,23 +119,11 @@ func TestRunnerFail(t *testing.T) {
 				}
 			},
 		},
-		"run with yaml": {
-			yaml:  `invalid: value`,
-			setup: func(t *testing.T) func() { return func() {} },
-		},
 	}
 	for _, test := range tests {
 		teardown := test.setup(t)
 		defer teardown()
-
-		var opts []func(*Runner) error
-		if test.path != "" {
-			opts = append(opts, WithScenarios(test.path))
-		}
-		if test.yaml != "" {
-			opts = append(opts, WithScenariosFromReader(strings.NewReader(test.yaml)))
-		}
-		runner, err := NewRunner(opts...)
+		runner, err := NewRunner(WithScenarios(test.path))
 		if err != nil {
 			t.Fatal(err)
 		}

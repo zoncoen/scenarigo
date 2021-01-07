@@ -31,20 +31,3 @@ func LoadScenarios(path string) ([]*Scenario, error) {
 	}
 	return scenarios, nil
 }
-
-// LoadScenariosFromReader loads test scenarios with io.Reader.
-func LoadScenariosFromReader(r io.Reader) ([]*Scenario, error) {
-	var scenarios []*Scenario
-	d := yaml.NewDecoder(r, yaml.UseOrderedMap(), yaml.Strict())
-	for {
-		var s Scenario
-		if err := d.Decode(&s); err != nil {
-			if err == io.EOF {
-				break
-			}
-			return nil, errors.Wrap(err, "failed to decode YAML")
-		}
-		scenarios = append(scenarios, &s)
-	}
-	return scenarios, nil
-}

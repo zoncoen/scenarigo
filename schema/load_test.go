@@ -2,7 +2,6 @@ package schema
 
 import (
 	"bytes"
-	"strings"
 	"testing"
 
 	"github.com/goccy/go-yaml"
@@ -242,130 +241,6 @@ func TestLoadScenarios(t *testing.T) {
 			test := test
 			t.Run(name, func(t *testing.T) {
 				_, err := LoadScenarios(test.path)
-				if err == nil {
-					t.Fatal("expected error but no error")
-				}
-			})
-		}
-	})
-}
-
-func TestLoadScenariosFromReader(t *testing.T) {
-	t.Run("success", func(t *testing.T) {
-		tests := map[string]struct {
-			yaml            string
-			scenarios       []*Scenario
-			request, expect interface{}
-		}{
-			"valid": {
-				yaml: `
-title: echo-service
-description: check echo-service
-vars:
-  message: hello
-steps:
-  - title: POST /say
-    description: check to respond same message
-    protocol: test
-    request:
-      body:
-        message: "{{vars.message}}"
-    expect:
-      body:
-        message: "{{request.body}}"
-`,
-				scenarios: []*Scenario{
-					{
-						Title:       "echo-service",
-						Description: "check echo-service",
-						Vars:        map[string]interface{}{"message": "hello"},
-						Steps: []*Step{
-							{
-								Title:       "POST /say",
-								Description: "check to respond same message",
-								Vars:        nil,
-								Protocol:    "test",
-							},
-						},
-					},
-				},
-				request: map[string]interface{}{
-					"body": map[string]interface{}{
-						"message": "{{vars.message}}",
-					},
-				},
-				expect: yaml.MapSlice{
-					{
-						Key: "body",
-						Value: yaml.MapSlice{
-							{
-								Key:   "message",
-								Value: "{{request.body}}",
-							},
-						},
-					},
-				},
-			},
-		}
-		for name, test := range tests {
-			test := test
-			t.Run(name, func(t *testing.T) {
-				p := &testProtocol{
-					name:    "test",
-					request: map[interface{}]interface{}{},
-					expect:  map[interface{}]interface{}{},
-				}
-				protocol.Register(p)
-				defer protocol.Unregister(p.Name())
-
-				got, err := LoadScenariosFromReader(strings.NewReader(test.yaml))
-				if err != nil {
-					t.Fatalf("unexpected error: %s", err)
-				}
-				if diff := cmp.Diff(test.scenarios, got,
-					cmp.AllowUnexported(
-						Scenario{}, Request{}, Expect{},
-					),
-					cmp.FilterPath(func(path cmp.Path) bool {
-						s := path.String()
-						if s == "Steps.Request" {
-							return true
-						}
-						if s == "Steps.Expect" {
-							return true
-						}
-						return false
-					}, cmp.Ignore()),
-				); diff != "" {
-					t.Errorf("scenario differs (-want +got):\n%s", diff)
-				}
-				if diff := cmp.Diff(test.request, p.request); diff != "" {
-					t.Errorf("request differs (-want +got):\n%s", diff)
-				}
-				if diff := cmp.Diff(test.expect, p.expect); diff != "" {
-					t.Errorf("expect differs (-want +got):\n%s", diff)
-				}
-			})
-		}
-	})
-	t.Run("failure", func(t *testing.T) {
-		p := &testProtocol{
-			name: "test",
-		}
-		protocol.Register(p)
-		defer protocol.Unregister(p.Name())
-
-		tests := map[string]struct {
-			yaml string
-		}{
-			"invalid": {
-				yaml: `title: {}`,
-			},
-		}
-		for name, test := range tests {
-			test := test
-			t.Run(name, func(t *testing.T) {
-				_, err := LoadScenariosFromReader(strings.NewReader(test.yaml))
 				if err == nil {
 					t.Fatal("expected error but no error")
 				}

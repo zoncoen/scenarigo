@@ -240,6 +240,45 @@ func TestExpect_Build(t *testing.T) {
 			expectBuildError  bool
 			expectAssertError bool
 		}{
+			"failed to execute template": {
+				expect: &Expect{
+					Code: "OK",
+					Body: yaml.MapSlice{
+						yaml.MapItem{
+							Key:   "messageId",
+							Value: "1",
+						},
+						yaml.MapItem{
+							Key:   "messageBody",
+							Value: "{{vars.body}}",
+						},
+					},
+				},
+				expectBuildError: true,
+			},
+			"invalid header assertion": {
+				expect: &Expect{
+					Header: yaml.MapSlice{
+						yaml.MapItem{
+							Key:   nil,
+							Value: "value",
+						},
+					},
+				},
+				expectBuildError: true,
+			},
+			"invalid trailer assertion": {
+				expect: &Expect{
+					Trailer: yaml.MapSlice{
+						yaml.MapItem{
+							Key:   nil,
+							Value: "value",
+						},
+					},
+				},
+				expectBuildError: true,
+			},
+
 			"return value must be []reflect.Value": {
 				expect:            &Expect{},
 				v:                 response{},
@@ -435,31 +474,6 @@ func TestExpect_Build(t *testing.T) {
 					},
 				},
 				expectAssertError: true,
-			},
-			"failed to execute template": {
-				expect: &Expect{
-					Code: "OK",
-					Body: yaml.MapSlice{
-						yaml.MapItem{
-							Key:   "messageId",
-							Value: "1",
-						},
-						yaml.MapItem{
-							Key:   "messageBody",
-							Value: "{{vars.body}}",
-						},
-					},
-				},
-				v: response{
-					rvalues: []reflect.Value{
-						reflect.ValueOf(&test.EchoResponse{
-							MessageId:   "1",
-							MessageBody: "hello",
-						}),
-						reflect.Zero(reflect.TypeOf((*error)(nil)).Elem()),
-					},
-				},
-				expectBuildError: true,
 			},
 			"wrong status code": {
 				expect: &Expect{

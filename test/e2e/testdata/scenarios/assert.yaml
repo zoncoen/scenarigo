@@ -116,3 +116,18 @@ steps:
           name: Bob
           friendIds: |-
             {{assert.contains <-}}: 1
+
+---
+title: regexp
+steps:
+- protocol: http
+  request:
+    method: GET
+    url: '{{env.TEST_ADDR}}'
+    header:
+      content-type: application/json
+    body:
+      message: 'Hello, world!'
+  expect:
+    body:
+      message: '{{assert.regexp("(?i)hello")}}'

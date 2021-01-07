@@ -13,6 +13,7 @@ var assertions = map[string]interface{}{
 	"notZero":     assert.NotZero,
 	"contains":    leftArrowFunc(assert.Contains),
 	"notContains": leftArrowFunc(assert.NotContains),
+	"regexp":      assert.Regexp,
 }
 
 type leftArrowFunc func(assertion assert.Assertion) func(*query.Query) assert.Assertion

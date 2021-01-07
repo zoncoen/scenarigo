@@ -142,6 +142,7 @@ steps:
 func TestRunnerFail(t *testing.T) {
 	tests := map[string]struct {
 		path  string
+		yaml  string
 		setup func(*testing.T) func()
 	}{
 		"include invalid yaml": {
@@ -167,11 +168,23 @@ func TestRunnerFail(t *testing.T) {
 				}
 			},
 		},
+		"run with yaml": {
+			yaml:  `invalid: value`,
+			setup: func(t *testing.T) func() { return func() {} },
+		},
 	}
 	for _, test := range tests {
 		teardown := test.setup(t)
 		defer teardown()
-		runner, err := NewRunner(WithScenarios(test.path))
+
+		var opts []func(*Runner) error
+		if test.path != "" {
+			opts = append(opts, WithScenarios(test.path))
+		}
+		if test.yaml != "" {
+			opts = append(opts, WithScenariosFromReader(strings.NewReader(test.yaml)))
+		}
+		runner, err := NewRunner(opts...)
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -11,7 +11,9 @@ import (
 	"github.com/zoncoen/scenarigo/schema"
 )
 
-func runScenario(ctx *context.Context, s *schema.Scenario) *context.Context {
+// RunScenario runs a test scenario s.
+func RunScenario(ctx *context.Context, s *schema.Scenario) *context.Context {
+	ctx = ctx.WithScenarioFilepath(s.Filepath())
 	if s.Plugins != nil {
 		plugs := map[string]interface{}{}
 		for name, path := range s.Plugins {

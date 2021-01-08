@@ -11,13 +11,14 @@ import (
 )
 
 type (
-	keyPluginDir    struct{}
-	keyPlugins      struct{}
-	keyVars         struct{}
-	keyRequest      struct{}
-	keyResponse     struct{}
-	keyYAMLNode     struct{}
-	keyEnabledColor struct{}
+	keyScenarioFilepath struct{}
+	keyPluginDir        struct{}
+	keyPlugins          struct{}
+	keyVars             struct{}
+	keyRequest          struct{}
+	keyResponse         struct{}
+	keyYAMLNode         struct{}
+	keyEnabledColor     struct{}
 )
 
 // Context represents a scenarigo context.
@@ -68,6 +69,24 @@ func (c *Context) WithReporter(r reporter.Reporter) *Context {
 // Reporter returns the reporter of context.
 func (c *Context) Reporter() reporter.Reporter {
 	return c.reporter
+}
+
+// WithScenarioFilepath returns a copy of c with the scenario filepath.
+func (c *Context) WithScenarioFilepath(path string) *Context {
+	return newContext(
+		context.WithValue(c.ctx, keyScenarioFilepath{}, path),
+		c.reqCtx,
+		c.reporter,
+	)
+}
+
+// ScenarioFilepath returns the filepath of the scenario executing in this context.
+func (c *Context) ScenarioFilepath() string {
+	path, ok := c.ctx.Value(keyScenarioFilepath{}).(string)
+	if ok {
+		return path
+	}
+	return ""
 }
 
 // WithPluginDir returns a copy of c with plugin root directory.

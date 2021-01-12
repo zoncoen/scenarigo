@@ -19,6 +19,17 @@
 {{ if eq .Tag.Name "v0.1.0" -}}
 - first release
 
+{{ else if eq .Tag.Name "v0.6.0" -}}
+### Bug Fixes
+- **template:** enable to set to pointer values
+
+### Features
+- export RunScenario function
+- add WithScenariosFromReader option
+- allow template in header assertion
+- **assert:** add regexp function
+- **context:** add ScenarioFilePath
+
 {{ else -}}
 {{ range .CommitGroups -}}
 ### {{ .Title }}
@@ -28,11 +39,14 @@
 {{ end -}}
 {{ end -}}
 
+{{ if eq .Tag.Name "v0.6.0" -}}
+{{ else -}}
 {{- if .RevertCommits -}}
 ### Reverts
 {{ range .RevertCommits -}}
 - {{ .Revert.Header }}
 {{ end }}
+{{ end -}}
 {{ end -}}
 
 {{- if .NoteGroups -}}

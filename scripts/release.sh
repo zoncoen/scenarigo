@@ -18,6 +18,12 @@ gobump set ${NEXT_VERSION} -w ${BASEDIR}/version
 
 git-chglog --next-tag v${NEXT_VERSION} -o ${BASEDIR}/CHANGELOG.md
 
+read -p "release v${NEXT_VERSION}? (y/N): " yn
+case "$yn" in
+  [yY]*) ;;
+  *) echo abort; exit 1;;
+esac
+
 git commit -am "release v${NEXT_VERSION}"
 git tag v${NEXT_VERSION}
 git push && git push --tags

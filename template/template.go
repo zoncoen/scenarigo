@@ -254,7 +254,12 @@ func (t *Template) executeLeftArrowExpr(e *ast.LeftArrowExpr, data interface{}) 
 			return err
 		}
 		// NOTE: Decode method ensures that v is a pointer.
-		reflect.ValueOf(v).Elem().Set(reflect.ValueOf(executed))
+		rv := reflect.ValueOf(v).Elem()
+		ev, err := convert(rv.Type())(reflect.ValueOf(executed), nil)
+		if err != nil {
+			return err
+		}
+		rv.Set(ev)
 
 		return nil
 	})

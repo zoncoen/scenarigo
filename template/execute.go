@@ -2,6 +2,7 @@ package template
 
 import (
 	"fmt"
+	"go/token"
 	"reflect"
 	"strings"
 
@@ -41,14 +42,14 @@ func structFieldName(field reflect.StructField) string {
 	return fieldName
 }
 
-func execute(v reflect.Value, data interface{}) (reflect.Value, error) {
-	v = reflectutil.Elem(v)
+func execute(in reflect.Value, data interface{}) (reflect.Value, error) {
+	v := reflectutil.Elem(in)
 	switch v.Kind() {
 	case reflect.Map:
 		for _, k := range v.MapKeys() {
 			e := v.MapIndex(k)
 			if !isNil(e) {
-				x, err := execute(e, data)
+				x, err := convert(v.Type().Elem())(execute(e, data))
 				if err != nil {
 					key := fmt.Sprint(k.Interface())
 					return reflect.Value{}, errors.WithPath(err, key)
@@ -60,7 +61,7 @@ func execute(v reflect.Value, data interface{}) (reflect.Value, error) {
 		for i := 0; i < v.Len(); i++ {
 			e := v.Index(i)
 			if !isNil(e) {
-				x, err := execute(e, data)
+				x, err := convert(v.Type().Elem())(execute(e, data))
 				if err != nil {
 					if v.Type() != yamlMapSliceType {
 						err = errors.WithPath(err, fmt.Sprintf("[%d]", i))
@@ -71,6 +72,9 @@ func execute(v reflect.Value, data interface{}) (reflect.Value, error) {
 			}
 		}
 	case reflect.Struct:
+		if !v.CanSet() {
+			v = makePtr(v).Elem() // create pointer to enable to set values
+		}
 		switch v.Type() {
 		case yamlMapItemType:
 			value := v.FieldByName("Value")
@@ -84,8 +88,11 @@ func execute(v reflect.Value, data interface{}) (reflect.Value, error) {
 			}
 		default:
 			for i := 0; i < v.NumField(); i++ {
+				if !token.IsExported(v.Type().Field(i).Name) {
+					continue // skip unexported field
+				}
 				field := v.Field(i)
-				x, err := execute(field, data)
+				x, err := convert(field.Type())(execute(field, data))
 				if err != nil {
 					fieldName := structFieldName(v.Type().Field(i))
 					return reflect.Value{}, errors.WithPath(err, fieldName)
@@ -102,8 +109,15 @@ func execute(v reflect.Value, data interface{}) (reflect.Value, error) {
 		if err != nil {
 			return reflect.Value{}, err
 		}
-		return reflect.ValueOf(x), nil
+		v = reflect.ValueOf(x)
 	default:
+	}
+
+	// keep the original type as much as possible
+	if in.IsValid() {
+		if converted, err := convert(in.Type())(v, nil); err == nil {
+			v = converted
+		}
 	}
 	return v, nil
 }
@@ -115,4 +129,34 @@ func isNil(v reflect.Value) bool {
 	default:
 		return false
 	}
+}
+
+// convert returns a function that converts a value to the given type t.
+func convert(t reflect.Type) func(reflect.Value, error) (reflect.Value, error) {
+	return func(v reflect.Value, err error) (result reflect.Value, resErr error) {
+		if err != nil {
+			return v, err
+		}
+
+		defer func() {
+			if err := recover(); err != nil {
+				resErr = errors.Errorf("failed to convert: %s", err)
+			}
+		}()
+
+		if t.Kind() == reflect.Ptr && t.Elem() == v.Type() {
+			v = makePtr(v)
+		}
+		if typ := v.Type(); typ.Kind() == reflect.Ptr && typ.Elem() == t {
+			v = v.Elem()
+		}
+
+		return v, nil
+	}
+}
+
+func makePtr(v reflect.Value) reflect.Value {
+	ptr := reflect.New(v.Type())
+	ptr.Elem().Set(v)
+	return ptr
 }

@@ -1,7 +1,19 @@
 # CHANGELOG
 
+<a name="v0.6.0"></a>
+## [v0.6.0] - 2021-01-12
+### Bug Fixes
+- **template:** enable to set to pointer values
+
+### Features
+- export RunScenario function
+- add WithScenariosFromReader option
+- allow template in header assertion
+- **assert:** add regexp function
+- **context:** add ScenarioFilePath
+
 <a name="v0.5.1"></a>
-## [v0.5.1] - 2020-10-22
+## [v0.5.1] - 2020-10-23
 ### Bug Fixes
 - **template:** restore funcs in args of left arrow function
 
@@ -70,6 +82,7 @@ change protocl.Protocol interface
 - first release
 
 
+[v0.6.0]: https://github.com/zoncoen/scenarigo/compare/v0.5.1...v0.6.0
 [v0.5.1]: https://github.com/zoncoen/scenarigo/compare/v0.5.0...v0.5.1
 [v0.5.0]: https://github.com/zoncoen/scenarigo/compare/v0.4.0...v0.5.0
 [v0.4.0]: https://github.com/zoncoen/scenarigo/compare/v0.3.3...v0.4.0

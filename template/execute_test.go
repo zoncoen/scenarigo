@@ -217,6 +217,16 @@ func TestConvert(t *testing.T) {
 			t.Fatalf("expect %s but got %s", expect, got)
 		}
 	})
+	t.Run("invalid value", func(t *testing.T) {
+		invalid := reflect.ValueOf(nil)
+		v, err := convertToStrPtr(invalid, nil)
+		if err != nil {
+			t.Fatalf("failed to convert: %s", err)
+		}
+		if got, expect := v, invalid; got != expect {
+			t.Fatalf("expect %s but got %s", expect, got)
+		}
+	})
 	t.Run("error", func(t *testing.T) {
 		_, err := convertToStrPtr(reflect.Value{}, errors.New("execute() failed"))
 		if err == nil {

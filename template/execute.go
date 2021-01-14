@@ -138,9 +138,13 @@ func convert(t reflect.Type) func(reflect.Value, error) (reflect.Value, error) {
 			return v, err
 		}
 
+		if !v.IsValid() {
+			return v, nil
+		}
+
 		defer func() {
 			if err := recover(); err != nil {
-				resErr = errors.Errorf("failed to convert: %s", err)
+				resErr = errors.Errorf("failed to convert %#v to %s: %s", v.Interface(), t.Name(), err)
 			}
 		}()
 

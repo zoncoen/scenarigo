@@ -1,5 +1,10 @@
 # CHANGELOG
 
+<a name="v0.6.1"></a>
+## [v0.6.1] - 2021-01-14
+### Bug Fixes
+- **template:** don't convert invalid values to avoid panic
+
 <a name="v0.6.0"></a>
 ## [v0.6.0] - 2021-01-12
 ### Bug Fixes
@@ -82,6 +87,7 @@ change protocl.Protocol interface
 - first release
 
 
+[v0.6.1]: https://github.com/zoncoen/scenarigo/compare/v0.6.0...v0.6.1
 [v0.6.0]: https://github.com/zoncoen/scenarigo/compare/v0.5.1...v0.6.0
 [v0.5.1]: https://github.com/zoncoen/scenarigo/compare/v0.5.0...v0.5.1
 [v0.5.0]: https://github.com/zoncoen/scenarigo/compare/v0.4.0...v0.5.0

@@ -66,16 +66,6 @@ func Equal(q *query.Query, expected interface{}) Assertion {
 	})
 }
 
-func convert(v interface{}, t reflect.Type) (result interface{}, resErr error) {
-	defer func() {
-		if err := recover(); err != nil {
-			resErr = errors.Errorf("failed to convert: %s", err)
-		}
-	}()
-	result = reflect.ValueOf(v).Convert(t).Interface()
-	return
-}
-
 func isNil(i interface{}) bool {
 	defer func() {
 		// return false if IsNil panics

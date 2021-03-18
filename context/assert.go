@@ -17,6 +17,7 @@ var assertions = map[string]interface{}{
 	"greaterThanOrEqual": assert.GreaterOrEqual,
 	"lessThan":           assert.Less,
 	"lessThanOrEqual":    assert.LessOrEqual,
+	"length":             assert.Length,
 }
 
 type leftArrowFunc func(assertion assert.Assertion) assert.Assertion

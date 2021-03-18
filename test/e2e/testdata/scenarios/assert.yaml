@@ -221,3 +221,18 @@ steps:
   expect:
     body:
       message: '{{assert.lessThanOrEqual(2)}}'
+
+---
+title: length
+steps:
+- protocol: http
+  request:
+    method: GET
+    url: '{{env.TEST_ADDR}}'
+    header:
+      content-type: application/json
+    body:
+      message: foo
+  expect:
+    body:
+      message: '{{assert.length(assert.greaterThan(2))}}'

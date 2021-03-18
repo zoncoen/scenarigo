@@ -3,41 +3,36 @@ package assert
 import (
 	"reflect"
 
-	"github.com/pkg/errors"
-	"github.com/zoncoen/query-go"
+	"github.com/zoncoen/scenarigo/errors"
 	"github.com/zoncoen/scenarigo/internal/reflectutil"
 )
 
 // Contains returns an assertion to ensure a value contains the value.
-func Contains(assertion Assertion) func(*query.Query) Assertion {
-	return func(q *query.Query) Assertion {
-		return assertFunc(q, func(v interface{}) error {
-			vv, err := arrayOrSlice(v)
-			if err != nil {
-				return errors.Wrap(err, q.String())
-			}
-			if err := contains(assertion, q, vv); err != nil {
-				return errors.Wrapf(err, "%s: doesn't contain expected value", q.String())
-			}
-			return nil
-		})
-	}
+func Contains(assertion Assertion) Assertion {
+	return AssertionFunc(func(v interface{}) error {
+		vv, err := arrayOrSlice(v)
+		if err != nil {
+			return err
+		}
+		if err := contains(assertion, vv); err != nil {
+			return errors.Wrap(err, "doesn't contain expected value")
+		}
+		return nil
+	})
 }
 
 // NotContains returns an assertion to ensure a value doesn't contain the value.
-func NotContains(assertion Assertion) func(*query.Query) Assertion {
-	return func(q *query.Query) Assertion {
-		return assertFunc(q, func(v interface{}) error {
-			vv, err := arrayOrSlice(v)
-			if err != nil {
-				return errors.Wrap(err, q.String())
-			}
-			if err := contains(assertion, q, vv); err == nil {
-				return errors.Errorf("%s: contains the value", q.String())
-			}
-			return nil
-		})
-	}
+func NotContains(assertion Assertion) Assertion {
+	return AssertionFunc(func(v interface{}) error {
+		vv, err := arrayOrSlice(v)
+		if err != nil {
+			return err
+		}
+		if err := contains(assertion, vv); err == nil {
+			return errors.Wrap(err, "contains the value")
+		}
+		return nil
+	})
 }
 
 func arrayOrSlice(v interface{}) (reflect.Value, error) {
@@ -50,7 +45,7 @@ func arrayOrSlice(v interface{}) (reflect.Value, error) {
 	return vv, nil
 }
 
-func contains(assertion Assertion, q *query.Query, v reflect.Value) error {
+func contains(assertion Assertion, v reflect.Value) error {
 	if v.Len() == 0 {
 		return errors.New("empty")
 	}

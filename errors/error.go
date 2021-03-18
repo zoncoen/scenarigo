@@ -185,7 +185,14 @@ func (e *PathError) yml() string {
 }
 
 func (e *PathError) Error() string {
-	return fmt.Sprintf("\n%s\n%s", e.yml(), e.Err.Error())
+	yml := e.yml()
+	if yml != "" {
+		return fmt.Sprintf("\n%s\n%s", yml, e.Err.Error())
+	}
+	if e.Path != "" {
+		return fmt.Sprintf("%s: %s", e.Path, e.Err.Error())
+	}
+	return e.Err.Error()
 }
 
 // MultiPathError represents multiple error with path.

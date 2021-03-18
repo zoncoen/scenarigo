@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"testing"
-
-	"github.com/zoncoen/query-go"
 )
 
 func TestNotZero(t *testing.T) {
@@ -49,7 +47,7 @@ func TestNotZero(t *testing.T) {
 	for i, test := range tests {
 		test := test
 		t.Run(fmt.Sprint(i), func(t *testing.T) {
-			assertion := NotZero(query.New())
+			assertion := NotZero()
 			if err := assertion.Assert(test.ok); err != nil {
 				t.Errorf("unexpected error: %s", err)
 			}

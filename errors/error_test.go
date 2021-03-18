@@ -75,13 +75,13 @@ func TestErrorQueryf(t *testing.T) {
 func TestWrap(t *testing.T) {
 	t.Run("wrap pkg/errors instance", func(t *testing.T) {
 		err := Wrap(errors.New("message"), "message2")
-		if err.Error() != "\n\nmessage2: message" {
+		if err.Error() != "message2: message" {
 			t.Fatalf("unexpected error message: %s", err.Error())
 		}
 	})
 	t.Run("wrap PathError instance", func(t *testing.T) {
 		err := Wrap(ErrorPath("path", "message"), "message2")
-		if err.Error() != "\n\nmessage2: message" {
+		if err.Error() != ".path: message2: message" {
 			t.Fatalf("unexpected error message: %s", err.Error())
 		}
 		e, ok := err.(*PathError)
@@ -95,13 +95,13 @@ func TestWrap(t *testing.T) {
 func TestWrapPath(t *testing.T) {
 	t.Run("wrap pkg/errors instance", func(t *testing.T) {
 		err := WrapPath(errors.New("message"), "path", "message2")
-		if err.Error() != "\n\nmessage2: message" {
+		if err.Error() != ".path: message2: message" {
 			t.Fatalf("unexpected error message: %s", err.Error())
 		}
 	})
 	t.Run("wrap PathError instance", func(t *testing.T) {
 		err := WrapPath(ErrorPath("a", "message"), "b", "message2")
-		if err.Error() != "\n\nmessage2: message" {
+		if err.Error() != ".b.a: message2: message" {
 			t.Fatalf("unexpected error message: %s", err.Error())
 		}
 		e, ok := err.(*PathError)
@@ -115,13 +115,13 @@ func TestWrapPath(t *testing.T) {
 func TestWrapf(t *testing.T) {
 	t.Run("wrap pkg/errors instance", func(t *testing.T) {
 		err := Wrapf(errors.New("message"), "%s", "message2")
-		if err.Error() != "\n\nmessage2: message" {
+		if err.Error() != "message2: message" {
 			t.Fatalf("unexpected error message: %s", err.Error())
 		}
 	})
 	t.Run("wrap PathError instance", func(t *testing.T) {
 		err := Wrapf(ErrorPath("path", "message"), "%s", "message2")
-		if err.Error() != "\n\nmessage2: message" {
+		if err.Error() != ".path: message2: message" {
 			t.Fatalf("unexpected error message: %s", err.Error())
 		}
 		e, ok := err.(*PathError)
@@ -135,13 +135,13 @@ func TestWrapf(t *testing.T) {
 func TestWrapPathf(t *testing.T) {
 	t.Run("wrap pkg/errors instance", func(t *testing.T) {
 		err := WrapPathf(errors.New("message"), "path", "%s", "message2")
-		if err.Error() != "\n\nmessage2: message" {
+		if err.Error() != ".path: message2: message" {
 			t.Fatalf("unexpected error message: %s", err.Error())
 		}
 	})
 	t.Run("wrap PathError instance", func(t *testing.T) {
 		err := WrapPathf(ErrorPath("a", "message"), "b", "%s", "message2")
-		if err.Error() != "\n\nmessage2: message" {
+		if err.Error() != ".b.a: message2: message" {
 			t.Fatalf("unexpected error message: %s", err.Error())
 		}
 		e, ok := err.(*PathError)
@@ -155,13 +155,13 @@ func TestWrapPathf(t *testing.T) {
 func TestWithPath(t *testing.T) {
 	t.Run("add path to pkg/errors instance", func(t *testing.T) {
 		err := WithPath(errors.New("message"), "path")
-		if err.Error() != "\n\nmessage" {
+		if err.Error() != ".path: message" {
 			t.Fatalf("unexpected error message: %s", err.Error())
 		}
 	})
 	t.Run("add path to PathError instance", func(t *testing.T) {
 		err := WithPath(ErrorPath("a", "message"), "b")
-		if err.Error() != "\n\nmessage" {
+		if err.Error() != ".b.a: message" {
 			t.Fatalf("unexpected error message: %s", err.Error())
 		}
 		e, ok := err.(*PathError)
@@ -179,7 +179,7 @@ func TestWithQuery(t *testing.T) {
 			t.Fatalf("%+v", err)
 		}
 		errQuery := WithQuery(errors.New("message"), q)
-		if errQuery.Error() != "\n\nmessage" {
+		if errQuery.Error() != ".path: message" {
 			t.Fatalf("unexpected error message: %s", errQuery.Error())
 		}
 		e, ok := errQuery.(*PathError)
@@ -194,7 +194,7 @@ func TestWithQuery(t *testing.T) {
 			t.Fatalf("%+v", err)
 		}
 		errQuery := WithQuery(ErrorPath("a", "message"), q)
-		if errQuery.Error() != "\n\nmessage" {
+		if errQuery.Error() != ".b.a: message" {
 			t.Fatalf("unexpected error message: %s", errQuery.Error())
 		}
 		e, ok := errQuery.(*PathError)

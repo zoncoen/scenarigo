@@ -2,8 +2,6 @@ package assert
 
 import (
 	"testing"
-
-	"github.com/zoncoen/query-go"
 )
 
 func TestRegexp(t *testing.T) {
@@ -42,7 +40,7 @@ func TestRegexp(t *testing.T) {
 	for name, tc := range tests {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
-			assertion := Regexp(tc.expr)(query.New())
+			assertion := Regexp(tc.expr)
 			if err := assertion.Assert(tc.ok); err != nil {
 				t.Errorf("unexpected error: %s", err)
 			}
@@ -54,7 +52,7 @@ func TestRegexp(t *testing.T) {
 
 	t.Run("failed to compile", func(t *testing.T) {
 		// invalid flag "a"
-		assertion := Regexp("(?a)")(query.New())
+		assertion := Regexp("(?a)")
 		if err := assertion.Assert("a"); err == nil {
 			t.Errorf("expected error but no error")
 		}

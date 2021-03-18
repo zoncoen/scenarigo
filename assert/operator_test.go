@@ -2,13 +2,10 @@ package assert
 
 import (
 	"testing"
-
-	"github.com/zoncoen/query-go"
 )
 
 func TestAnd(t *testing.T) {
-	q := query.New()
-	if err := And()(q).Assert(""); err == nil {
+	if err := And().Assert(""); err == nil {
 		t.Fatal("empty assertion list should be an error")
 	}
 
@@ -19,15 +16,15 @@ func TestAnd(t *testing.T) {
 	}{
 		"one": {
 			assertions: []Assertion{
-				Equal(q, "one"),
+				Equal("one"),
 			},
 			ok: "one",
 			ng: "1",
 		},
 		"multi": {
 			assertions: []Assertion{
-				Equal(q, "one"),
-				NotZero(q),
+				Equal("one"),
+				NotZero(),
 			},
 			ok: "one",
 			ng: "1",
@@ -35,7 +32,7 @@ func TestAnd(t *testing.T) {
 	}
 	for _, test := range tests {
 		test := test
-		and := And(test.assertions...)(q)
+		and := And(test.assertions...)
 		if err := and.Assert(test.ok); err != nil {
 			t.Errorf("unexpected error: %s", err)
 		}
@@ -46,8 +43,7 @@ func TestAnd(t *testing.T) {
 }
 
 func TestOr(t *testing.T) {
-	q := query.New()
-	if err := Or()(q).Assert(""); err == nil {
+	if err := Or().Assert(""); err == nil {
 		t.Fatal("empty assertion list should be an error")
 	}
 
@@ -58,15 +54,15 @@ func TestOr(t *testing.T) {
 	}{
 		"one": {
 			assertions: []Assertion{
-				Equal(q, "two"),
+				Equal("two"),
 			},
 			ok: "two",
 			ng: "2",
 		},
 		"multi": {
 			assertions: []Assertion{
-				Equal(q, "one"),
-				Equal(q, "two"),
+				Equal("one"),
+				Equal("two"),
 			},
 			ok: "two",
 			ng: "2",
@@ -74,7 +70,7 @@ func TestOr(t *testing.T) {
 	}
 	for _, test := range tests {
 		test := test
-		or := Or(test.assertions...)(q)
+		or := Or(test.assertions...)
 		if err := or.Assert(test.ok); err != nil {
 			t.Errorf("unexpected error: %s", err)
 		}

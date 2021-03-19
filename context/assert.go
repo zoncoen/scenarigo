@@ -2,7 +2,6 @@ package context
 
 import (
 	"github.com/pkg/errors"
-	"github.com/zoncoen/query-go"
 
 	"github.com/zoncoen/scenarigo/assert"
 )
@@ -10,7 +9,7 @@ import (
 var assertions = map[string]interface{}{
 	"and":                listArgsLeftArrowFunc(listArgsAssertion(assert.And)),
 	"or":                 listArgsLeftArrowFunc(listArgsAssertion(assert.Or)),
-	"notZero":            assert.NotZero,
+	"notZero":            assert.NotZero(),
 	"contains":           leftArrowFunc(assert.Contains),
 	"notContains":        leftArrowFunc(assert.NotContains),
 	"regexp":             assert.Regexp,
@@ -18,9 +17,10 @@ var assertions = map[string]interface{}{
 	"greaterThanOrEqual": assert.GreaterOrEqual,
 	"lessThan":           assert.Less,
 	"lessThanOrEqual":    assert.LessOrEqual,
+	"length":             assert.Length,
 }
 
-type leftArrowFunc func(assertion assert.Assertion) func(*query.Query) assert.Assertion
+type leftArrowFunc func(assertion assert.Assertion) assert.Assertion
 
 func (f leftArrowFunc) Exec(arg interface{}) (interface{}, error) {
 	assertion, ok := arg.(assert.Assertion)
@@ -38,8 +38,8 @@ func (leftArrowFunc) UnmarshalArg(unmarshal func(interface{}) error) (interface{
 	return assert.Build(i), nil
 }
 
-func listArgsAssertion(base func(...assert.Assertion) func(*query.Query) assert.Assertion) func(...interface{}) func(*query.Query) assert.Assertion {
-	return func(args ...interface{}) func(*query.Query) assert.Assertion {
+func listArgsAssertion(base func(...assert.Assertion) assert.Assertion) func(...interface{}) assert.Assertion {
+	return func(args ...interface{}) assert.Assertion {
 		var assertions []assert.Assertion
 		for _, arg := range args {
 			arg := arg
@@ -53,7 +53,7 @@ func listArgsAssertion(base func(...assert.Assertion) func(*query.Query) assert.
 	}
 }
 
-type listArgsLeftArrowFunc func(args ...interface{}) func(*query.Query) assert.Assertion
+type listArgsLeftArrowFunc func(args ...interface{}) assert.Assertion
 
 func (f listArgsLeftArrowFunc) Exec(arg interface{}) (interface{}, error) {
 	assertions, ok := arg.([]interface{})

@@ -4,13 +4,12 @@ import (
 	"encoding/json"
 	"reflect"
 
-	"github.com/zoncoen/query-go"
 	"github.com/zoncoen/scenarigo/errors"
 )
 
 // Equal returns an assertion to ensure a value equals the expected value.
-func Equal(q *query.Query, expected interface{}) Assertion {
-	return assertFunc(q, func(v interface{}) error {
+func Equal(expected interface{}) Assertion {
+	return AssertionFunc(func(v interface{}) error {
 		if n, ok := v.(json.Number); ok {
 			switch expected.(type) {
 			case int, int8, int16, int32, int64,
@@ -54,15 +53,9 @@ func Equal(q *query.Query, expected interface{}) Assertion {
 					return nil
 				}
 			}
-			if q.String() == "" {
-				return errors.Errorf("expected %T (%+v) but got %T (%+v)", expected, expected, v, v)
-			}
-			return errors.Errorf("%s: expected %T (%+v) but got %T (%+v)", q.String(), expected, expected, v, v)
+			return errors.Errorf("expected %T (%+v) but got %T (%+v)", expected, expected, v, v)
 		}
-		if q.String() == "" {
-			return errors.Errorf("expected %+v but got %+v", expected, v)
-		}
-		return errors.Errorf("%s: expected %+v but got %+v", q.String(), expected, v)
+		return errors.Errorf("expected %+v but got %+v", expected, v)
 	})
 }
 

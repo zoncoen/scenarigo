@@ -23,19 +23,6 @@ func (f AssertionFunc) Assert(v interface{}) error {
 	return f(v)
 }
 
-func assertFunc(q *query.Query, f func(interface{}) error) Assertion {
-	return AssertionFunc(func(v interface{}) error {
-		got, err := q.Extract(v)
-		if err != nil {
-			return errors.WithQuery(err, q)
-		}
-		if err := f(got); err != nil {
-			return errors.WithQuery(err, q)
-		}
-		return nil
-	})
-}
-
 // Build creates an assertion from Go value.
 func Build(expect interface{}) Assertion {
 	var assertions []Assertion
@@ -90,7 +77,7 @@ func build(q *query.Query, expect interface{}) []Assertion {
 		case func(*query.Query) Assertion:
 			assertions = append(assertions, v(q))
 		default:
-			assertions = append(assertions, Equal(q, v))
+			assertions = append(assertions, build(q, Equal(v))...)
 		}
 	}
 	return assertions

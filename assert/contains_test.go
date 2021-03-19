@@ -2,8 +2,6 @@ package assert
 
 import (
 	"testing"
-
-	"github.com/zoncoen/query-go"
 )
 
 func TestContains(t *testing.T) {
@@ -32,11 +30,10 @@ func TestContains(t *testing.T) {
 			expectError: true,
 		},
 	}
-	q := &query.Query{}
 	for name, test := range tests {
 		test := test
 		t.Run(name, func(t *testing.T) {
-			assertion := Contains(Equal(q, test.contains))(q)
+			assertion := Contains(Equal(test.contains))
 			err := assertion.Assert(test.in)
 			if !test.expectError && err != nil {
 				t.Fatalf("unexpected error: %s", err)
@@ -73,11 +70,10 @@ func TestNotContains(t *testing.T) {
 			notContains: 2,
 		},
 	}
-	q := &query.Query{}
 	for name, test := range tests {
 		test := test
 		t.Run(name, func(t *testing.T) {
-			assertion := NotContains(Equal(q, test.notContains))(q)
+			assertion := NotContains(Equal(test.notContains))
 			err := assertion.Assert(test.in)
 			if !test.expectError && err != nil {
 				t.Fatalf("unexpected error: %s", err)

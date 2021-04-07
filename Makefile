@@ -32,7 +32,12 @@ $(PROTOC): | $(BIN_DIR)
 PROTOC_GEN_GO := $(BIN_DIR)/protoc-gen-go
 $(PROTOC_GEN_GO): | $(BIN_DIR)
 	@cd $(TOOLS_DIR) && \
-		go build -o $(PROTOC_GEN_GO) github.com/golang/protobuf/protoc-gen-go
+		go build -o $(PROTOC_GEN_GO) google.golang.org/protobuf/cmd/protoc-gen-go
+
+PROTOC_GEN_GO_GRPC := $(BIN_DIR)/protoc-gen-go-grpc
+$(PROTOC_GEN_GO_GRPC): | $(BIN_DIR)
+	@cd $(TOOLS_DIR) && \
+		go build -o $(PROTOC_GEN_GO_GRPC) google.golang.org/grpc/cmd/protoc-gen-go-grpc
 
 GOPROTOYAMLTAG := $(BIN_DIR)/goprotoyamltag
 $(GOPROTOYAMLTAG): | $(BIN_DIR)
@@ -113,11 +118,12 @@ gen: gen/proto gen/plugins ## generate necessary files for testing
 
 .PHONY: gen/proto
 PROTOC_OPTION := -I$(PROTO_DIR)
-PROTOC_GO_OPTION := $(PROTOC_OPTION) --plugin=${BIN_DIR}/protoc-gen-go --go_out=plugins=grpc,paths=source_relative:$(GEN_PB_DIR)
-gen/proto: $(PROTOC) $(PROTOC_GEN_GO)
+PROTOC_GO_OPTION := --plugin=${BIN_DIR}/protoc-gen-go --go_out=$(GEN_PB_DIR) --go_opt=paths=source_relative
+PROTOC_GO_GRPC_OPTION := --go-grpc_out=require_unimplemented_servers=false:$(GEN_PB_DIR) --go-grpc_opt=paths=source_relative
+gen/proto: $(PROTOC) $(PROTOC_GEN_GO) $(PROTOC_GEN_GO_GRPC)
 	@rm -rf $(GEN_PB_DIR)
 	@mkdir -p $(GEN_PB_DIR)
-	@find $(PROTO_DIR) -name '*.proto' | xargs -P8 protoc $(PROTOC_GO_OPTION)
+	@find $(PROTO_DIR) -name '*.proto' | xargs -P8 protoc $(PROTOC_OPTION) $(PROTOC_GO_OPTION) $(PROTOC_GO_GRPC_OPTION)
 	@make add-yaml-tag
 	@make gen/mock
 
@@ -130,11 +136,12 @@ add-yaml-tag: $(GOPROTOYAMLTAG)
 
 .PHONY: gen/mock
 gen/mock: $(GOTYPENAMES) $(MOCKGEN)
-	@for file in $$(find $(GEN_PB_DIR) -name '*.pb.go'); do \
+	@for file in $$(find $(GEN_PB_DIR) -name '*_grpc.pb.go'); do \
 		package=$$(basename $$(dirname $$file)); \
 		echo "generate mock for $$file"; \
 		dstfile=$$(dirname $$file)/$$(basename $${file%.pb.go})_mock.go; \
-		gotypenames --filename $$file --only-exported --types interface | xargs -ISTRUCT -L1 -P8 mockgen -source $$file -package $$package -self_package $(GEN_PB_DIR)/$$package -destination $$dstfile; \
+		self=github.com/zoncoen/scenarigo`echo $(GEN_PB_DIR)/$$package | perl -pe 's!^$(CURDIR)!!g'`; \
+		gotypenames --filename $$file --only-exported --types interface | xargs -ISTRUCT -L1 -P8 mockgen -source $$file -package $$package -self_package $$self -destination $$dstfile; \
 		perl -pi -e 's!^// Source: .*\n!!g' $$dstfile ||  (echo "failed to delete generated marker about source path ( Source: /path/to/name.pb.go )"); \
 	done
 
@@ -164,6 +171,7 @@ credits: $(GO_LICENSES) $(GOCREDITS) ## generate CREDITS
 	@go mod download
 	@go-licenses check ./...
 	@gocredits . > CREDITS
+	@go mod tidy
 
 .PHONY: help
 help: ## print help

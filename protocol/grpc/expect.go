@@ -169,7 +169,7 @@ func (e *Expect) assertStatusDetails(sts *status.Status) error {
 			return errors.Errorf(`expected status.details[%d] is "%s" but got detail is not a proto message: "%#v"`, i, expectName, actualDetails[i])
 		}
 
-		if name := proto.MessageName(actual); name != expectName {
+		if name := string(proto.MessageV2(actual).ProtoReflect().Descriptor().FullName()); name != expectName {
 			return errors.Errorf(`expected status.details[%d] is "%s" but got detail is "%s"%s`, i, expectName, name, appendDetailsString(sts))
 		}
 
@@ -187,7 +187,7 @@ func appendDetailsString(sts *status.Status) string {
 
 	for _, i := range sts.Details() {
 		if pb, ok := i.(proto.Message); ok {
-			details = append(details, fmt.Sprintf(format, proto.MessageName(pb), pb.String()))
+			details = append(details, fmt.Sprintf(format, proto.MessageV2(pb).ProtoReflect().Descriptor().FullName(), pb.String()))
 			continue
 		}
 

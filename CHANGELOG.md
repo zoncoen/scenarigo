@@ -1,5 +1,19 @@
 # CHANGELOG
 
+<a name="v0.6.2"></a>
+## [v0.6.2] - 2021-03-19
+### Bug Fixes
+- **plugin:** avoid the error caused by loading plugins concurrently ([#78](https://github.com/zoncoen/scenarigo/issues/78))
+
+### Code Refactoring
+- **assert:** remove query from arguments
+
+### Features
+- **assert:** add length assertion
+- **assert:** add greaterThan/greaterThanOrEqual/lessThan/lessThanOrEqual ([#77](https://github.com/zoncoen/scenarigo/issues/77))
+- **reporter:** enable to generate test report ([#83](https://github.com/zoncoen/scenarigo/issues/83))
+- **reporter:** include the execution time of sub-tests ([#82](https://github.com/zoncoen/scenarigo/issues/82))
+
 <a name="v0.6.1"></a>
 ## [v0.6.1] - 2021-01-14
 ### Bug Fixes
@@ -87,6 +101,7 @@ change protocl.Protocol interface
 - first release
 
 
+[v0.6.2]: https://github.com/zoncoen/scenarigo/compare/v0.6.1...v0.6.2
 [v0.6.1]: https://github.com/zoncoen/scenarigo/compare/v0.6.0...v0.6.1
 [v0.6.0]: https://github.com/zoncoen/scenarigo/compare/v0.5.1...v0.6.0
 [v0.5.1]: https://github.com/zoncoen/scenarigo/compare/v0.5.0...v0.5.1

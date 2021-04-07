@@ -3,6 +3,9 @@ title: /echo
 steps:
 - title: include
   include: './included.yaml'
+  bind:
+    vars:
+      include: '{{vars.include}}'
 - title: POST /echo
   vars:
     id: "123"

@@ -11,6 +11,7 @@ import (
 	"github.com/zoncoen/scenarigo/context"
 	"github.com/zoncoen/scenarigo/errors"
 	"github.com/zoncoen/scenarigo/plugin"
+	"github.com/zoncoen/scenarigo/reporter"
 	"github.com/zoncoen/scenarigo/schema"
 )
 
@@ -46,8 +47,8 @@ func runStep(ctx *context.Context, s *schema.Step, stepIdx int) *context.Context
 			ctx.Reporter().Fatalf(`failed to create ast: %s`, err)
 		}
 		currentNode := ctx.Node()
-		ctx.Run(scenarios[0].Filepath(), func(ctx *context.Context) {
-			RunScenario(ctx.WithNode(includeNode), scenarios[0])
+		ctx.Reporter().Run(scenarios[0].Filepath(), func(rptr reporter.Reporter) {
+			ctx = RunScenario(ctx.WithReporter(rptr).WithNode(includeNode), scenarios[0])
 		})
 
 		// back node to current node

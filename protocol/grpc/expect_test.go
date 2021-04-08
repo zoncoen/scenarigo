@@ -5,15 +5,15 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/golang/protobuf/proto"
-	"google.golang.org/genproto/googleapis/rpc/errdetails"
-
 	"github.com/goccy/go-yaml"
-	"github.com/zoncoen/scenarigo/context"
-	"github.com/zoncoen/scenarigo/testdata/gen/pb/test"
+	"github.com/golang/protobuf/proto" // nolint:staticcheck
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+
+	"github.com/zoncoen/scenarigo/context"
+	"github.com/zoncoen/scenarigo/testdata/gen/pb/test"
 )
 
 func TestExpect_Build(t *testing.T) {

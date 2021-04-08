@@ -1,7 +1,7 @@
 package grpc
 
 import (
-	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/proto" // nolint:staticcheck
 	"google.golang.org/protobuf/reflect/protoreflect"
 
 	"github.com/zoncoen/scenarigo/assert"

@@ -1,0 +1,1 @@
+ok  	testdata/testcases/scenarios/grpc-enum.yaml	0.000s

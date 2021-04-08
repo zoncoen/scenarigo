@@ -1,0 +1,31 @@
+---
+title: enum integer
+plugins:
+  grpc: "grpc.so"
+steps:
+- protocol: grpc
+  request:
+    client: '{{plugins.grpc.CreateClient(ctx, env.TEST_GRPC_SERVER_ADDR)}}'
+    method: Echo
+    metadata:
+      token: "{{env.TEST_TOKEN}}"
+  expect:
+    code: OK
+    body:
+      userType: 1
+
+---
+title: enum string
+plugins:
+  grpc: "grpc.so"
+steps:
+- protocol: grpc
+  request:
+    client: '{{plugins.grpc.CreateClient(ctx, env.TEST_GRPC_SERVER_ADDR)}}'
+    method: Echo
+    metadata:
+      token: "{{env.TEST_TOKEN}}"
+  expect:
+    code: OK
+    body:
+      userType: "CUSTOMER"

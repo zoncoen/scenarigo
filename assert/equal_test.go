@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/zoncoen/scenarigo/testdata/gen/pb/test"
+	"github.com/zoncoen/scenarigo/errors"
 )
 
 func TestEqual(t *testing.T) {
@@ -52,16 +52,6 @@ func TestEqual(t *testing.T) {
 			ok:       myString("test"),
 			ng:       myString("develop"),
 		},
-		"enum integer": {
-			expected: int(test.UserType_CUSTOMER),
-			ok:       test.UserType_CUSTOMER,
-			ng:       test.UserType_USER_TYPE_UNSPECIFIED,
-		},
-		"enum string": {
-			expected: test.UserType_CUSTOMER.String(),
-			ok:       test.UserType_CUSTOMER,
-			ng:       test.UserType_USER_TYPE_UNSPECIFIED,
-		},
 		"json.Number (string)": {
 			expected: "100",
 			ok:       json.Number("100"),
@@ -87,6 +77,85 @@ func TestEqual(t *testing.T) {
 			}
 			if err := assertion.Assert(tc.ng); err == nil {
 				t.Errorf("expected error but no error")
+			}
+		})
+	}
+}
+
+func TestCustomEqualer(t *testing.T) {
+	RegisterCustomEqualer(EqualerFunc(func(a, b interface{}) (bool, error) {
+		v, ok := a.(int)
+		if !ok {
+			return false, nil
+		}
+		if v == 100 {
+			// 1 always succeeds
+			return true, nil
+		}
+		return true, errors.New("custom equaler 1")
+	}))
+	RegisterCustomEqualer(EqualerFunc(func(a, b interface{}) (bool, error) {
+		v, ok := a.(bool)
+		if !ok {
+			return false, nil
+		}
+		if v {
+			// true always succeeds
+			return true, nil
+		}
+		return true, errors.New("custom equaler 2")
+	}))
+	defer func() {
+		m.Lock()
+		defer m.Unlock()
+		equalers = nil
+	}()
+
+	tests := map[string]struct {
+		expected interface{}
+		got      interface{}
+		error    error
+	}{
+		"equal": {
+			expected: 0,
+			got:      0,
+			error:    nil,
+		},
+		"not equal but passed by first custom equaler": {
+			expected: 100,
+			got:      0,
+			error:    nil,
+		},
+		"not equal (first equaler returns error)": {
+			expected: 0,
+			got:      100,
+			error:    errors.New("custom equaler 1"),
+		},
+		"not equal (second equaler returns error)": {
+			expected: false,
+			got:      true,
+			error:    errors.New("custom equaler 2"),
+		},
+		"not equal (through all custom equalers)": {
+			expected: "100",
+			got:      0,
+			error:    errors.New("expected string (100) but got int (0)"),
+		},
+	}
+	for name, test := range tests {
+		test := test
+		t.Run(name, func(t *testing.T) {
+			gotError := Equal(test.expected).Assert(test.got)
+			if gotError == nil {
+				if test.error != nil {
+					t.Errorf("expect %q but got nil", test.error)
+				}
+			} else {
+				if test.error == nil {
+					t.Errorf("expect nil but got %q", gotError)
+				} else if gotError.Error() != test.error.Error() {
+					t.Errorf("expect %q but got %q", test.error, gotError)
+				}
 			}
 		})
 	}

@@ -1,7 +1,12 @@
 # CHANGELOG
 
+<a name="v0.6.3"></a>
+## [v0.6.3] - 2021-04-08
+### Bug Fixes
+- enable to bind vars defined in the included scenario
+
 <a name="v0.6.2"></a>
-## [v0.6.2] - 2021-03-19
+## [v0.6.2] - 2021-04-07
 ### Bug Fixes
 - **plugin:** avoid the error caused by loading plugins concurrently ([#78](https://github.com/zoncoen/scenarigo/issues/78))
 
@@ -101,6 +106,7 @@ change protocl.Protocol interface
 - first release
 
 
+[v0.6.3]: https://github.com/zoncoen/scenarigo/compare/v0.6.2...v0.6.3
 [v0.6.2]: https://github.com/zoncoen/scenarigo/compare/v0.6.1...v0.6.2
 [v0.6.1]: https://github.com/zoncoen/scenarigo/compare/v0.6.0...v0.6.1
 [v0.6.0]: https://github.com/zoncoen/scenarigo/compare/v0.5.1...v0.6.0

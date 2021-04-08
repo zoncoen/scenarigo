@@ -1,7 +1,11 @@
 package grpc
 
 import (
+	"fmt"
+	"reflect"
 	"testing"
+
+	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/zoncoen/scenarigo/testdata/gen/pb/test"
 )
@@ -42,4 +46,76 @@ func TestEqualEnum(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestEqualMessage(t *testing.T) {
+	tests := map[string]struct {
+		expected interface{}
+		got      interface{}
+		ok       bool
+	}{
+		"expected is not proto message": {
+			expected: "",
+			got:      &test.EchoResponse{},
+		},
+		"got is not proto message": {
+			expected: &test.EchoResponse{},
+			got:      "",
+		},
+		"equals": {
+			expected: echoResponse(t, "xxx", "hello"),
+			got: &test.EchoResponse{
+				MessageId:   "xxx",
+				MessageBody: "hello",
+			},
+			ok: true,
+		},
+		"not equals": {
+			expected: &test.EchoResponse{
+				MessageId:   "xxx",
+				MessageBody: "hello",
+			},
+			got: &test.EchoResponse{
+				MessageId:   "yyy",
+				MessageBody: "bye",
+			},
+		},
+	}
+	for name, test := range tests {
+		test := test
+		t.Run(name, func(t *testing.T) {
+			ok, err := equalMessage(test.expected, test.got)
+			if ok != test.ok {
+				t.Errorf("expect %t but got %t", test.ok, ok)
+			}
+			if err != nil {
+				t.Error(err)
+			}
+		})
+	}
+}
+
+func echoResponse(t *testing.T, id, body string) *test.EchoResponse {
+	t.Helper()
+
+	var msg test.EchoResponse
+	if err := protojson.Unmarshal([]byte(fmt.Sprintf(`
+{
+  "messageId": "%s",
+  "messageBody": "%s"
+}
+`, id, body)), &msg); err != nil {
+		t.Fatalf("failed to unmarshal: %s", err)
+	}
+
+	// Ensure at least one of the unexported fields is not zero value.
+	// nolint:govet
+	if reflect.DeepEqual(msg, test.EchoResponse{
+		MessageId:   id,
+		MessageBody: body,
+	}) {
+		t.Fatal("expect not deep equal for testing")
+	}
+
+	return &msg
 }

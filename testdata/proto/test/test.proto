@@ -24,6 +24,7 @@ message EchoResponse {
     string message_id = 1;
     string message_body = 2;
     int64 received_at = 3;
+    UserType user_type = 4;
     StringValue nullable_string = 11;
 }
 

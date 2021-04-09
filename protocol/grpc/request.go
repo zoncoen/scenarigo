@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/goccy/go-yaml"
-	"github.com/golang/protobuf/jsonpb"
-	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/jsonpb" // nolint:staticcheck
+	"github.com/golang/protobuf/proto"  // nolint:staticcheck
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"

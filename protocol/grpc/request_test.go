@@ -9,15 +9,17 @@ import (
 
 	"github.com/goccy/go-yaml"
 	"github.com/golang/mock/gomock"
-	"github.com/golang/protobuf/proto"
+	"github.com/golang/protobuf/proto" // nolint:staticcheck
 	"github.com/google/go-cmp/cmp"
 	"github.com/zoncoen/scenarigo/context"
+	"github.com/zoncoen/scenarigo/internal/mockutil"
 	"github.com/zoncoen/scenarigo/internal/testutil"
 	"github.com/zoncoen/scenarigo/reporter"
 	"github.com/zoncoen/scenarigo/testdata/gen/pb/test"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/testing/protocmp"
 )
 
 func TestRequest_Invoke(t *testing.T) {
@@ -29,7 +31,7 @@ func TestRequest_Invoke(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			client := test.NewMockTestClient(ctrl)
-			client.EXPECT().Echo(gomock.Any(), req, gomock.Any()).Return(resp, nil)
+			client.EXPECT().Echo(gomock.Any(), mockutil.ProtoMessage(req), gomock.Any()).Return(resp, nil)
 
 			r := &Request{
 				Client: "{{vars.client}}",
@@ -54,7 +56,7 @@ func TestRequest_Invoke(t *testing.T) {
 			if err != nil {
 				t.Fatalf("unexpected error: %s", err)
 			}
-			if diff := cmp.Diff(resp, message); diff != "" {
+			if diff := cmp.Diff(resp, message, protocmp.Transform()); diff != "" {
 				t.Errorf("differs: (-want +got)\n%s", diff)
 			}
 			if serr != nil {
@@ -62,10 +64,10 @@ func TestRequest_Invoke(t *testing.T) {
 			}
 
 			// ensure that ctx.WithRequest and ctx.WithResponse are called
-			if diff := cmp.Diff(req, ctx.Request()); diff != "" {
+			if diff := cmp.Diff(req, ctx.Request(), protocmp.Transform()); diff != "" {
 				t.Errorf("differs: (-want +got)\n%s", diff)
 			}
-			if diff := cmp.Diff(resp, ctx.Response()); diff != "" {
+			if diff := cmp.Diff(resp, ctx.Response(), protocmp.Transform()); diff != "" {
 				t.Errorf("differs: (-want +got)\n%s", diff)
 			}
 		})
@@ -75,7 +77,7 @@ func TestRequest_Invoke(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			client := test.NewMockTestClient(ctrl)
-			client.EXPECT().Echo(gomock.Any(), req, gomock.Any()).Return(nil, status.New(codes.Unauthenticated, "unauthenticated").Err())
+			client.EXPECT().Echo(gomock.Any(), mockutil.ProtoMessage(req), gomock.Any()).Return(nil, status.New(codes.Unauthenticated, "unauthenticated").Err())
 
 			r := &Request{
 				Client: "{{vars.client}}",
@@ -106,7 +108,7 @@ func TestRequest_Invoke(t *testing.T) {
 			}
 
 			// ensure that ctx.WithRequest and ctx.WithResponse are called
-			if diff := cmp.Diff(req, ctx.Request()); diff != "" {
+			if diff := cmp.Diff(req, ctx.Request(), protocmp.Transform()); diff != "" {
 				t.Errorf("differs: (-want +got)\n%s", diff)
 			}
 		})
@@ -184,7 +186,7 @@ func TestRequest_Invoke_Log(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	client := test.NewMockTestClient(ctrl)
-	client.EXPECT().Echo(gomock.Any(), req, gomock.Any()).Return(resp, nil)
+	client.EXPECT().Echo(gomock.Any(), mockutil.ProtoMessage(req), gomock.Any()).Return(resp, nil)
 
 	r := &Request{
 		Client: "{{vars.client}}",
@@ -368,7 +370,7 @@ func TestBuildRequestBody(t *testing.T) {
 			if tc.error {
 				t.Fatal("no error")
 			}
-			if diff := cmp.Diff(tc.expect, &req); diff != "" {
+			if diff := cmp.Diff(tc.expect, &req, protocmp.Transform()); diff != "" {
 				t.Errorf("differs: (-want +got)\n%s", diff)
 			}
 		})

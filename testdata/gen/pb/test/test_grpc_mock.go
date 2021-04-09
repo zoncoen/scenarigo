@@ -5,35 +5,36 @@ package test
 
 import (
 	context "context"
+	reflect "reflect"
+
 	gomock "github.com/golang/mock/gomock"
 	grpc "google.golang.org/grpc"
-	reflect "reflect"
 )
 
-// MockTestClient is a mock of TestClient interface
+// MockTestClient is a mock of TestClient interface.
 type MockTestClient struct {
 	ctrl     *gomock.Controller
 	recorder *MockTestClientMockRecorder
 }
 
-// MockTestClientMockRecorder is the mock recorder for MockTestClient
+// MockTestClientMockRecorder is the mock recorder for MockTestClient.
 type MockTestClientMockRecorder struct {
 	mock *MockTestClient
 }
 
-// NewMockTestClient creates a new mock instance
+// NewMockTestClient creates a new mock instance.
 func NewMockTestClient(ctrl *gomock.Controller) *MockTestClient {
 	mock := &MockTestClient{ctrl: ctrl}
 	mock.recorder = &MockTestClientMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockTestClient) EXPECT() *MockTestClientMockRecorder {
 	return m.recorder
 }
 
-// Echo mocks base method
+// Echo mocks base method.
 func (m *MockTestClient) Echo(ctx context.Context, in *EchoRequest, opts ...grpc.CallOption) (*EchoResponse, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{ctx, in}
@@ -46,37 +47,37 @@ func (m *MockTestClient) Echo(ctx context.Context, in *EchoRequest, opts ...grpc
 	return ret0, ret1
 }
 
-// Echo indicates an expected call of Echo
+// Echo indicates an expected call of Echo.
 func (mr *MockTestClientMockRecorder) Echo(ctx, in interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{ctx, in}, opts...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Echo", reflect.TypeOf((*MockTestClient)(nil).Echo), varargs...)
 }
 
-// MockTestServer is a mock of TestServer interface
+// MockTestServer is a mock of TestServer interface.
 type MockTestServer struct {
 	ctrl     *gomock.Controller
 	recorder *MockTestServerMockRecorder
 }
 
-// MockTestServerMockRecorder is the mock recorder for MockTestServer
+// MockTestServerMockRecorder is the mock recorder for MockTestServer.
 type MockTestServerMockRecorder struct {
 	mock *MockTestServer
 }
 
-// NewMockTestServer creates a new mock instance
+// NewMockTestServer creates a new mock instance.
 func NewMockTestServer(ctrl *gomock.Controller) *MockTestServer {
 	mock := &MockTestServer{ctrl: ctrl}
 	mock.recorder = &MockTestServerMockRecorder{mock}
 	return mock
 }
 
-// EXPECT returns an object that allows the caller to indicate expected use
+// EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockTestServer) EXPECT() *MockTestServerMockRecorder {
 	return m.recorder
 }
 
-// Echo mocks base method
+// Echo mocks base method.
 func (m *MockTestServer) Echo(arg0 context.Context, arg1 *EchoRequest) (*EchoResponse, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Echo", arg0, arg1)
@@ -85,8 +86,43 @@ func (m *MockTestServer) Echo(arg0 context.Context, arg1 *EchoRequest) (*EchoRes
 	return ret0, ret1
 }
 
-// Echo indicates an expected call of Echo
+// Echo indicates an expected call of Echo.
 func (mr *MockTestServerMockRecorder) Echo(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Echo", reflect.TypeOf((*MockTestServer)(nil).Echo), arg0, arg1)
+}
+
+// MockUnsafeTestServer is a mock of UnsafeTestServer interface.
+type MockUnsafeTestServer struct {
+	ctrl     *gomock.Controller
+	recorder *MockUnsafeTestServerMockRecorder
+}
+
+// MockUnsafeTestServerMockRecorder is the mock recorder for MockUnsafeTestServer.
+type MockUnsafeTestServerMockRecorder struct {
+	mock *MockUnsafeTestServer
+}
+
+// NewMockUnsafeTestServer creates a new mock instance.
+func NewMockUnsafeTestServer(ctrl *gomock.Controller) *MockUnsafeTestServer {
+	mock := &MockUnsafeTestServer{ctrl: ctrl}
+	mock.recorder = &MockUnsafeTestServerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockUnsafeTestServer) EXPECT() *MockUnsafeTestServerMockRecorder {
+	return m.recorder
+}
+
+// mustEmbedUnimplementedTestServer mocks base method.
+func (m *MockUnsafeTestServer) mustEmbedUnimplementedTestServer() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "mustEmbedUnimplementedTestServer")
+}
+
+// mustEmbedUnimplementedTestServer indicates an expected call of mustEmbedUnimplementedTestServer.
+func (mr *MockUnsafeTestServerMockRecorder) mustEmbedUnimplementedTestServer() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "mustEmbedUnimplementedTestServer", reflect.TypeOf((*MockUnsafeTestServer)(nil).mustEmbedUnimplementedTestServer))
 }

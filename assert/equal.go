@@ -3,9 +3,42 @@ package assert
 import (
 	"encoding/json"
 	"reflect"
+	"sync"
 
 	"github.com/zoncoen/scenarigo/errors"
 )
+
+var (
+	m        sync.RWMutex
+	equalers []Equaler
+)
+
+// Equaler is the interface for custom equaler.
+type Equaler interface {
+	// Equal checks two values are equal or not.
+	// If the ok is true, the err should be used as result.
+	Equal(expected, got interface{}) (ok bool, err error)
+}
+
+// RegisterCustomEqualer appends eq as a custom equaler.
+// Registered equaler will be used when all default equalers judge two values are not equal.
+func RegisterCustomEqualer(eq Equaler) {
+	m.Lock()
+	defer m.Unlock()
+	equalers = append(equalers, eq)
+}
+
+// EqualerFunc is an adaptor to allow the use of ordinary functions as Equaler.
+func EqualerFunc(eq func(interface{}, interface{}) (bool, error)) Equaler {
+	return equaler(eq)
+}
+
+type equaler func(interface{}, interface{}) (bool, error)
+
+// Equal implements Equaler interface.
+func (eq equaler) Equal(expected, got interface{}) (bool, error) {
+	return eq(expected, got)
+}
 
 // Equal returns an assertion to ensure a value equals the expected value.
 func Equal(expected interface{}) Assertion {
@@ -34,18 +67,16 @@ func Equal(expected interface{}) Assertion {
 			return nil
 		}
 
-		if t := reflect.TypeOf(v); t != reflect.TypeOf(expected) {
-			// handle enumeration strings
-			if s, ok := expected.(string); ok {
-				if enum, ok := v.(interface {
-					String() string
-					EnumDescriptor() ([]byte, []int)
-				}); ok {
-					if enum.String() == s {
-						return nil
-					}
-				}
+		m.RLock()
+		defer m.RUnlock()
+		for _, eq := range equalers {
+			ok, err := eq.Equal(expected, v)
+			if ok {
+				return err
 			}
+		}
+
+		if t := reflect.TypeOf(v); t != reflect.TypeOf(expected) {
 			// try type conversion
 			converted, err := convert(expected, t)
 			if err == nil {

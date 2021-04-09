@@ -1,0 +1,6 @@
+title: grpc enum
+scenarios:
+- filename: grpc-enum.yaml
+  success: true
+  output:
+    stdout: grpc-enum.txt

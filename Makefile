@@ -105,9 +105,10 @@ lint: $(GOLANGCI_LINT) ## run lint
 
 .PHONY: lint/ci
 lint/ci:
+	@go version
 	@make credits
 	@git add --all
-	@git diff --cached --quiet || (echo '"make credits" required'; exit 1)
+	@git diff --cached --exit-code || (echo '"make credits" required'; exit 1)
 
 .PHONY: clean
 clean: ## remove generated files

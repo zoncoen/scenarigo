@@ -1,6 +1,6 @@
 name: generate CREDITS
 on:
-  pull_request
+  pull_request_target
 jobs:
   generate:
     runs-on: ubuntu-latest

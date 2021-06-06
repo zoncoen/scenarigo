@@ -23,7 +23,7 @@ jobs:
     - name: Test
       run: make test/ci
     - name: Upload coverage
-      uses: codecov/codecov-action@v1
+      uses: codecov/codecov-action@v1.5.0
       with:
         file: ./coverage.out
         fail_ci_if_error: true

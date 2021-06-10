@@ -3,17 +3,16 @@ module github.com/zoncoen/scenarigo
 go 1.16
 
 require (
-	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/fatih/color v1.9.0 // indirect
 	github.com/goccy/go-yaml v1.7.15
 	github.com/golang/mock v1.5.0
 	github.com/golang/protobuf v1.5.2
 	github.com/google/go-cmp v0.5.5
 	github.com/hashicorp/go-multierror v1.0.0
-	github.com/lestrrat-go/backoff v1.0.0
+	github.com/lestrrat-go/backoff v1.0.1
 	github.com/mattn/go-colorable v0.1.6 // indirect
 	github.com/mattn/go-isatty v0.0.12
-	github.com/pkg/errors v0.8.1
+	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v0.0.7
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/zoncoen/query-go v1.0.1
@@ -24,5 +23,4 @@ require (
 	google.golang.org/genproto v0.0.0-20210406143921-e86de6bf7a46
 	google.golang.org/grpc v1.36.1
 	google.golang.org/protobuf v1.26.0
-	gopkg.in/yaml.v2 v2.3.0 // indirect
 )

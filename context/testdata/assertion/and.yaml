@@ -24,3 +24,22 @@ ok:
 - xxx
 ng:
 - yyy
+
+---
+name: left arrow function w/ assertion
+yaml: |-
+  {{assert.and <-}}:
+  - |-
+    {{assert.contains <-}}:
+      name: Alice
+  - |-
+    {{assert.contains <-}}:
+      name: Bob
+ok:
+-
+  - name: Alice
+  - name: Bob
+ng:
+-
+  - name: Bob
+  - name: Charlie

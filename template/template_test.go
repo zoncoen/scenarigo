@@ -397,3 +397,11 @@ func (*callFunc) UnmarshalArg(unmarshal func(interface{}) error) (interface{}, e
 	}
 	return &arg, nil
 }
+
+func TestFuncStash(t *testing.T) {
+	var s funcStash
+	name := s.save("value")
+	if s[name] != "value" {
+		t.Fatal("failed to save")
+	}
+}

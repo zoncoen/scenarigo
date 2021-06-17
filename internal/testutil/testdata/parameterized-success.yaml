@@ -1,0 +1,10 @@
+---
+name: example
+yaml:
+  key: value
+ok:
+  - ok-1
+  - ok-2
+ng:
+  - ng-1
+  - ng-2

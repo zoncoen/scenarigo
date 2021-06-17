@@ -1,0 +1,9 @@
+---
+name: not ok
+ok:
+  - ng
+
+---
+name: not ng
+ng:
+  - ok

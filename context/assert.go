@@ -7,11 +7,11 @@ import (
 )
 
 var assertions = map[string]interface{}{
-	"and":                listArgsLeftArrowFunc(listArgsAssertion(assert.And)),
-	"or":                 listArgsLeftArrowFunc(listArgsAssertion(assert.Or)),
+	"and":                listArgsLeftArrowFunc(buildArgs(assert.And)),
+	"or":                 listArgsLeftArrowFunc(buildArgs(assert.Or)),
 	"notZero":            assert.NotZero(),
-	"contains":           leftArrowFunc(assert.Contains),
-	"notContains":        leftArrowFunc(assert.NotContains),
+	"contains":           leftArrowFunc(buildArg(assert.Contains)),
+	"notContains":        leftArrowFunc(buildArg(assert.NotContains)),
 	"regexp":             assert.Regexp,
 	"greaterThan":        assert.Greater,
 	"greaterThanOrEqual": assert.GreaterOrEqual,
@@ -20,7 +20,17 @@ var assertions = map[string]interface{}{
 	"length":             assert.Length,
 }
 
-type leftArrowFunc func(assertion assert.Assertion) assert.Assertion
+func buildArg(base func(assert.Assertion) assert.Assertion) func(interface{}) assert.Assertion {
+	return func(arg interface{}) assert.Assertion {
+		assertion, ok := arg.(assert.Assertion)
+		if !ok {
+			assertion = assert.Build(arg)
+		}
+		return base(assertion)
+	}
+}
+
+type leftArrowFunc func(interface{}) assert.Assertion
 
 func (f leftArrowFunc) Exec(arg interface{}) (interface{}, error) {
 	assertion, ok := arg.(assert.Assertion)
@@ -38,7 +48,7 @@ func (leftArrowFunc) UnmarshalArg(unmarshal func(interface{}) error) (interface{
 	return assert.Build(i), nil
 }
 
-func listArgsAssertion(base func(...assert.Assertion) assert.Assertion) func(...interface{}) assert.Assertion {
+func buildArgs(base func(...assert.Assertion) assert.Assertion) func(...interface{}) assert.Assertion {
 	return func(args ...interface{}) assert.Assertion {
 		var assertions []assert.Assertion
 		for _, arg := range args {

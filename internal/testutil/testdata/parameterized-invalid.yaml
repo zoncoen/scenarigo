@@ -1,0 +1,5 @@
+---
+name: invalid yaml
+yaml: {{}}
+ng:
+  - no use

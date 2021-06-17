@@ -21,7 +21,7 @@ type Template struct {
 	expr ast.Expr
 
 	executingLeftArrowExprArg bool
-	argFuncs                  map[string]interface{}
+	argFuncs                  *funcStash
 }
 
 // New parses text as a template and returns it.
@@ -36,8 +36,9 @@ func New(str string) (*Template, error) {
 		return nil, errors.Errorf(`unknown node "%T"`, node)
 	}
 	return &Template{
-		str:  str,
-		expr: expr,
+		str:      str,
+		expr:     expr,
+		argFuncs: &funcStash{},
 	}, nil
 }
 
@@ -109,12 +110,11 @@ func (t *Template) executeParameterExpr(e *ast.ParameterExpr, data interface{}) 
 		// Replace the function into a string temporary.
 		// It will be restored in UnmarshalArg method.
 		if reflectutil.Elem(reflect.ValueOf(v)).Kind() == reflect.Func {
-			p := fmt.Sprintf("func-%p", v)
-			t.argFuncs[p] = v
+			name := t.argFuncs.save(v)
 			if e.Quoted {
-				return fmt.Sprintf("'{{%s}}'", p), nil
+				return fmt.Sprintf("'{{%s}}'", name), nil
 			}
-			return fmt.Sprintf("{{%s}}", p), nil
+			return fmt.Sprintf("{{%s}}", name), nil
 		}
 	}
 	return v, nil
@@ -273,11 +273,21 @@ func (t *Template) executeLeftArrowExprArg(arg ast.Expr, data interface{}) (inte
 	tt := &Template{
 		expr:                      arg,
 		executingLeftArrowExprArg: true,
-		argFuncs:                  map[string]interface{}{},
+		argFuncs:                  t.argFuncs,
 	}
 	v, err := tt.Execute(data)
-	t.argFuncs = tt.argFuncs
 	return v, err
+}
+
+type funcStash map[string]interface{}
+
+func (s *funcStash) save(f interface{}) string {
+	if *s == nil {
+		*s = funcStash{}
+	}
+	name := fmt.Sprintf("func-%d", len(*s))
+	(*s)[name] = f
+	return name
 }
 
 // Func represents a left arrow function.

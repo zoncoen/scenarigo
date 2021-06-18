@@ -12,10 +12,18 @@ type testStruct struct {
 	A      string
 	B      string       `yaml:"2"`
 	Inline inlineStruct `yaml:",inline"`
+
+	AnonymousStruct
+
+	unexported struct{}
 }
 
 type inlineStruct struct {
 	C string
+}
+
+type AnonymousStruct struct {
+	D string
 }
 
 type testKeyExtractor struct {
@@ -71,6 +79,16 @@ func TestKey_Extract(t *testing.T) {
 				v:      testStruct{Inline: inlineStruct{C: "CCC"}},
 				expect: "CCC",
 			},
+			"anonymous field": {
+				key:    "anonymousstruct",
+				v:      testStruct{AnonymousStruct: AnonymousStruct{D: "DDD"}},
+				expect: AnonymousStruct{D: "DDD"},
+			},
+			"anonymous field's field": {
+				key:    "d",
+				v:      testStruct{AnonymousStruct: AnonymousStruct{D: "DDD"}},
+				expect: "DDD",
+			},
 			"key extractor": {
 				key:    "key",
 				v:      &testKeyExtractor{v: "value"},
@@ -125,6 +143,27 @@ func TestKey_Extract(t *testing.T) {
 			"key extractor returns false": {
 				key: "key",
 				v:   &testKeyExtractor{},
+			},
+		}
+		for name, test := range tests {
+			test := test
+			t.Run(name, func(t *testing.T) {
+				e := Key(test.key)
+				v, ok := e.Extract(reflect.ValueOf(test.v))
+				if ok {
+					t.Fatalf("unexpected value: %#v", v)
+				}
+			})
+		}
+	})
+	t.Run("unexported", func(t *testing.T) {
+		tests := map[string]struct {
+			key string
+			v   interface{}
+		}{
+			"unexported field": {
+				key: "unexported",
+				v:   testStruct{unexported: struct{}{}},
 			},
 		}
 		for name, test := range tests {

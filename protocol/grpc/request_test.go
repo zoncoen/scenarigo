@@ -134,7 +134,7 @@ func TestRequest_Invoke(t *testing.T) {
 				},
 				client:      "{{vars.client}}",
 				method:      "Echo",
-				expectError: "client {{vars.client}} is invalid",
+				expectError: ".vars.client: invalid value",
 			},
 			"method not found": {
 				vars: map[string]interface{}{

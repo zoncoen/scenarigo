@@ -13,11 +13,17 @@ type testStruct struct {
 	B      string       `yaml:"2"`
 	Inline inlineStruct `yaml:",inline"`
 
+	AnonymousStruct
+
 	unexported struct{}
 }
 
 type inlineStruct struct {
 	C string
+}
+
+type AnonymousStruct struct {
+	D string
 }
 
 type testKeyExtractor struct {
@@ -72,6 +78,16 @@ func TestKey_Extract(t *testing.T) {
 				key:    "c",
 				v:      testStruct{Inline: inlineStruct{C: "CCC"}},
 				expect: "CCC",
+			},
+			"anonymous field": {
+				key:    "anonymousstruct",
+				v:      testStruct{AnonymousStruct: AnonymousStruct{D: "DDD"}},
+				expect: AnonymousStruct{D: "DDD"},
+			},
+			"anonymous field's field": {
+				key:    "d",
+				v:      testStruct{AnonymousStruct: AnonymousStruct{D: "DDD"}},
+				expect: "DDD",
 			},
 			"key extractor": {
 				key:    "key",

@@ -68,6 +68,11 @@ func (e *keyExtractor) extract(v reflect.Value) (reflect.Value, bool) {
 					}
 					name = strs[0]
 				}
+				if field.Anonymous {
+					if len(inlines) == 0 || inlines[len(inlines)-1] != i {
+						inlines = append(inlines, i)
+					}
+				}
 				if name == e.key {
 					return v.FieldByIndex([]int{i}), true
 				}

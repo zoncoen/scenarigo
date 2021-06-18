@@ -55,6 +55,9 @@ func (e *keyExtractor) extract(v reflect.Value) (reflect.Value, bool) {
 			inlines := []int{}
 			for i := 0; i < v.Type().NumField(); i++ {
 				field := v.Type().FieldByIndex([]int{i})
+				if !v.Field(i).CanInterface() {
+					continue
+				}
 				name := strings.ToLower(field.Name)
 				if tag, ok := field.Tag.Lookup("yaml"); ok {
 					strs := strings.Split(tag, ",")

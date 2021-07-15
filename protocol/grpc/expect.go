@@ -22,10 +22,13 @@ import (
 // Expect represents expected response values.
 type Expect struct {
 	Code    string        `yaml:"code"`
-	Body    interface{}   `yaml:"body"`
+	Message interface{}   `yaml:"message"`
 	Status  ExpectStatus  `yaml:"status"`
 	Header  yaml.MapSlice `yaml:"header"`
 	Trailer yaml.MapSlice `yaml:"trailer"`
+
+	// for backward compatibility
+	Body interface{} `yaml:"body,omitempty"`
 }
 
 // ExpectStatus represents expected gRPC status.
@@ -52,13 +55,13 @@ func (e *Expect) Build(ctx *context.Context) (assert.Assertion, error) {
 	}
 	codeAssertion := assert.Build(executedCode)
 
-	var msgAssertion assert.Assertion
+	var statusMsgAssertion assert.Assertion
 	if e.Status.Message != "" {
 		executedMsg, err := ctx.ExecuteTemplate(e.Status.Message)
 		if err != nil {
 			return nil, errors.WrapPathf(err, "message", "invalid expect response: %s", err)
 		}
-		msgAssertion = assert.Build(executedMsg)
+		statusMsgAssertion = assert.Build(executedMsg)
 	}
 
 	headerAssertion, err := assertutil.BuildHeaderAssertion(ctx, e.Header)
@@ -70,11 +73,11 @@ func (e *Expect) Build(ctx *context.Context) (assert.Assertion, error) {
 		return nil, errors.WrapPathf(err, "trailer", "invalid expect trailer")
 	}
 
-	expectBody, err := ctx.ExecuteTemplate(e.Body)
+	expectMsg, err := ctx.ExecuteTemplate(e.Message)
 	if err != nil {
-		return nil, errors.WrapPathf(err, "body", "invalid expect response: %s", err)
+		return nil, errors.WrapPathf(err, "message", "invalid expect response: %s", err)
 	}
-	bodyAssertion := assert.Build(expectBody)
+	msgAssertion := assert.Build(expectMsg)
 
 	return assert.AssertionFunc(func(v interface{}) error {
 		resp, ok := v.(response)
@@ -88,7 +91,7 @@ func (e *Expect) Build(ctx *context.Context) (assert.Assertion, error) {
 		if err := assertStatusCode(codeAssertion, stErr); err != nil {
 			return errors.WithPath(err, codePath)
 		}
-		if err := e.assertStatusMessage(msgAssertion, stErr); err != nil {
+		if err := e.assertStatusMessage(statusMsgAssertion, stErr); err != nil {
 			return errors.WithPath(err, "status.message")
 		}
 		if err := e.assertStatusDetails(stErr); err != nil {
@@ -100,8 +103,8 @@ func (e *Expect) Build(ctx *context.Context) (assert.Assertion, error) {
 		if err := trailerAssertion.Assert(resp.Trailer); err != nil {
 			return errors.WithPath(err, "trailer")
 		}
-		if err := bodyAssertion.Assert(message); err != nil {
-			return errors.WithPath(err, "body")
+		if err := msgAssertion.Assert(message); err != nil {
+			return errors.WithPath(err, "message")
 		}
 		return nil
 	}), nil

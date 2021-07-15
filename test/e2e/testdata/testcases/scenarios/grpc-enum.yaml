@@ -11,7 +11,7 @@ steps:
       token: "{{env.TEST_TOKEN}}"
   expect:
     code: OK
-    body:
+    message:
       userType: 1
 
 ---
@@ -27,5 +27,5 @@ steps:
       token: "{{env.TEST_TOKEN}}"
   expect:
     code: OK
-    body:
+    message:
       userType: "CUSTOMER"

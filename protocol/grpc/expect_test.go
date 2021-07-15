@@ -68,7 +68,7 @@ func TestExpect_Build(t *testing.T) {
 			"assert body": {
 				expect: &Expect{
 					Code: "OK",
-					Body: yaml.MapSlice{
+					Message: yaml.MapSlice{
 						yaml.MapItem{
 							Key:   "messageId",
 							Value: "1",
@@ -194,7 +194,7 @@ func TestExpect_Build(t *testing.T) {
 				vars: map[string]string{"body": "hello"},
 				expect: &Expect{
 					Code: "OK",
-					Body: yaml.MapSlice{
+					Message: yaml.MapSlice{
 						yaml.MapItem{
 							Key:   "messageId",
 							Value: "1",
@@ -243,7 +243,7 @@ func TestExpect_Build(t *testing.T) {
 			"failed to execute template": {
 				expect: &Expect{
 					Code: "OK",
-					Body: yaml.MapSlice{
+					Message: yaml.MapSlice{
 						yaml.MapItem{
 							Key:   "messageId",
 							Value: "1",
@@ -338,7 +338,7 @@ func TestExpect_Build(t *testing.T) {
 			"wrong body": {
 				expect: &Expect{
 					Code: "OK",
-					Body: yaml.MapSlice{
+					Message: yaml.MapSlice{
 						yaml.MapItem{
 							Key:   "messageId",
 							Value: "1",

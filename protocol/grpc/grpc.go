@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"bytes"
+	"errors"
 
 	"github.com/goccy/go-yaml"
 	"github.com/zoncoen/scenarigo/protocol"
@@ -25,6 +26,16 @@ func (p *GRPC) UnmarshalRequest(b []byte) (protocol.Invoker, error) {
 	if err := yaml.Unmarshal(b, &r); err != nil {
 		return nil, err
 	}
+
+	// for backward compatibility
+	if r.Body != nil {
+		if r.Message != nil {
+			return nil, errors.New("body is deprecated, use message field only")
+		}
+		r.Message = r.Body
+		r.Body = nil
+	}
+
 	return &r, nil
 }
 
@@ -38,5 +49,15 @@ func (p *GRPC) UnmarshalExpect(b []byte) (protocol.AssertionBuilder, error) {
 	if err := decoder.Decode(&e); err != nil {
 		return nil, err
 	}
+
+	// for backward compatibility
+	if e.Body != nil {
+		if e.Message != nil {
+			return nil, errors.New("body is deprecated, use message field only")
+		}
+		e.Message = e.Body
+		e.Body = nil
+	}
+
 	return &e, nil
 }

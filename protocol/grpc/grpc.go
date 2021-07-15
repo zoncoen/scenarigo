@@ -23,7 +23,7 @@ func (p *GRPC) Name() string {
 // UnmarshalRequest implements protocol.Protocol interface.
 func (p *GRPC) UnmarshalRequest(b []byte) (protocol.Invoker, error) {
 	var r Request
-	if err := yaml.Unmarshal(b, &r); err != nil {
+	if err := yaml.UnmarshalWithOptions(b, &r, yaml.Strict()); err != nil {
 		return nil, err
 	}
 

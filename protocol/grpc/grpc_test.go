@@ -54,6 +54,14 @@ func TestGRPC_UnmarshalRequest(t *testing.T) {
 		tests := map[string]struct {
 			bytes []byte
 		}{
+			"unknown field": {
+				bytes: []byte(`a: b`),
+			},
+			"duplicated field": {
+				bytes: []byte(`
+method: Ping
+method: Ping`),
+			},
 			"use body and message": {
 				bytes: []byte(`
 body: test

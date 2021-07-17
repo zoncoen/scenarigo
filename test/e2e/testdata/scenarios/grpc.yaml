@@ -16,12 +16,12 @@ steps:
     method: Echo
     metadata:
       token: "{{env.TEST_TOKEN}}"
-    body:
+    message:
       messageId: "{{vars.id}}"
       messageBody: "{{vars.message}}"
   expect:
     code: OK
-    body:
+    message:
       messageId: "{{request.messageId}}"
       messageBody: "{{request.messageBody}}"
       nullableString: null

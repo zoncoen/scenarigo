@@ -23,13 +23,16 @@ type Request struct {
 	Client   string      `yaml:"client,omitempty"`
 	Method   string      `yaml:"method"`
 	Metadata interface{} `yaml:"metadata,omitempty"`
-	Body     interface{} `yaml:"body,omitempty"`
+	Message  interface{} `yaml:"message,omitempty"`
+
+	// for backward compatibility
+	Body interface{} `yaml:"body,omitempty"`
 }
 
 type response struct {
 	Header  metadata.MD     `yaml:"header,omitempty"`
 	Trailer metadata.MD     `yaml:"trailer,omitempty"`
-	Body    interface{}     `yaml:"body,omitempty"`
+	Message interface{}     `yaml:"message,omitempty"`
 	rvalues []reflect.Value `yaml:"-"`
 }
 
@@ -108,8 +111,8 @@ func (r *Request) Invoke(ctx *context.Context) (*context.Context, interface{}, e
 			in = append(in, reflect.ValueOf(reqCtx))
 		case 1:
 			req := reflect.New(method.Type().In(i).Elem()).Interface()
-			if err := buildRequestBody(ctx, req, r.Body); err != nil {
-				return ctx, nil, errors.WrapPathf(err, "body", "failed to build request body")
+			if err := buildRequestMsg(ctx, req, r.Message); err != nil {
+				return ctx, nil, errors.WrapPathf(err, "message", "failed to build request message")
 			}
 
 			ctx = ctx.WithRequest(req)
@@ -117,7 +120,7 @@ func (r *Request) Invoke(ctx *context.Context) (*context.Context, interface{}, e
 			if b, err := yaml.Marshal(Request{
 				Method:   r.Method,
 				Metadata: reqMD,
-				Body:     req,
+				Message:  req,
 			}); err == nil {
 				ctx.Reporter().Logf("request:\n%s", r.addIndent(string(b), indentNum))
 			} else {
@@ -135,14 +138,14 @@ func (r *Request) Invoke(ctx *context.Context) (*context.Context, interface{}, e
 	)
 
 	rvalues := method.Call(in)
-	body := rvalues[0].Interface()
+	message := rvalues[0].Interface()
 	resp := response{
 		Header:  header,
 		Trailer: trailer,
-		Body:    body,
+		Message: message,
 		rvalues: rvalues,
 	}
-	ctx = ctx.WithResponse(body)
+	ctx = ctx.WithResponse(message)
 	if b, err := yaml.Marshal(resp); err == nil {
 		ctx.Reporter().Logf("response:\n%s", r.addIndent(string(b), indentNum))
 	} else {
@@ -189,7 +192,7 @@ func validateMethod(method reflect.Value) error {
 	return nil
 }
 
-func buildRequestBody(ctx *context.Context, req interface{}, src interface{}) error {
+func buildRequestMsg(ctx *context.Context, req interface{}, src interface{}) error {
 	x, err := ctx.ExecuteTemplate(src)
 	if err != nil {
 		return err

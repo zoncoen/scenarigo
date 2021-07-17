@@ -12,7 +12,6 @@ import (
 	"testing"
 
 	"github.com/goccy/go-yaml"
-	"github.com/google/go-cmp/cmp"
 	"github.com/zoncoen/scenarigo"
 	"github.com/zoncoen/scenarigo/context"
 	"github.com/zoncoen/scenarigo/internal/testutil"
@@ -80,8 +79,10 @@ func TestE2E(t *testing.T) {
 						t.Fatal(err)
 					}
 
-					if diff := cmp.Diff(string(stdout), testutil.ResetDuration(b.String())); diff != "" {
-						t.Errorf("stdout differs (-want +got):\n%s", diff)
+					if expect, got := string(stdout), testutil.ResetDuration(b.String()); expect != got {
+						t.Logf("===== expect =====\n%s", expect)
+						t.Logf("===== got =====\n%s", got)
+						t.FailNow()
 					}
 				})
 			}

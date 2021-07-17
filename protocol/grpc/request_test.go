@@ -36,7 +36,7 @@ func TestRequest_Invoke(t *testing.T) {
 			r := &Request{
 				Client: "{{vars.client}}",
 				Method: "Echo",
-				Body: yaml.MapSlice{
+				Message: yaml.MapSlice{
 					yaml.MapItem{Key: "messageId", Value: "1"},
 					yaml.MapItem{Key: "messageBody", Value: "hello"},
 				},
@@ -82,7 +82,7 @@ func TestRequest_Invoke(t *testing.T) {
 			r := &Request{
 				Client: "{{vars.client}}",
 				Method: "Echo",
-				Body: yaml.MapSlice{
+				Message: yaml.MapSlice{
 					yaml.MapItem{Key: "messageId", Value: "1"},
 					yaml.MapItem{Key: "messageBody", Value: "hello"},
 				},
@@ -194,7 +194,7 @@ func TestRequest_Invoke_Log(t *testing.T) {
 		Metadata: map[string]string{
 			"version": "1.0.0",
 		},
-		Body: yaml.MapSlice{
+		Message: yaml.MapSlice{
 			yaml.MapItem{Key: "messageId", Value: "1"},
 			yaml.MapItem{Key: "messageBody", Value: "hello"},
 		},
@@ -220,12 +220,12 @@ func TestRequest_Invoke_Log(t *testing.T) {
           metadata:
             version:
             - 1.0.0
-          body:
+          message:
             messageId: "1"
             messageBody: hello
           
         response:
-          body:
+          message:
             messageId: "1"
             messageBody: hello
           
@@ -360,7 +360,7 @@ func TestBuildRequestBody(t *testing.T) {
 				ctx = ctx.WithVars(tc.vars)
 			}
 			var req test.EchoRequest
-			err := buildRequestBody(ctx, &req, tc.src)
+			err := buildRequestMsg(ctx, &req, tc.src)
 			if err != nil {
 				if !tc.error {
 					t.Fatalf("unexpected error: %s", err)

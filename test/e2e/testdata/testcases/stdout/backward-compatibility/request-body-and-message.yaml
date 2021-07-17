@@ -1,0 +1,5 @@
+--- FAIL: testdata/testcases/scenarios/backward-compatibility/request-body-and-message.yaml (0.00s)
+        failed to load scenarios: failed to decode YAML: body is deprecated, use message field only
+FAIL
+FAIL	testdata/testcases/scenarios/backward-compatibility/request-body-and-message.yaml	0.000s
+FAIL

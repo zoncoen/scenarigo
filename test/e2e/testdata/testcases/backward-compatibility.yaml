@@ -1,0 +1,14 @@
+title: backward compatibility
+scenarios:
+- filename: backward-compatibility/body.yaml
+  success: true
+  output:
+    stdout: backward-compatibility/body.yaml
+- filename: backward-compatibility/request-body-and-message.yaml
+  success: false
+  output:
+    stdout: backward-compatibility/request-body-and-message.yaml
+- filename: backward-compatibility/expect-body-and-message.yaml
+  success: false
+  output:
+    stdout: backward-compatibility/expect-body-and-message.yaml

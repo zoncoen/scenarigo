@@ -1,16 +1,13 @@
 package scenarigo
 
 import (
-	"bytes"
+	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
 
-	"github.com/goccy/go-yaml/ast"
-	"github.com/goccy/go-yaml/parser"
 	"github.com/mattn/go-isatty"
 	"github.com/pkg/errors"
 
@@ -130,30 +127,6 @@ func (r *Runner) setEnabledColor(envColor string) {
 	r.enabledColor = result
 }
 
-func newYAMLNode(path string, docIdx int) (ast.Node, error) {
-	bytes, err := ioutil.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	file, err := parser.ParseBytes(bytes, 0)
-	if err != nil {
-		return nil, err
-	}
-	return file.Docs[docIdx].Body, nil
-}
-
-func newYAMLNodeFromReader(reader io.Reader, docIdx int) (ast.Node, error) {
-	bytes, err := ioutil.ReadAll(reader)
-	if err != nil {
-		return nil, err
-	}
-	file, err := parser.ParseBytes(bytes, 0)
-	if err != nil {
-		return nil, err
-	}
-	return file.Docs[docIdx].Body, nil
-}
-
 // ScenariosFiles returns all scenario file paths.
 func (r *Runner) ScenarioFiles() []string {
 	return r.scenarioFiles
@@ -196,13 +169,9 @@ func (r *Runner) Run(ctx *context.Context) {
 			if err != nil {
 				ctx.Reporter().Fatalf("failed to load scenarios: %s", err)
 			}
-			for idx, scn := range scns {
+			for _, scn := range scns {
 				scn := scn
-				node, err := newYAMLNode(f, idx)
-				if err != nil {
-					ctx.Reporter().Fatalf("failed to create ast: %s", err)
-				}
-				ctx = ctx.WithNode(node)
+				ctx = ctx.WithNode(scn.Node)
 				ctx.Run(scn.Title, func(ctx *context.Context) {
 					ctx.Reporter().Parallel()
 					_ = RunScenario(ctx, scn)
@@ -210,23 +179,15 @@ func (r *Runner) Run(ctx *context.Context) {
 			}
 		})
 	}
-	for _, reader := range r.scenarioReaders {
-		ctx.Run("", func(ctx *context.Context) {
-			buf := new(bytes.Buffer)
-			if _, err := buf.ReadFrom(reader); err != nil {
-				ctx.Reporter().Fatalf("failed to read from io.Reader: %s", err)
-			}
-			scns, err := schema.LoadScenariosFromReader(bytes.NewBuffer(buf.Bytes()))
+	for i, reader := range r.scenarioReaders {
+		ctx.Run(fmt.Sprint(i), func(ctx *context.Context) {
+			scns, err := schema.LoadScenariosFromReader(reader)
 			if err != nil {
 				ctx.Reporter().Fatalf("failed to load scenarios: %s", err)
 			}
-			for idx, scn := range scns {
+			for _, scn := range scns {
 				scn := scn
-				node, err := newYAMLNodeFromReader(bytes.NewBuffer(buf.Bytes()), idx)
-				if err != nil {
-					ctx.Reporter().Fatalf("failed to create ast: %s", err)
-				}
-				ctx = ctx.WithNode(node)
+				ctx = ctx.WithNode(scn.Node)
 				ctx.Run(scn.Title, func(ctx *context.Context) {
 					ctx.Reporter().Parallel()
 					_ = RunScenario(ctx, scn)

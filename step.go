@@ -42,13 +42,9 @@ func runStep(ctx *context.Context, s *schema.Step, stepIdx int) *context.Context
 		if len(scenarios) != 1 {
 			ctx.Reporter().Fatalf(`failed to include "%s" as step: must be a scenario`, s.Include)
 		}
-		includeNode, err := newYAMLNode(s.Include, 0)
-		if err != nil {
-			ctx.Reporter().Fatalf(`failed to create ast: %s`, err)
-		}
 		currentNode := ctx.Node()
 		ctx.Reporter().Run(scenarios[0].Filepath(), func(rptr reporter.Reporter) {
-			ctx = RunScenario(ctx.WithReporter(rptr).WithNode(includeNode), scenarios[0])
+			ctx = RunScenario(ctx.WithReporter(rptr).WithNode(scenarios[0].Node), scenarios[0])
 		})
 
 		// back node to current node

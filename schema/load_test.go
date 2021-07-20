@@ -2,11 +2,13 @@ package schema
 
 import (
 	"bytes"
+	"io"
 	"strings"
 	"testing"
 
 	"github.com/goccy/go-yaml"
 	"github.com/google/go-cmp/cmp"
+	"github.com/pkg/errors"
 	"github.com/zoncoen/scenarigo/assert"
 	"github.com/zoncoen/scenarigo/context"
 	"github.com/zoncoen/scenarigo/protocol"
@@ -204,6 +206,9 @@ func TestLoadScenarios(t *testing.T) {
 						if s == "Steps.Expect.bytes" {
 							return true
 						}
+						if s == "Node" {
+							return true
+						}
 						return false
 					}, cmp.Ignore()),
 				); diff != "" {
@@ -214,6 +219,14 @@ func TestLoadScenarios(t *testing.T) {
 				}
 				if diff := cmp.Diff(test.expect, p.expect); diff != "" {
 					t.Errorf("expect differs (-want +got):\n%s", diff)
+				}
+				for i, scn := range got {
+					if g, e := scn.filepath, test.path; g != e {
+						t.Errorf("[%d] expect %q but got %q", i, e, g)
+					}
+					if scn.Node == nil {
+						t.Errorf("[%d] Node is nil", i)
+					}
 				}
 			})
 		}
@@ -230,6 +243,9 @@ func TestLoadScenarios(t *testing.T) {
 		}{
 			"not found": {
 				path: "notfound.yaml",
+			},
+			"parse error": {
+				path: "testdata/parse-error.yaml",
 			},
 			"invalid": {
 				path: "testdata/invalid.yaml",
@@ -334,6 +350,9 @@ steps:
 						if s == "Steps.Expect" {
 							return true
 						}
+						if s == "Node" {
+							return true
+						}
 						return false
 					}, cmp.Ignore()),
 				); diff != "" {
@@ -345,27 +364,35 @@ steps:
 				if diff := cmp.Diff(test.expect, p.expect); diff != "" {
 					t.Errorf("expect differs (-want +got):\n%s", diff)
 				}
+				for i, scn := range got {
+					if g, e := scn.filepath, ""; g != e {
+						t.Errorf("[%d] expect %q but got %q", i, e, g)
+					}
+					if scn.Node == nil {
+						t.Errorf("[%d] Node is nil", i)
+					}
+				}
 			})
 		}
 	})
 	t.Run("failure", func(t *testing.T) {
-		p := &testProtocol{
-			name: "test",
-		}
-		protocol.Register(p)
-		defer protocol.Unregister(p.Name())
-
 		tests := map[string]struct {
-			yaml string
+			r io.Reader
 		}{
-			"invalid": {
-				yaml: `title: {}`,
+			"failed to read": {
+				r: errReader{errors.New("read error")},
+			},
+			"parse error": {
+				r: strings.NewReader(`
+a:
+- b
+  c: d`),
 			},
 		}
 		for name, test := range tests {
 			test := test
 			t.Run(name, func(t *testing.T) {
-				_, err := LoadScenariosFromReader(strings.NewReader(test.yaml))
+				_, err := LoadScenariosFromReader(test.r)
 				if err == nil {
 					t.Fatal("expected error but no error")
 				}
@@ -373,3 +400,9 @@ steps:
 		}
 	})
 }
+
+type errReader struct {
+	err error
+}
+
+func (r errReader) Read(_ []byte) (int, error) { return 0, r.err }

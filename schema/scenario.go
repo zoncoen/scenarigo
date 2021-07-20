@@ -2,7 +2,9 @@
 package schema
 
 import (
+	"github.com/goccy/go-yaml/ast"
 	"github.com/pkg/errors"
+
 	"github.com/zoncoen/scenarigo/assert"
 	"github.com/zoncoen/scenarigo/context"
 	"github.com/zoncoen/scenarigo/protocol"
@@ -22,6 +24,7 @@ type Scenario struct {
 	Anchors anchors `yaml:"anchors"`
 
 	filepath string // YAML filepath
+	Node     ast.Node
 }
 
 // Filepath returns YAML filepath of s.

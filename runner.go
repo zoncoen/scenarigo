@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"strconv"
 
-	"github.com/mattn/go-isatty"
+	"github.com/fatih/color"
 	"github.com/pkg/errors"
 
 	"github.com/zoncoen/scenarigo/context"
@@ -42,7 +42,7 @@ func WithPluginDir(path string) func(*Runner) error {
 // NewRunner returns a new test runner.
 func NewRunner(opts ...func(*Runner) error) (*Runner, error) {
 	r := &Runner{}
-	r.enabledColor = isatty.IsTerminal(os.Stdout.Fd())
+	r.enabledColor = !color.NoColor
 	for _, opt := range opts {
 		if err := opt(r); err != nil {
 			return nil, err

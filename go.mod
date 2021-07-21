@@ -3,14 +3,14 @@ module github.com/zoncoen/scenarigo
 go 1.16
 
 require (
-	github.com/fatih/color v1.12.0 // indirect
+	github.com/fatih/color v1.12.0
 	github.com/goccy/go-yaml v1.9.1
 	github.com/golang/mock v1.6.0
 	github.com/golang/protobuf v1.5.2
 	github.com/google/go-cmp v0.5.6
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/lestrrat-go/backoff v1.0.1
-	github.com/mattn/go-isatty v0.0.13
+	github.com/mattn/go-isatty v0.0.13 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v0.0.7
 	github.com/spf13/pflag v1.0.5 // indirect

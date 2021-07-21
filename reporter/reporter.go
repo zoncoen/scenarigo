@@ -13,6 +13,14 @@ import (
 	"sync/atomic"
 	"time"
 	"unicode"
+
+	"github.com/fatih/color"
+)
+
+var (
+	passColor = color.New(color.FgGreen)
+	failColor = color.New(color.FgHiRed)
+	skipColor = color.New(color.FgYellow)
 )
 
 // A Reporter is something that can be used to report test results.
@@ -309,7 +317,7 @@ func print(r *reporter) {
 	results := collectOutput(r)
 	r.context.printf("%s\n", strings.Join(results, "\n"))
 	if r.Failed() {
-		r.context.printf("FAIL\n")
+		r.context.printf(failColor.Sprintln("FAIL"))
 	}
 }
 
@@ -318,13 +326,16 @@ func collectOutput(r *reporter) []string {
 	if r.Failed() || r.context.verbose {
 		prefix := strings.Repeat("    ", r.depth-1)
 		status := "PASS"
+		c := passColor
 		if r.Failed() {
 			status = "FAIL"
+			c = failColor
 		} else if r.Skipped() {
 			status = "SKIP"
+			c = skipColor
 		}
 		results = []string{
-			fmt.Sprintf("%s--- %s: %s (%.2fs)", prefix, status, r.goTestName, r.durationMeasurer.getDuration().Seconds()),
+			c.Sprintf("%s--- %s: %s (%.2fs)", prefix, status, r.goTestName, r.durationMeasurer.getDuration().Seconds()),
 		}
 		for _, l := range r.logs.all() {
 			padding := fmt.Sprintf("%s    ", prefix)
@@ -337,14 +348,14 @@ func collectOutput(r *reporter) []string {
 	if r.depth == 1 {
 		if r.Failed() {
 			results = append(results,
-				fmt.Sprintf("FAIL\nFAIL\t%s\t%.3fs", r.goTestName, r.durationMeasurer.getDuration().Seconds()),
+				failColor.Sprintf("FAIL\nFAIL\t%s\t%.3fs", r.goTestName, r.durationMeasurer.getDuration().Seconds()),
 			)
 		} else {
 			if r.context.verbose {
-				results = append(results, "PASS")
+				results = append(results, passColor.Sprint("PASS"))
 			}
 			results = append(results,
-				fmt.Sprintf("ok  \t%s\t%.3fs", r.goTestName, r.durationMeasurer.getDuration().Seconds()),
+				passColor.Sprintf("ok  \t%s\t%.3fs", r.goTestName, r.durationMeasurer.getDuration().Seconds()),
 			)
 		}
 	}

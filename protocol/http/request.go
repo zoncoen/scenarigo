@@ -5,7 +5,6 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -93,7 +92,7 @@ func (r *Request) Invoke(ctx *context.Context) (*context.Context, interface{}, e
 		reader = resp.Body
 	}
 
-	b, err := ioutil.ReadAll(reader)
+	b, err := io.ReadAll(reader)
 	if err != nil {
 		return ctx, nil, errors.Errorf("failed to read response body: %s", err)
 	}

@@ -3,7 +3,6 @@ package schema
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 
 	"github.com/goccy/go-yaml"
 	"github.com/goccy/go-yaml/ast"
@@ -22,7 +21,7 @@ func LoadScenarios(path string) ([]*Scenario, error) {
 
 // LoadScenariosFromReader loads test scenarios with io.Reader.
 func LoadScenariosFromReader(r io.Reader) ([]*Scenario, error) {
-	b, err := ioutil.ReadAll(r)
+	b, err := io.ReadAll(r)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to read")
 	}

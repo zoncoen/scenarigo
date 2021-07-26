@@ -40,6 +40,8 @@ $ scenarigo run github.yaml
 
 #### Use as Go package
 
+This package requires Go 1.16 or later.
+
 ```go main_test.go
 package main
 

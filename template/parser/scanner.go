@@ -3,7 +3,6 @@ package parser
 import (
 	"bufio"
 	"io"
-	"io/ioutil"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -173,7 +172,7 @@ func (s *scanner) scan() (int, token.Token, string) {
 			if ch := s.read(); ch != ':' {
 				return s.pos - 1, token.ILLEGAL, string(ch)
 			}
-			b, err := ioutil.ReadAll(s.r)
+			b, err := io.ReadAll(s.r)
 			if err != nil {
 				return s.pos, token.ILLEGAL, err.Error()
 			}

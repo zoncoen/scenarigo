@@ -2,7 +2,7 @@ package scenarigo
 
 import (
 	"bytes"
-	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/zoncoen/scenarigo/context"
@@ -47,7 +47,7 @@ steps:
 
 func createTempScenario(t *testing.T, scenario string) string {
 	t.Helper()
-	f, err := ioutil.TempFile("", "*.yaml")
+	f, err := os.CreateTemp("", "*.yaml")
 	if err != nil {
 		t.Fatalf("failed to create temp file: %s", err)
 	}

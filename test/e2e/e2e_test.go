@@ -4,7 +4,7 @@ package scenarigo
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
 	"net"
 	"os"
 	"path/filepath"
@@ -22,7 +22,7 @@ import (
 
 func TestE2E(t *testing.T) {
 	dir := "testdata/testcases"
-	infos, err := ioutil.ReadDir(dir)
+	infos, err := os.ReadDir(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -74,7 +74,7 @@ func TestE2E(t *testing.T) {
 					}
 					defer f.Close()
 
-					stdout, err := ioutil.ReadAll(f)
+					stdout, err := io.ReadAll(f)
 					if err != nil {
 						t.Fatal(err)
 					}

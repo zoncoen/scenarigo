@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"strings"
 	"testing"
@@ -452,7 +452,7 @@ func TestTestReport_MarshalXML(t *testing.T) {
 				t.Fatalf("failed to open: %s", err)
 			}
 			defer f.Close()
-			expected, err := ioutil.ReadAll(f)
+			expected, err := io.ReadAll(f)
 			if err != nil {
 				t.Fatalf("failed to read: %s", err)
 			}

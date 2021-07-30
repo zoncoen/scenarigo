@@ -13,7 +13,8 @@ import (
 
 var listCmd = &cobra.Command{
 	Use:           "list",
-	Short:         "lists the test scenarios ( or steps of scenario )",
+	Short:         "list the test scenarios",
+	Long:          "Lists the test scenarios.",
 	Args:          cobra.MinimumNArgs(1),
 	RunE:          list,
 	SilenceErrors: true,

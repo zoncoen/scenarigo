@@ -31,6 +31,13 @@ func WithVerboseLog() Option {
 	}
 }
 
+// WithNoColor returns an option to disable colored log.
+func WithNoColor() Option {
+	return func(ctx *testContext) {
+		ctx.noColor = true
+	}
+}
+
 // testContext holds all fields that are common to all tests.
 type testContext struct {
 	m sync.Mutex
@@ -52,6 +59,8 @@ type testContext struct {
 
 	// verbose indicates that prints verbose log or not.
 	verbose bool
+
+	noColor bool
 }
 
 func newTestContext(opts ...Option) *testContext {

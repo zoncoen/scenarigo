@@ -1,0 +1,13 @@
+schemaVersion: config/v1
+scenarios:
+  - a.yaml
+  - b.yaml
+pluginDirectory: plugins
+output:
+  verbose: true
+  colored: true
+  report:
+    json:
+      filename: report.json
+    junit:
+      filename: junit.xml

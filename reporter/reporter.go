@@ -17,12 +17,6 @@ import (
 	"github.com/fatih/color"
 )
 
-var (
-	passColor = color.New(color.FgGreen)
-	failColor = color.New(color.FgHiRed)
-	skipColor = color.New(color.FgYellow)
-)
-
 // A Reporter is something that can be used to report test results.
 type Reporter interface {
 	Name() string
@@ -317,7 +311,7 @@ func print(r *reporter) {
 	results := collectOutput(r)
 	r.context.printf("%s\n", strings.Join(results, "\n"))
 	if r.Failed() {
-		r.context.printf(failColor.Sprintln("FAIL"))
+		r.context.printf(r.failColor().Sprintln("FAIL"))
 	}
 }
 
@@ -326,13 +320,13 @@ func collectOutput(r *reporter) []string {
 	if r.Failed() || r.context.verbose {
 		prefix := strings.Repeat("    ", r.depth-1)
 		status := "PASS"
-		c := passColor
+		c := r.passColor()
 		if r.Failed() {
 			status = "FAIL"
-			c = failColor
+			c = r.failColor()
 		} else if r.Skipped() {
 			status = "SKIP"
-			c = skipColor
+			c = r.skipColor()
 		}
 		results = []string{
 			c.Sprintf("%s--- %s: %s (%.2fs)", prefix, status, r.goTestName, r.durationMeasurer.getDuration().Seconds()),
@@ -348,14 +342,14 @@ func collectOutput(r *reporter) []string {
 	if r.depth == 1 {
 		if r.Failed() {
 			results = append(results,
-				failColor.Sprintf("FAIL\nFAIL\t%s\t%.3fs", r.goTestName, r.durationMeasurer.getDuration().Seconds()),
+				r.failColor().Sprintf("FAIL\nFAIL\t%s\t%.3fs", r.goTestName, r.durationMeasurer.getDuration().Seconds()),
 			)
 		} else {
 			if r.context.verbose {
-				results = append(results, passColor.Sprint("PASS"))
+				results = append(results, r.passColor().Sprint("PASS"))
 			}
 			results = append(results,
-				passColor.Sprintf("ok  \t%s\t%.3fs", r.goTestName, r.durationMeasurer.getDuration().Seconds()),
+				r.passColor().Sprintf("ok  \t%s\t%.3fs", r.goTestName, r.durationMeasurer.getDuration().Seconds()),
 			)
 		}
 	}
@@ -396,4 +390,25 @@ func (r *reporter) getChildren() []Reporter {
 		children[i] = child
 	}
 	return children
+}
+
+func (r *reporter) passColor() *color.Color {
+	if r.context.noColor {
+		return color.New()
+	}
+	return color.New(color.FgGreen)
+}
+
+func (r *reporter) failColor() *color.Color {
+	if r.context.noColor {
+		return color.New()
+	}
+	return color.New(color.FgHiRed)
+}
+
+func (r *reporter) skipColor() *color.Color {
+	if r.context.noColor {
+		return color.New()
+	}
+	return color.New(color.FgYellow)
 }

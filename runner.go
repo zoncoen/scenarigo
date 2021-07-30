@@ -1,6 +1,8 @@
 package scenarigo
 
 import (
+	"encoding/json"
+	"encoding/xml"
 	"fmt"
 	"io"
 	"os"
@@ -12,6 +14,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/zoncoen/scenarigo/context"
+	"github.com/zoncoen/scenarigo/reporter"
 	"github.com/zoncoen/scenarigo/schema"
 
 	// Register default protocols.
@@ -25,18 +28,8 @@ type Runner struct {
 	scenarioFiles   []string
 	scenarioReaders []io.Reader
 	enabledColor    bool
-}
-
-// WithPluginDir returns a option which sets plugin root directory.
-func WithPluginDir(path string) func(*Runner) error {
-	return func(r *Runner) error {
-		abs, err := filepath.Abs(path)
-		if err != nil {
-			return errors.Wrapf(err, `failed to set plugin directory "%s"`, path)
-		}
-		r.pluginDir = &abs
-		return nil
-	}
+	rootDir         string
+	reportConfig    schema.ReportConfig
 }
 
 // NewRunner returns a new test runner.
@@ -51,14 +44,51 @@ func NewRunner(opts ...func(*Runner) error) (*Runner, error) {
 	return r, nil
 }
 
+// WithConfig returns a option which sets configuration.
+func WithConfig(config *schema.Config) func(*Runner) error {
+	return func(r *Runner) error {
+		if config == nil {
+			return nil
+		}
+		var opts []func(r *Runner) error
+		opts = append(opts, WithScenarios(config.Scenarios...))
+		if config.PluginDirectory != "" {
+			opts = append(opts, WithPluginDir(config.PluginDirectory))
+		}
+		for _, opt := range opts {
+			if err := opt(r); err != nil {
+				return err
+			}
+		}
+		if config.Output.Colored != nil {
+			r.enabledColor = *config.Output.Colored
+		}
+		r.rootDir = config.Root
+		r.reportConfig = config.Output.Report
+		return nil
+	}
+}
+
 // WithScenarios returns a option which finds and sets test scenario files.
 func WithScenarios(paths ...string) func(*Runner) error {
 	return func(r *Runner) error {
 		files, err := getAllFiles(paths...)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to find test scenarios: %w", err)
 		}
 		r.scenarioFiles = files
+		return nil
+	}
+}
+
+// WithPluginDir returns a option which sets plugin root directory.
+func WithPluginDir(path string) func(*Runner) error {
+	return func(r *Runner) error {
+		abs, err := filepath.Abs(path)
+		if err != nil {
+			return errors.Wrapf(err, `failed to set plugin directory "%s"`, path)
+		}
+		r.pluginDir = &abs
 		return nil
 	}
 }
@@ -195,4 +225,46 @@ func (r *Runner) Run(ctx *context.Context) {
 			}
 		})
 	}
+	r.writeTestReport(ctx)
+}
+
+func (r *Runner) writeTestReport(ctx *context.Context) {
+	var report *reporter.TestReport
+	if r.reportConfig.JSON.Filename != "" {
+		report = r.generateTestReport(ctx, report)
+		f, err := os.Create(filepath.Join(r.rootDir, r.reportConfig.JSON.Filename))
+		if err != nil {
+			ctx.Reporter().Fatalf("failed to write JSON test report: %s", err)
+		}
+		defer f.Close()
+		enc := json.NewEncoder(f)
+		enc.SetIndent("", "  ")
+		if err := enc.Encode(report); err != nil {
+			ctx.Reporter().Fatalf("failed to write JSON test report: %s", err)
+		}
+	}
+	if r.reportConfig.JUnit.Filename != "" {
+		report = r.generateTestReport(ctx, report)
+		f, err := os.Create(filepath.Join(r.rootDir, r.reportConfig.JUnit.Filename))
+		if err != nil {
+			ctx.Reporter().Fatalf("failed to write JUnit test report: %s", err)
+		}
+		defer f.Close()
+		enc := xml.NewEncoder(f)
+		enc.Indent("", "  ")
+		if err := enc.Encode(report); err != nil {
+			ctx.Reporter().Fatalf("failed to write JUnit test report: %s", err)
+		}
+	}
+}
+
+func (r *Runner) generateTestReport(ctx *context.Context, report *reporter.TestReport) *reporter.TestReport {
+	if report != nil {
+		return report
+	}
+	report, err := reporter.GenerateTestReport(ctx.Reporter())
+	if err != nil {
+		ctx.Reporter().Fatalf("failed to generate test report: %s", err)
+	}
+	return report
 }

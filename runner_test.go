@@ -10,8 +10,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+
 	"github.com/zoncoen/scenarigo/context"
 	"github.com/zoncoen/scenarigo/reporter"
+	"github.com/zoncoen/scenarigo/schema"
 )
 
 func TestRunnerWithScenarios(t *testing.T) {
@@ -227,5 +230,171 @@ func TestRunner_ScenarioMap(t *testing.T) {
 				t.Fatal("failed to get steps from scenario map")
 			}
 		}
+	}
+}
+
+func TestWithConfig(t *testing.T) {
+	pluginDir := "plugins"
+	pluginDirAbs, err := filepath.Abs(pluginDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	colored := true
+	tests := map[string]struct {
+		config *schema.Config
+		expect *Runner
+	}{
+		"nil": {
+			config: nil,
+			expect: &Runner{},
+		},
+		"empty": {
+			config: &schema.Config{},
+			expect: &Runner{
+				scenarioFiles: []string{},
+			},
+		},
+		"scenarios": {
+			config: &schema.Config{
+				Scenarios: []string{"testdata/use_include.yaml"},
+			},
+			expect: &Runner{
+				scenarioFiles: []string{"testdata/use_include.yaml"},
+			},
+		},
+		"plugin directory": {
+			config: &schema.Config{
+				PluginDirectory: pluginDir,
+			},
+			expect: &Runner{
+				scenarioFiles: []string{},
+				pluginDir:     &pluginDirAbs,
+			},
+		},
+		"output colored": {
+			config: &schema.Config{
+				Output: schema.OutputConfig{
+					Colored: &colored,
+				},
+			},
+			expect: &Runner{
+				scenarioFiles: []string{},
+				enabledColor:  colored,
+			},
+		},
+		"output report": {
+			config: &schema.Config{
+				Output: schema.OutputConfig{
+					Report: schema.ReportConfig{
+						JSON: schema.JSONReportConfig{
+							Filename: "report.json",
+						},
+						JUnit: schema.JUnitReportConfig{
+							Filename: "report.json",
+						},
+					},
+				},
+			},
+			expect: &Runner{
+				scenarioFiles: []string{},
+				reportConfig: schema.ReportConfig{
+					JSON: schema.JSONReportConfig{
+						Filename: "report.json",
+					},
+					JUnit: schema.JUnitReportConfig{
+						Filename: "report.json",
+					},
+				},
+			},
+		},
+	}
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			got, err := NewRunner(WithConfig(test.config))
+			if err != nil {
+				t.Fatalf("unexpected error: %s", err)
+			}
+			if diff := cmp.Diff(test.expect, got,
+				cmp.AllowUnexported(Runner{}),
+			); diff != "" {
+				t.Errorf("differs (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestWriteTestReport(t *testing.T) {
+	tests := map[string]struct {
+		config schema.ReportConfig
+		files  []string
+	}{
+		"default": {},
+		"json": {
+			config: schema.ReportConfig{
+				JSON: schema.JSONReportConfig{
+					Filename: "report.json",
+				},
+			},
+			files: []string{"report.json"},
+		},
+		"junit": {
+			config: schema.ReportConfig{
+				JUnit: schema.JUnitReportConfig{
+					Filename: "junit.xml",
+				},
+			},
+			files: []string{"junit.xml"},
+		},
+		"all": {
+			config: schema.ReportConfig{
+				JSON: schema.JSONReportConfig{
+					Filename: "report.json",
+				},
+				JUnit: schema.JUnitReportConfig{
+					Filename: "junit.xml",
+				},
+			},
+			files: []string{"report.json", "junit.xml"},
+		},
+	}
+	for name, test := range tests {
+		test := test
+		t.Run(name, func(t *testing.T) {
+			dir := t.TempDir()
+			r, err := NewRunner(WithConfig(&schema.Config{
+				Output: schema.OutputConfig{
+					Report: test.config,
+				},
+				Root: dir,
+			}))
+			if err != nil {
+				t.Fatalf("failed to create a runner: %s", err)
+			}
+
+			if success := reporter.Run(func(rptr reporter.Reporter) {
+				r.writeTestReport(context.New(rptr))
+			}); !success {
+				t.Fatal("runner failed")
+			}
+
+			entries, err := os.ReadDir(dir)
+			if err != nil {
+				t.Fatalf("failed to read directory: %s", err)
+			}
+			filenames := map[string]struct{}{}
+			for _, e := range entries {
+				filenames[e.Name()] = struct{}{}
+			}
+			for _, file := range test.files {
+				if _, ok := filenames[file]; !ok {
+					t.Errorf("%q not found", file)
+				} else {
+					delete(filenames, file)
+				}
+			}
+			for name := range filenames {
+				t.Errorf("unexpected file %q created", name)
+			}
+		})
 	}
 }

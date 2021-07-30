@@ -1,13 +1,17 @@
 package cmd
 
 import (
-	"errors"
+	"fmt"
 	"os"
 
+	"github.com/fatih/color"
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/zoncoen/scenarigo"
+	"github.com/zoncoen/scenarigo/cmd/scenarigo/cmd/config"
 	"github.com/zoncoen/scenarigo/context"
 	"github.com/zoncoen/scenarigo/reporter"
+	"github.com/zoncoen/scenarigo/schema"
 )
 
 // ErrTestFailed is the error returned when the test failed.
@@ -23,7 +27,7 @@ func init() {
 var runCmd = &cobra.Command{
 	Use:           "run",
 	Short:         "run test scenarios",
-	Args:          cobra.MinimumNArgs(1),
+	Long:          "Runs test scenarios.",
 	RunE:          run,
 	SilenceErrors: true,
 	SilenceUsage:  true,
@@ -31,6 +35,13 @@ var runCmd = &cobra.Command{
 
 func run(cmd *cobra.Command, args []string) error {
 	opts := []func(*scenarigo.Runner) error{}
+	cfg, err := loadConfig(configFile)
+	if err != nil {
+		return fmt.Errorf("failed to load config: %w", err)
+	}
+	if cfg != nil {
+		opts = append(opts, scenarigo.WithConfig(cfg))
+	}
 	for _, arg := range args {
 		opts = append(opts, scenarigo.WithScenarios(arg))
 	}
@@ -42,8 +53,16 @@ func run(cmd *cobra.Command, args []string) error {
 	reporterOpts := []reporter.Option{
 		reporter.WithWriter(os.Stdout),
 	}
-	if verbose {
+	if (cfg != nil && cfg.Output.Verbose) || verbose {
 		reporterOpts = append(reporterOpts, reporter.WithVerboseLog())
+	}
+
+	noColor := color.NoColor
+	if cfg != nil && cfg.Output.Colored != nil {
+		noColor = !*cfg.Output.Colored
+	}
+	if noColor {
+		reporterOpts = append(reporterOpts, reporter.WithNoColor())
 	}
 
 	success := reporter.Run(
@@ -56,4 +75,18 @@ func run(cmd *cobra.Command, args []string) error {
 		return ErrTestFailed
 	}
 	return nil
+}
+
+func loadConfig(cfgpath string) (*schema.Config, error) {
+	if cfgpath != "" {
+		return schema.LoadConfig(cfgpath, !color.NoColor)
+	}
+	cfg, err := schema.LoadConfig(config.DefaultConfigFileName, !color.NoColor)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return cfg, nil
 }

@@ -7,11 +7,11 @@
 [![codebeat](https://codebeat.co/badges/93ee2453-1a25-4db6-b98e-c430c994b4b8)](https://codebeat.co/projects/github-com-zoncoen-scenarigo-master)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-An end-to-end scenario testing tool for HTTP/gRPC server.
+A scenario-based API testing tool for HTTP/gRPC server.
 
 ## Overview
 
-scenarigo is an end-to-end scenario testing tool for HTTP/gRPC server.
+scenarigo is a scenario-based API testing tool for HTTP/gRPC server.
 It is written in Go, enable to customize by [the plugin package of Go](https://golang.org/pkg/plugin/).
 You can write test scenarios as YAML files and executes them.
 

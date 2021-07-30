@@ -64,7 +64,7 @@ func TestLoadConfig(t *testing.T) {
 			found: true,
 		},
 		"specify file": {
-			filename: "./testdata/.scenarigo.yaml",
+			filename: "./testdata/scenarigo.yaml",
 			found:    true,
 		},
 		"specify file (not found)": {

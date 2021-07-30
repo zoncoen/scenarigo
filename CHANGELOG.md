@@ -1,5 +1,34 @@
 # CHANGELOG
 
+<a name="v0.7.0"></a>
+## [v0.7.0] - 2020-08-01
+### Bug Fixes
+- **assert:** fix the assertion operators
+- **assert:** fix the logic to compare Go protobuf APIv2 messages
+- **grpc:** rename body field to message
+- **query:** don't access unexported field
+
+### Code Refactoring
+- don't use ioutil package
+
+### Features
+- change default configuration filename
+- enable to set configurations by file
+- add WithConfig option
+- colorize outputs
+- support NO_COLOR standard
+- enable strictly check on request field
+- use Go protobuf APIv2
+- **assert:** enable to change the behavior of equal assertion
+- **query:** allow accessing anonymous fields
+
+### Performance Improvements
+- reuse parsed AST node to print error tokens
+
+### BREAKING CHANGE
+
+This package requires Go 1.16 or later.
+
 <a name="v0.6.3"></a>
 ## [v0.6.3] - 2021-04-08
 ### Bug Fixes
@@ -106,6 +135,7 @@ change protocl.Protocol interface
 - first release
 
 
+[v0.7.0]: https://github.com/zoncoen/scenarigo/compare/v0.6.3...v0.7.0
 [v0.6.3]: https://github.com/zoncoen/scenarigo/compare/v0.6.2...v0.6.3
 [v0.6.2]: https://github.com/zoncoen/scenarigo/compare/v0.6.1...v0.6.2
 [v0.6.1]: https://github.com/zoncoen/scenarigo/compare/v0.6.0...v0.6.1

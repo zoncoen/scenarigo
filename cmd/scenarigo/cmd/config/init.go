@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const DefaultConfigFileName = ".scenarigo.yaml"
+const DefaultConfigFileName = "scenarigo.yaml"
 
 //go:embed default.scenarigo.yaml
 var defaultConfig []byte

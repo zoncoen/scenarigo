@@ -17,7 +17,11 @@ func lookup(node ast.Node, data interface{}) (interface{}, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create query from AST")
 	}
-	return q.Extract(data)
+	v, err := q.Extract(data)
+	if err != nil {
+		return nil, err
+	}
+	return Execute(v, data)
 }
 
 func newQuery() *query.Query {

@@ -168,6 +168,15 @@ func TestExecute(t *testing.T) {
 			in:       &iface,
 			expected: "test",
 		},
+		"variable is a template string": {
+			in:       "{{a}}",
+			expected: "test",
+			vars: map[string]string{
+				"a": "{{b}}",
+				"b": "{{c}}",
+				"c": "test",
+			},
+		},
 	}
 	for name, test := range tests {
 		test := test

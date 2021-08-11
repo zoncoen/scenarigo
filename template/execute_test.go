@@ -194,7 +194,6 @@ func TestExecute(t *testing.T) {
 
 func TestConvert(t *testing.T) {
 	convertToStr := convert(reflect.TypeOf(""))
-	convertToStrPtr := convert(reflect.PtrTo(reflect.TypeOf("")))
 	t.Run("convert to string", func(t *testing.T) {
 		s := "test"
 		v, err := convertToStr(reflect.ValueOf(&s), nil)
@@ -205,39 +204,8 @@ func TestConvert(t *testing.T) {
 			t.Fatalf("expect %s but got %s", expect, got)
 		}
 	})
-	t.Run("convert to string pointer", func(t *testing.T) {
-		v, err := convertToStrPtr(reflect.ValueOf("test"), nil)
-		if err != nil {
-			t.Fatalf("failed to convert: %s", err)
-		}
-		if got, expect := v.Type().Kind(), reflect.Ptr; got != expect {
-			t.Fatalf("expect %s but got %s", expect, got)
-		}
-		if got, expect := v.Type().Elem().Kind(), reflect.String; got != expect {
-			t.Fatalf("expect %s but got %s", expect, got)
-		}
-	})
-	t.Run("can't convert", func(t *testing.T) {
-		v, err := convertToStrPtr(reflect.ValueOf(1), nil)
-		if err != nil {
-			t.Fatalf("failed to convert: %s", err)
-		}
-		if got, expect := v.Type().Kind(), reflect.Int; got != expect {
-			t.Fatalf("expect %s but got %s", expect, got)
-		}
-	})
-	t.Run("invalid value", func(t *testing.T) {
-		invalid := reflect.ValueOf(nil)
-		v, err := convertToStrPtr(invalid, nil)
-		if err != nil {
-			t.Fatalf("failed to convert: %s", err)
-		}
-		if got, expect := v, invalid; got != expect {
-			t.Fatalf("expect %s but got %s", expect, got)
-		}
-	})
 	t.Run("error", func(t *testing.T) {
-		_, err := convertToStrPtr(reflect.Value{}, errors.New("execute() failed"))
+		_, err := convertToStr(reflect.Value{}, errors.New("execute() failed"))
 		if err == nil {
 			t.Fatal("no error")
 		}

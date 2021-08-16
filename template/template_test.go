@@ -167,24 +167,25 @@ func TestTemplate_Execute(t *testing.T) {
 `, "\n"),
 			data: map[string]interface{}{
 				"join": &joinFunc{},
-				"call": &callFunc{},
 				"f":    func(s string) string { return s },
 				"text": "test",
 			},
 			expect: "preout-prein-test-sufin-sufout",
 		},
-		"left arrow func with the arg which contains non-string variable": {
+		"left arrow func with the non-string argument": {
 			str: strings.Trim(`
-{{echo <-}}:
-  message: |-
-    {{echo <-}}:
-      message: '{{message}}'
+{{join <-}}: '{{arg}}'
 `, "\n"),
 			data: map[string]interface{}{
-				"echo":    &echoFunc{},
-				"message": 0,
+				"join": &joinFunc{},
+				"arg": map[string]interface{}{
+					"prefix": "pre-",
+					"text":   "{{text}}",
+					"suffix": "-suf",
+				},
+				"text": 0,
 			},
-			expect: "0",
+			expect: "pre-0-suf",
 		},
 		"left arrow func (complex)": {
 			str: strings.Trim(`
@@ -288,6 +289,53 @@ func TestTemplate_ExecuteDirect(t *testing.T) {
 			}
 			if diff := cmp.Diff(test.expect, i); diff != "" {
 				t.Errorf("diff: (-want +got)\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestTemplate_add(t *testing.T) {
+	tests := map[string]struct {
+		tmpl   *Template
+		x      interface{}
+		y      interface{}
+		expect string
+	}{
+		"string + string": {
+			tmpl:   &Template{},
+			x:      "a",
+			y:      "b",
+			expect: "ab",
+		},
+		"string + map (marshaled)": {
+			tmpl: &Template{
+				executingLeftArrowExprArg: true,
+			},
+			x: `
+- `,
+			y: map[string]interface{}{
+				"a": 1,
+				"b": 2,
+			},
+			expect: `
+- a: 1
+  b: 2
+`,
+		},
+	}
+	for name, test := range tests {
+		test := test
+		t.Run(name, func(t *testing.T) {
+			v, err := test.tmpl.add(test.x, test.y)
+			if err != nil {
+				t.Fatalf("failed to add: %s", err)
+			}
+			s, ok := v.(string)
+			if !ok {
+				t.Fatalf("expect string but got %T", v)
+			}
+			if s != test.expect {
+				t.Errorf("expect %q but got %q", test.expect, s)
 			}
 		})
 	}

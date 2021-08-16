@@ -138,18 +138,18 @@ func (t *Template) executeBinaryExpr(e *ast.BinaryExpr, data interface{}) (inter
 }
 
 func (t *Template) add(x, y interface{}) (interface{}, error) {
-	strX, err := t.stringize(x)
+	strX, err := t.stringize(x, "")
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to concat strings")
 	}
-	strY, err := t.stringize(y)
+	strY, err := t.stringize(y, strX)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to concat strings")
 	}
 	return strX + strY, nil
 }
 
-func (t *Template) stringize(v interface{}) (string, error) {
+func (t *Template) stringize(v interface{}, preStr string) (string, error) {
 	s, ok := v.(string)
 	if ok {
 		return s, nil
@@ -159,7 +159,40 @@ func (t *Template) stringize(v interface{}) (string, error) {
 		if err != nil {
 			return "", errors.Wrap(err, "failed to marshal")
 		}
-		return string(b), nil
+		str := string(b)
+
+		// align indents of marshaled texts
+		//
+		// example: stringize(map[string]int{"a": 1, "b": 2}, "- ")
+		// === before ===
+		// - a: 1
+		// b: 2
+		// === after ===
+		// - a: 1
+		//   b: 2
+		if strings.ContainsRune(str, '\n') && preStr != "" {
+			x := strings.Split(preStr, "\n")
+			prefix := strings.Repeat(" ", len([]rune(x[len(x)-1])))
+			var b strings.Builder
+			for i, s := range strings.Split(str, "\n") {
+				if i != 0 {
+					if _, err := b.WriteRune('\n'); err != nil {
+						return "", err
+					}
+					if s != "" {
+						if _, err := b.WriteString(prefix); err != nil {
+							return "", err
+						}
+					}
+				}
+				if _, err := b.WriteString(s); err != nil {
+					return "", err
+				}
+			}
+			return b.String(), nil
+		}
+
+		return str, nil
 	}
 	return "", errors.Errorf("expect string but got %T", v)
 }

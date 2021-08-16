@@ -97,7 +97,10 @@ func execute(in reflect.Value, data interface{}) (reflect.Value, error) {
 					fieldName := structFieldName(v.Type().Field(i))
 					return reflect.Value{}, errors.WithPath(err, fieldName)
 				}
-				field.Set(x)
+				if err := reflectutil.Set(field, x); err != nil {
+					fieldName := structFieldName(v.Type().Field(i))
+					return reflect.Value{}, errors.WithPath(err, fieldName)
+				}
 			}
 		}
 	case reflect.String:
@@ -118,6 +121,13 @@ func execute(in reflect.Value, data interface{}) (reflect.Value, error) {
 		if converted, err := convert(in.Type())(v, nil); err == nil {
 			v = converted
 		}
+		// keep the original address
+		if in.Type().Kind() == reflect.Ptr && v.Type().Kind() == reflect.Ptr {
+			if v.Elem().Type().AssignableTo(in.Elem().Type()) {
+				reflectutil.Set(in.Elem(), v.Elem())
+				v = in
+			}
+		}
 	}
 	return v, nil
 }
@@ -137,25 +147,11 @@ func convert(t reflect.Type) func(reflect.Value, error) (reflect.Value, error) {
 		if err != nil {
 			return v, err
 		}
-
-		if !v.IsValid() {
-			return v, nil
+		vv, _, err := reflectutil.Convert(t, v)
+		if err != nil {
+			return v, err
 		}
-
-		defer func() {
-			if err := recover(); err != nil {
-				resErr = errors.Errorf("failed to convert %#v to %s: %s", v.Interface(), t.Name(), err)
-			}
-		}()
-
-		if t.Kind() == reflect.Ptr && t.Elem() == v.Type() {
-			v = makePtr(v)
-		}
-		if typ := v.Type(); typ.Kind() == reflect.Ptr && typ.Elem() == t {
-			v = v.Elem()
-		}
-
-		return v, nil
+		return vv, nil
 	}
 }
 

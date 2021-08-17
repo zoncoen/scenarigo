@@ -12,12 +12,14 @@ import (
 	"testing"
 
 	"github.com/goccy/go-yaml"
+	"github.com/sergi/go-diff/diffmatchpatch"
+	"google.golang.org/grpc"
+
 	"github.com/zoncoen/scenarigo"
 	"github.com/zoncoen/scenarigo/context"
 	"github.com/zoncoen/scenarigo/internal/testutil"
 	"github.com/zoncoen/scenarigo/reporter"
 	"github.com/zoncoen/scenarigo/testdata/gen/pb/test"
-	"google.golang.org/grpc"
 )
 
 func TestE2E(t *testing.T) {
@@ -79,10 +81,10 @@ func TestE2E(t *testing.T) {
 						t.Fatal(err)
 					}
 
-					if expect, got := string(stdout), testutil.ResetDuration(b.String()); expect != got {
-						t.Logf("===== expect =====\n%s", expect)
-						t.Logf("===== got =====\n%s", got)
-						t.FailNow()
+					if got, expect := testutil.ResetDuration(b.String()), string(stdout); got != expect {
+						dmp := diffmatchpatch.New()
+						diffs := dmp.DiffMain(expect, got, false)
+						t.Errorf("stdout differs:\n%s", dmp.DiffPrettyText(diffs))
 					}
 				})
 			}

@@ -11,10 +11,9 @@ import (
 type testStruct struct {
 	A      string
 	B      string       `yaml:"2"`
+	C      string       `yaml:"3,omitempty"`
 	Inline inlineStruct `yaml:",inline"`
-
 	AnonymousStruct
-
 	unexported struct{}
 }
 
@@ -73,6 +72,11 @@ func TestKey_Extract(t *testing.T) {
 				key:    "2",
 				v:      testStruct{B: "BBB"},
 				expect: "BBB",
+			},
+			"struct field tag w/ option": {
+				key:    "3",
+				v:      testStruct{C: "C"},
+				expect: "C",
 			},
 			"inline struct": {
 				key:    "c",

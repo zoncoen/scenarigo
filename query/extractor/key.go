@@ -53,6 +53,7 @@ func (e *keyExtractor) extract(v reflect.Value) (reflect.Value, bool) {
 			}
 		default:
 			inlines := []int{}
+		FIELD_LOOP:
 			for i := 0; i < v.Type().NumField(); i++ {
 				field := v.Type().FieldByIndex([]int{i})
 				if !v.Field(i).CanInterface() {
@@ -64,9 +65,12 @@ func (e *keyExtractor) extract(v reflect.Value) (reflect.Value, bool) {
 					for _, opt := range strs[1:] {
 						if opt == "inline" {
 							inlines = append(inlines, i)
+							continue FIELD_LOOP // Do not extract by the inline field name.
 						}
 					}
-					name = strs[0]
+					if strs[0] != "" {
+						name = strs[0]
+					}
 				}
 				if field.Anonymous {
 					if len(inlines) == 0 || inlines[len(inlines)-1] != i {

@@ -12,6 +12,7 @@ require (
 	github.com/lestrrat-go/backoff v1.0.1
 	github.com/mattn/go-isatty v0.0.13 // indirect
 	github.com/pkg/errors v0.9.1
+	github.com/sergi/go-diff v1.2.0
 	github.com/spf13/cobra v0.0.7
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/zoncoen/query-go v1.0.4

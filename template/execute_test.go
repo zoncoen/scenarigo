@@ -140,6 +140,10 @@ func TestExecute(t *testing.T) {
 				},
 			},
 		},
+		"zero struct": {
+			in:       s{},
+			expected: s{},
+		},
 		"struct": {
 			in: s{
 				Str:        tmpl,

@@ -116,6 +116,13 @@ func (t *Template) executeParameterExpr(e *ast.ParameterExpr, data interface{}) 
 			}
 			return fmt.Sprintf("{{%s}}", name), nil
 		}
+
+		// Left arrow function arguments must be a string in YAML.
+		b, err := yaml.Marshal(v)
+		if err != nil {
+			return nil, err
+		}
+		return strings.TrimSuffix(string(b), "\n"), nil
 	}
 	return v, nil
 }
@@ -129,50 +136,52 @@ func (t *Template) executeBinaryExpr(e *ast.BinaryExpr, data interface{}) (inter
 	if err != nil {
 		return nil, err
 	}
+	var withIndent bool
+	if t.executingLeftArrowExprArg {
+		if _, ok := (e.Y).(*ast.ParameterExpr); ok {
+			withIndent = true
+		}
+	}
 	switch e.Op {
 	case token.ADD:
-		return t.add(x, y)
+		return t.add(x, y, withIndent)
 	default:
 		return nil, errors.Errorf(`unknown operation "%s"`, e.Op.String())
 	}
 }
 
-func (t *Template) add(x, y interface{}) (interface{}, error) {
-	strX, err := t.stringize(x, "")
+func (t *Template) add(x, y interface{}, withIndent bool) (interface{}, error) {
+	strX, err := t.stringize(x)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to concat strings")
 	}
-	strY, err := t.stringize(y, strX)
+	strY, err := t.stringize(y)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to concat strings")
+	}
+	if withIndent {
+		strY, err = t.addIndent(strY, strX)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to concat strings")
+		}
 	}
 	return strX + strY, nil
 }
 
-func (t *Template) stringize(v interface{}, preStr string) (string, error) {
-	s, ok := v.(string)
-	if ok {
-		return s, nil
-	}
+// align indents of marshaled texts
+//
+// example: addIndent("a: 1\nb:2", "- ")
+// === before ===
+// - a: 1
+// b: 2
+// === after ===
+// - a: 1
+//   b: 2
+func (t *Template) addIndent(str, preStr string) (string, error) {
 	if t.executingLeftArrowExprArg {
-		b, err := yaml.Marshal(v)
-		if err != nil {
-			return "", errors.Wrap(err, "failed to marshal")
-		}
-		str := string(b)
-
-		// align indents of marshaled texts
-		//
-		// example: stringize(map[string]int{"a": 1, "b": 2}, "- ")
-		// === before ===
-		// - a: 1
-		// b: 2
-		// === after ===
-		// - a: 1
-		//   b: 2
 		if strings.ContainsRune(str, '\n') && preStr != "" {
-			x := strings.Split(preStr, "\n")
-			prefix := strings.Repeat(" ", len([]rune(x[len(x)-1])))
+			lines := strings.Split(preStr, "\n")
+			prefix := strings.Repeat(" ", len([]rune(lines[len(lines)-1])))
 			var b strings.Builder
 			for i, s := range strings.Split(str, "\n") {
 				if i != 0 {
@@ -191,10 +200,16 @@ func (t *Template) stringize(v interface{}, preStr string) (string, error) {
 			}
 			return b.String(), nil
 		}
-
-		return str, nil
 	}
-	return "", errors.Errorf("expect string but got %T", v)
+	return str, nil
+}
+
+func (t *Template) stringize(v interface{}) (string, error) {
+	s, ok := v.(string)
+	if !ok {
+		return "", errors.Errorf("expect string but got %T", v)
+	}
+	return s, nil
 }
 
 func (t *Template) requiredFuncArgType(funcType reflect.Type, argIdx int) reflect.Type {
@@ -276,7 +291,7 @@ func (t *Template) executeLeftArrowExpr(e *ast.LeftArrowExpr, data interface{}) 
 		return nil, errors.Errorf(`expect string but got %T`, v)
 	}
 	arg, err := f.UnmarshalArg(func(v interface{}) error {
-		if err := yaml.NewDecoder(strings.NewReader(argStr), yaml.UseOrderedMap()).Decode(v); err != nil {
+		if err := yaml.NewDecoder(strings.NewReader(argStr), yaml.UseOrderedMap(), yaml.Strict()).Decode(v); err != nil {
 			return err
 		}
 

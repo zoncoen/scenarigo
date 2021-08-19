@@ -70,6 +70,14 @@ func TestEqualMessage(t *testing.T) {
 			},
 			ok: true,
 		},
+		"equals (convert)": {
+			expected: echoResponse(t, "xxx", "hello"),
+			got: test.EchoResponse{
+				MessageId:   "xxx",
+				MessageBody: "hello",
+			},
+			ok: true,
+		},
 		"not equals": {
 			expected: &test.EchoResponse{
 				MessageId:   "xxx",
@@ -79,6 +87,19 @@ func TestEqualMessage(t *testing.T) {
 				MessageId:   "yyy",
 				MessageBody: "bye",
 			},
+		},
+		"untyped nil doesn't implement proto.Message": {
+			expected: nil,
+			got:      nil,
+		},
+		"typed nil implements proto.Message": {
+			expected: (*test.EchoResponse)(nil),
+			got:      (*test.EchoResponse)(nil),
+			ok:       true,
+		},
+		"different type": {
+			expected: (*test.EchoRequest)(nil),
+			got:      (*test.EchoResponse)(nil),
 		},
 	}
 	for name, test := range tests {

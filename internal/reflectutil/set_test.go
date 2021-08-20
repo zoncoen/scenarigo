@@ -153,6 +153,59 @@ func TestConvert(t *testing.T) {
 	}
 }
 
+func TestConvertInterface(t *testing.T) {
+	str := "test"
+	tests := map[string]struct {
+		target reflect.Type
+		v      interface{}
+		expect interface{}
+		ok     bool
+		error  error
+	}{
+		"no need to convert": {
+			target: reflect.TypeOf(""),
+			v:      str,
+			expect: str,
+			ok:     true,
+		},
+		"convert *string to string": {
+			target: reflect.TypeOf(""),
+			v:      &str,
+			expect: str,
+			ok:     true,
+		},
+		"can't convert": {
+			target: reflect.TypeOf(0),
+			v:      str,
+			expect: str,
+			ok:     false,
+		},
+	}
+	for name, test := range tests {
+		test := test
+		t.Run(name, func(t *testing.T) {
+			got, ok, err := ConvertInterface(test.target, test.v)
+			if err != nil {
+				if test.error == nil {
+					t.Fatalf("unexpected error: %s", err)
+				} else if got, expect := err.Error(), test.error.Error(); got != expect {
+					t.Fatalf("expect %q but got %q", expect, got)
+				}
+			} else {
+				if test.error != nil {
+					t.Fatal("no error")
+				}
+				if ok != test.ok {
+					t.Fatalf("expect %t but got %t", test.ok, ok)
+				}
+				if diff := cmp.Diff(test.expect, got); diff != "" {
+					t.Errorf("differs: (-want +got)\n%s", diff)
+				}
+			}
+		})
+	}
+}
+
 type Stringer interface {
 	String() string
 }

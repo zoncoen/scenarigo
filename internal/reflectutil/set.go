@@ -65,3 +65,17 @@ func Convert(t reflect.Type, v reflect.Value) (ret reflect.Value, ok bool, retEr
 
 	return v, false, nil
 }
+
+// ConvertInterface returns the value v converted to type t.
+func ConvertInterface(t reflect.Type, v interface{}) (interface{}, bool, error) {
+	vv, ok, err := Convert(t, reflect.ValueOf(v))
+	if err != nil {
+		return vv, ok, err
+	}
+	if ok {
+		if vv.IsValid() && vv.CanInterface() {
+			return vv.Interface(), ok, nil
+		}
+	}
+	return v, ok, nil
+}

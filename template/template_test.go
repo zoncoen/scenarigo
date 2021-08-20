@@ -1,6 +1,7 @@
 package template
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -144,7 +145,7 @@ func TestTemplate_Execute(t *testing.T) {
 			},
 			expect: "hello",
 		},
-		"left arrow func (function in argument)": {
+		"left arrow func with function in argument": {
 			str: strings.Trim(`
 {{exec <-}}: '{{f}}'
 `, "\n"),
@@ -189,15 +190,18 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		"left arrow func (complex)": {
 			str: strings.Trim(`
-{{join <-}}:
-  prefix: pre-
-  text: |-
-    {{call <-}}:
-      f: '{{f}}'
-      arg: '{{text}}'
-  suffix: -suf
+{{echo <-}}:
+  message: |-
+    {{join <-}}:
+      prefix: pre-
+      text: |-
+        {{call <-}}:
+          f: '{{f}}'
+          arg: '{{text}}'
+      suffix: -suf
 `, "\n"),
 			data: map[string]interface{}{
+				"echo": &echoFunc{},
 				"join": &joinFunc{},
 				"call": &callFunc{},
 				"f":    func(s string) string { return s },
@@ -230,6 +234,131 @@ func TestTemplate_Execute(t *testing.T) {
 			}
 			if test.expectError && err == nil {
 				t.Fatal("expected error but got no error")
+			}
+			if diff := cmp.Diff(test.expect, i); diff != "" {
+				t.Errorf("diff: (-want +got)\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestLeftArrowFunctionArg(t *testing.T) {
+	tests := map[string]struct {
+		str    string
+		data   map[string]interface{}
+		expect interface{}
+	}{
+		"no template": {
+			str: strings.TrimPrefix(`
+a: 1
+b: 2
+`, "\n"),
+			expect: map[string]interface{}{
+				"a": uint64(1),
+				"b": uint64(2),
+			},
+		},
+		"string": {
+			str:    `'{{"test"}}'`,
+			expect: "test",
+		},
+		"int": {
+			str:    `'{{1}}'`,
+			expect: uint64(1),
+		},
+		"int string": {
+			str:    `'{{"1"}}'`,
+			expect: "1",
+		},
+		"map array": {
+			str: strings.TrimPrefix(`
+users:
+  - '{{user}}'
+`, "\n"),
+			data: map[string]interface{}{
+				"user": map[string]interface{}{
+					"name": "Alice",
+					"age":  20,
+				},
+			},
+			expect: map[string]interface{}{
+				"users": []interface{}{
+					map[string]interface{}{
+						"name": "Alice",
+						"age":  uint64(20),
+					},
+				},
+			},
+		},
+		"map map": {
+			str: strings.TrimPrefix(`
+admin: '{{user}}'
+`, "\n"),
+			data: map[string]interface{}{
+				"user": map[string]interface{}{
+					"name": "Alice",
+					"age":  20,
+				},
+			},
+			expect: map[string]interface{}{
+				"admin": map[string]interface{}{
+					"name": "Alice",
+					"age":  uint64(20),
+				},
+			},
+		},
+		"complex function call": {
+			str: strings.TrimPrefix(`
+prefix: pre-
+text: |-
+  {{call <-}}:
+    f: '{{f}}'
+    arg: '{{text}}'
+suffix: -suf
+`, "\n"),
+			data: map[string]interface{}{
+				"call": &callFunc{},
+				"f":    func(s string) string { return s },
+				"text": "test",
+			},
+			expect: map[string]interface{}{
+				"prefix": "pre-",
+				"text":   "test",
+				"suffix": "-suf",
+			},
+		},
+	}
+	for name, test := range tests {
+		test := test
+		t.Run(name, func(t *testing.T) {
+			lines := []string{"{{dump <-}}:"}
+			for _, line := range strings.Split(test.str, "\n") {
+				lines = append(lines, fmt.Sprintf("  %s", line))
+			}
+			tmpl, err := New(strings.Join(lines, "\n"))
+			if err != nil {
+				t.Fatalf("unexpected error: %s", err)
+			}
+			tmpl.executingLeftArrowExprArg = true
+			data := test.data
+			if data == nil {
+				data = map[string]interface{}{
+					"dump": &dumpFunc{},
+				}
+			} else {
+				data["dump"] = &dumpFunc{}
+			}
+			v, err := tmpl.Execute(data)
+			if err != nil {
+				t.Fatalf("unexpected error: %s", err)
+			}
+			s, ok := v.(string)
+			if !ok {
+				t.Fatalf("expect string but got %T", v)
+			}
+			var i interface{}
+			if err := yaml.Unmarshal([]byte(s), &i); err != nil {
+				t.Fatal(err)
 			}
 			if diff := cmp.Diff(test.expect, i); diff != "" {
 				t.Errorf("diff: (-want +got)\n%s", diff)
@@ -289,53 +418,6 @@ func TestTemplate_ExecuteDirect(t *testing.T) {
 			}
 			if diff := cmp.Diff(test.expect, i); diff != "" {
 				t.Errorf("diff: (-want +got)\n%s", diff)
-			}
-		})
-	}
-}
-
-func TestTemplate_add(t *testing.T) {
-	tests := map[string]struct {
-		tmpl   *Template
-		x      interface{}
-		y      interface{}
-		expect string
-	}{
-		"string + string": {
-			tmpl:   &Template{},
-			x:      "a",
-			y:      "b",
-			expect: "ab",
-		},
-		"string + map (marshaled)": {
-			tmpl: &Template{
-				executingLeftArrowExprArg: true,
-			},
-			x: `
-- `,
-			y: map[string]interface{}{
-				"a": 1,
-				"b": 2,
-			},
-			expect: `
-- a: 1
-  b: 2
-`,
-		},
-	}
-	for name, test := range tests {
-		test := test
-		t.Run(name, func(t *testing.T) {
-			v, err := test.tmpl.add(test.x, test.y)
-			if err != nil {
-				t.Fatalf("failed to add: %s", err)
-			}
-			s, ok := v.(string)
-			if !ok {
-				t.Fatalf("expect string but got %T", v)
-			}
-			if s != test.expect {
-				t.Errorf("expect %q but got %q", test.expect, s)
 			}
 		})
 	}
@@ -452,4 +534,20 @@ func TestFuncStash(t *testing.T) {
 	if s[name] != "value" {
 		t.Fatal("failed to save")
 	}
+}
+
+var _ Func = &dumpFunc{}
+
+type dumpFunc struct{}
+
+func (*dumpFunc) Exec(in interface{}) (interface{}, error) {
+	return in, nil
+}
+
+func (*dumpFunc) UnmarshalArg(unmarshal func(interface{}) error) (interface{}, error) {
+	var arg interface{}
+	if err := unmarshal(&arg); err != nil {
+		return nil, err
+	}
+	return arg, nil
 }

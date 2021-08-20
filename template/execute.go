@@ -45,6 +45,8 @@ func structFieldName(field reflect.StructField) string {
 func execute(in reflect.Value, data interface{}) (reflect.Value, error) {
 	v := reflectutil.Elem(in)
 	switch v.Kind() {
+	case reflect.Invalid:
+		return in, nil
 	case reflect.Map:
 		for _, k := range v.MapKeys() {
 			e := v.MapIndex(k)
@@ -117,7 +119,7 @@ func execute(in reflect.Value, data interface{}) (reflect.Value, error) {
 	}
 
 	// keep the original type as much as possible
-	if in.IsValid() {
+	if in.IsValid() && v.IsValid() {
 		if converted, err := convert(in.Type())(v, nil); err == nil {
 			v = converted
 		}

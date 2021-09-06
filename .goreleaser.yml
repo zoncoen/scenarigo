@@ -8,7 +8,7 @@ builds:
   - -X github.com/zoncoen/scenarigo/version.version={{.Version}}
   - -X github.com/zoncoen/scenarigo/version.revision=
   env:
-  - CGO_ENABLED=0
+  - CGO_ENABLED=1 # for plugin package
 archives:
 - name_template: "{{ .ProjectName  }}_v{{ .Version }}_{{ .Os  }}_{{ .Arch  }}"
   replacements:

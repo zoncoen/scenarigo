@@ -1,7 +1,23 @@
 # CHANGELOG
 
+<a name="v0.8.0"></a>
+## [v0.8.0] - 2021-09-08
+### Bug Fixes
+- enable CGO on release build
+- **query:** do not extract by the inline field name
+- **template:** fix a bug by nil struct field
+- **template:** marshal variables to YAML in LAF arguments
+- **template:** keep the original memory address
+- **template:** marshal LAF arguments with indent
+
+### Features
+- enable cross compile with CGO
+- **grpc:** loose type checking for equaler
+- **template:** execute templates of data
+- **version:** get version from build info
+
 <a name="v0.7.0"></a>
-## [v0.7.0] - 2020-08-01
+## [v0.7.0] - 2021-07-30
 ### Bug Fixes
 - **assert:** fix the assertion operators
 - **assert:** fix the logic to compare Go protobuf APIv2 messages
@@ -135,6 +151,7 @@ change protocl.Protocol interface
 - first release
 
 
+[v0.8.0]: https://github.com/zoncoen/scenarigo/compare/v0.7.0...v0.8.0
 [v0.7.0]: https://github.com/zoncoen/scenarigo/compare/v0.6.3...v0.7.0
 [v0.6.3]: https://github.com/zoncoen/scenarigo/compare/v0.6.2...v0.6.3
 [v0.6.2]: https://github.com/zoncoen/scenarigo/compare/v0.6.1...v0.6.2

@@ -1,0 +1,64 @@
+builds:
+- id: darwin-amd64
+  env:
+    - CGO_ENABLED=1
+    - CC=o64-clang
+    - CXX=o64-clang++
+  main: ./cmd/scenarigo
+  ldflags:
+  - -s -w
+  - -X github.com/zoncoen/scenarigo/version.version={{.Version}}
+  - -X github.com/zoncoen/scenarigo/version.revision=
+  goos:
+    - darwin
+  goarch:
+    - amd64
+- id: darwin-arm64
+  env:
+    - CGO_ENABLED=1
+    - CC=aarch64-apple-darwin20.2-clang
+    - CXX=aarch64-apple-darwin20.2-clang++
+  main: ./cmd/scenarigo
+  ldflags:
+  - -s -w
+  - -X github.com/zoncoen/scenarigo/version.version={{.Version}}
+  - -X github.com/zoncoen/scenarigo/version.revision=
+  goos:
+    - darwin
+  goarch:
+    - arm64
+- id: linux
+  env:
+    - CGO_ENABLED=1
+  main: ./cmd/scenarigo
+  ldflags:
+  - -s -w
+  - -X github.com/zoncoen/scenarigo/version.version={{.Version}}
+  - -X github.com/zoncoen/scenarigo/version.revision=
+  goos:
+    - linux
+  goarch:
+    - amd64
+
+archives:
+- name_template: "{{ .ProjectName  }}_v{{ .Version }}_go<< .GoVersion >>_{{ .Os  }}_{{ .Arch  }}"
+  replacements:
+    darwin: Darwin
+    linux: Linux
+    windows: Windows
+    386: i386
+    amd64: x86_64
+  format_overrides:
+  - goos: windows
+    format: zip
+  files:
+  - README.md
+  - CHANGELOG.md
+  - LICENSE
+  - CREDITS
+checksum:
+  name_template: 'checksums.txt'
+snapshot:
+  name_template: "{{ .Version }}-snapshot"
+changelog:
+  skip: true

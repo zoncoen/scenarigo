@@ -174,6 +174,12 @@ credits: $(GO_LICENSES) $(GOCREDITS) ## generate CREDITS
 	@gocredits . > CREDITS
 	@go mod tidy
 
+.PHONY: build/ci
+build/ci:
+	@rm -rf assets
+	@cd scripts/cross-build && PJ_ROOT=$(CURDIR) go run ./main.go && cd -
+	@cp scripts/cross-build/.goreleaser.yml ./
+
 .PHONY: help
 help: ## print help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'

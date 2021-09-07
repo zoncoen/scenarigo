@@ -18,6 +18,10 @@ gobump set ${NEXT_VERSION} -w ${BASEDIR}/version
 
 git-chglog --next-tag v${NEXT_VERSION} -o ${BASEDIR}/CHANGELOG.md
 
+GO_VERSION=$(go version | perl -waln -e 'print $F[2]')
+perl -pi -e "s/go_version='.+'/go_version='${GO_VERSION}'/" README.md
+perl -pi -e "s/@v${VERSION}/@v${NEXT_VERSION}/" README.md
+
 read -p "release v${NEXT_VERSION}? (y/N): " yn
 case "$yn" in
   [yY]*) ;;

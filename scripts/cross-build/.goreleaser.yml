@@ -1,0 +1,4 @@
+release:
+  extra_files:
+    - glob: 'assets/checksums.txt'
+    - glob: 'assets/*.tar.gz'

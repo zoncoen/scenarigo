@@ -15,8 +15,15 @@ jobs:
       uses: actions/checkout@v2
       with:
         fetch-depth: 0
+        path: go/src/github.com/${{ github.repository }}
     - name: Generate CHANGELOG
+      working-directory: ./go/src/github.com/${{ github.repository }}
       run: make changelog/ci && cat .CHANGELOG.md
+    - name: Build
+      working-directory: ./go/src/github.com/${{ github.repository }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: make build/ci
     - name: Run GoReleaser
       uses: goreleaser/goreleaser-action@v2
       with:

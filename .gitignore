@@ -4,3 +4,6 @@ vendor
 /test/e2e/testdata/gen
 coverage.out
 .CHANGELOG.md
+/.goreleaser.yml
+dist
+assets

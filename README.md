@@ -37,7 +37,7 @@ steps:
 ### go install command
 
 ```shell
-$ go install github.com/zoncoen/scenarigo/cmd/scenarig@v0.8.0
+$ go install github.com/zoncoen/scenarigo/cmd/scenarigo@v0.8.0
 ```
 
 ### from release page

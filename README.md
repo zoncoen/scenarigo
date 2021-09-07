@@ -34,7 +34,26 @@ steps:
 
 ## Installation
 
+### go install command
+
+```shell
+$ go install github.com/zoncoen/scenarigo/cmd/scenarig@v0.7.0
+```
+
+### from release page
+
 Go to the [releases page](https://github.com/zoncoen/scenarigo/releases) and download the zip file. Unpack the zip file, and put the binary to a directory in your `$PATH`.
+
+You can download the latest command into the `./scenarigo` directory with the following one-liner code. Place the binary `./scenarigo/scenarigo` into your `$PATH`.
+
+```shell
+$ version=$(curl -s https://api.github.com/repos/zoncoen/scenarigo/releases/latest | jq -r '.tag_name') && \
+    go_version='go1.17' && \
+    curl -sLJ https://github.com/zoncoen/scenarigo/releases/download/${version}/scenarigo_${version}_${go_version}_$(uname)_$(uname -m).tar.gz -o scenarigo.tar.gz && \
+    mkdir ./scenarigo && tar -zxvf ./scenarigo.tar.gz -C ./scenarigo && rm scenarigo.tar.gz
+```
+
+**Notes**: If you use the plugin mechanism, the `scenarigo` command and plugins must be built using the same version of Go.
 
 ### Setup
 

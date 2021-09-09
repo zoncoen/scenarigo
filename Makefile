@@ -1,6 +1,8 @@
 SHELL := /bin/bash
 .DEFAULT_GOAL := test
 
+GO ?= go
+
 BIN_DIR := $(CURDIR)/.bin
 PATH := $(abspath $(BIN_DIR)):$(PATH)
 TOOLS_DIR := $(CURDIR)/tools
@@ -32,47 +34,47 @@ $(PROTOC): | $(BIN_DIR)
 PROTOC_GEN_GO := $(BIN_DIR)/protoc-gen-go
 $(PROTOC_GEN_GO): | $(BIN_DIR)
 	@cd $(TOOLS_DIR) && \
-		go build -o $(PROTOC_GEN_GO) google.golang.org/protobuf/cmd/protoc-gen-go
+		$(GO) build -o $(PROTOC_GEN_GO) google.golang.org/protobuf/cmd/protoc-gen-go
 
 PROTOC_GEN_GO_GRPC := $(BIN_DIR)/protoc-gen-go-grpc
 $(PROTOC_GEN_GO_GRPC): | $(BIN_DIR)
 	@cd $(TOOLS_DIR) && \
-		go build -o $(PROTOC_GEN_GO_GRPC) google.golang.org/grpc/cmd/protoc-gen-go-grpc
+		$(GO) build -o $(PROTOC_GEN_GO_GRPC) google.golang.org/grpc/cmd/protoc-gen-go-grpc
 
 GOPROTOYAMLTAG := $(BIN_DIR)/goprotoyamltag
 $(GOPROTOYAMLTAG): | $(BIN_DIR)
 	@cd $(TOOLS_DIR) && \
-		go build -o $(GOPROTOYAMLTAG) github.com/zoncoen/goprotoyamltag
+		$(GO) build -o $(GOPROTOYAMLTAG) github.com/zoncoen/goprotoyamltag
 
 GOTYPENAMES := $(BIN_DIR)/gotypenames
 $(GOTYPENAMES): | $(BIN_DIR)
 	@cd $(TOOLS_DIR) && \
-		go build -o $(GOTYPENAMES) github.com/zoncoen/gotypenames
+		$(GO) build -o $(GOTYPENAMES) github.com/zoncoen/gotypenames
 
 MOCKGEN := $(BIN_DIR)/mockgen
 $(MOCKGEN): | $(BIN_DIR)
 	@cd $(TOOLS_DIR) && \
-		go build -o $(MOCKGEN) github.com/golang/mock/mockgen
+		$(GO) build -o $(MOCKGEN) github.com/golang/mock/mockgen
 
 GOBUMP := $(BIN_DIR)/gobump
 $(GOBUMP): | $(BIN_DIR)
 	@cd $(TOOLS_DIR) && \
-		go build -o $(GOBUMP) github.com/x-motemen/gobump/cmd/gobump
+		$(GO) build -o $(GOBUMP) github.com/x-motemen/gobump/cmd/gobump
 
 GIT_CHGLOG := $(BIN_DIR)/git-chglog
 $(GIT_CHGLOG): | $(BIN_DIR)
 	@cd $(TOOLS_DIR) && \
-		go build -o $(GIT_CHGLOG) github.com/git-chglog/git-chglog/cmd/git-chglog
+		$(GO) build -o $(GIT_CHGLOG) github.com/git-chglog/git-chglog/cmd/git-chglog
 
 GO_LICENSES := $(BIN_DIR)/go-licenses
 $(GO_LICENSES): | $(BIN_DIR)
 	@cd $(TOOLS_DIR) && \
-		go build -o $(GO_LICENSES) github.com/google/go-licenses
+		$(GO) build -o $(GO_LICENSES) github.com/google/go-licenses
 
 GOCREDITS := $(BIN_DIR)/gocredits
 $(GOCREDITS): | $(BIN_DIR)
 	@cd $(TOOLS_DIR) && \
-		go build -o $(GOCREDITS) github.com/Songmu/gocredits/cmd/gocredits
+		$(GO) build -o $(GOCREDITS) github.com/Songmu/gocredits/cmd/gocredits
 
 GOLANGCI_LINT := $(BIN_DIR)/golangci-lint
 GOLANGCI_LINT_VERSION := v1.30.0
@@ -81,7 +83,7 @@ $(GOLANGCI_LINT): | $(BIN_DIR)
 
 .PHONY: test
 E2E_TEST_TARGETS := test/e2e
-TEST_TARGETS := $(shell go list ./... | grep -v $(E2E_TEST_TARGETS))
+TEST_TARGETS := $(shell $(GO) list ./... | grep -v $(E2E_TEST_TARGETS))
 test: test/race test/norace
 
 .PHONY: test/ci
@@ -89,15 +91,15 @@ test/ci: coverage test/race
 
 .PHONY: coverage
 coverage: ## measure test coverage
-	@go test $(TEST_TARGETS) ./$(E2E_TEST_TARGETS)/... -coverprofile=coverage.out -covermode=atomic
+	@$(GO) test $(TEST_TARGETS) ./$(E2E_TEST_TARGETS)/... -coverprofile=coverage.out -covermode=atomic
 
 .PHONY: test/norace
 test/norace:
-	@go test $(TEST_TARGETS) ./$(E2E_TEST_TARGETS)/...
+	@$(GO) test $(TEST_TARGETS) ./$(E2E_TEST_TARGETS)/...
 
 .PHONY: test/race
 test/race:
-	@go test -race $(TEST_TARGETS) ./$(E2E_TEST_TARGETS)/...
+	@$(GO) test -race $(TEST_TARGETS) ./$(E2E_TEST_TARGETS)/...
 
 .PHONY: lint
 lint: $(GOLANGCI_LINT) ## run lint
@@ -105,7 +107,7 @@ lint: $(GOLANGCI_LINT) ## run lint
 
 .PHONY: lint/ci
 lint/ci:
-	@go version
+	@$(GO) version
 	@make credits
 	@git add --all
 	@git diff --cached --exit-code || (echo '"make credits" required'; exit 1)
@@ -152,7 +154,7 @@ gen/plugins:
 	@mkdir -p $(GEN_PLUGINS_DIR)
 	@for dir in $$(find $(PLUGINS_DIR) -name '*.go' | xargs -L1 -P8 dirname | sort | uniq); do \
 		echo "build plugin $$(basename $$dir).so"; \
-		go build -buildmode=plugin -o $(GEN_PLUGINS_DIR)/$$(basename $$dir).so $$dir; \
+		$(GO) build -buildmode=plugin -o $(GEN_PLUGINS_DIR)/$$(basename $$dir).so $$dir; \
 	done
 
 .PHONY: release
@@ -169,15 +171,15 @@ changelog/ci: $(GIT_CHGLOG) $(GOBUMP)
 
 .PHONY: credits
 credits: $(GO_LICENSES) $(GOCREDITS) ## generate CREDITS
-	@go mod download
+	@$(GO) mod download
 	@go-licenses check ./...
 	@gocredits . > CREDITS
-	@go mod tidy
+	@$(GO) mod tidy
 
 .PHONY: build/ci
 build/ci:
 	@rm -rf assets
-	@cd scripts/cross-build && PJ_ROOT=$(CURDIR) go run ./main.go && cd -
+	@cd scripts/cross-build && PJ_ROOT=$(CURDIR) $(GO) run ./main.go && cd -
 	@cp scripts/cross-build/.goreleaser.yml ./
 
 .PHONY: help

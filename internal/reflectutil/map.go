@@ -7,11 +7,13 @@ import (
 	"github.com/pkg/errors"
 )
 
+var stringType = reflect.TypeOf("")
+
 // ConvertStringsMap converts map[string]string to map[string][]string.
 func ConvertStringsMap(v reflect.Value) (map[string][]string, error) {
 	v = Elem(v)
 	if !v.IsValid() {
-		return nil, errors.New("invalid")
+		return nil, errors.New("invalid value")
 	}
 	if v.Kind() != reflect.Map {
 		return nil, errors.Errorf("expected map but got %T", v.Interface())
@@ -21,12 +23,12 @@ func ConvertStringsMap(v reflect.Value) (map[string][]string, error) {
 	iter := v.MapRange()
 	for iter.Next() {
 		k := iter.Key()
-		key, err := convertString(k)
+		key, err := ConvertString(k)
 		if err != nil {
 			return nil, errors.Errorf("expected key is string but got %T", k.Interface())
 		}
 
-		strs, err := convertStrings(iter.Value())
+		strs, err := ConvertStrings(iter.Value())
 		if err != nil {
 			return nil, errors.Wrapf(err, "%s is invalid", key)
 		}
@@ -36,9 +38,10 @@ func ConvertStringsMap(v reflect.Value) (map[string][]string, error) {
 	return m, nil
 }
 
-func convertStrings(v reflect.Value) ([]string, error) {
+// ConvertStrings converts v to []string.
+func ConvertStrings(v reflect.Value) ([]string, error) {
 	if !v.IsValid() {
-		return nil, errors.New("invalid")
+		return nil, errors.New("invalid value")
 	}
 	if k := v.Kind(); k == reflect.Interface || k == reflect.Ptr {
 		if v.IsNil() {
@@ -53,7 +56,7 @@ func convertStrings(v reflect.Value) ([]string, error) {
 		var strs []string
 		for i := 0; i < v.Len(); i++ {
 			x := v.Index(i)
-			str, err := convertString(x)
+			str, err := ConvertString(x)
 			if err != nil {
 				return nil, err
 			}
@@ -61,7 +64,7 @@ func convertStrings(v reflect.Value) ([]string, error) {
 		}
 		return strs, nil
 	default:
-		str, err := convertString(v)
+		str, err := ConvertString(v)
 		if err == nil {
 			return []string{str}, nil
 		}
@@ -69,7 +72,11 @@ func convertStrings(v reflect.Value) ([]string, error) {
 	return nil, errors.Errorf("expected string or []string but got %T", v.Interface())
 }
 
-func convertString(v reflect.Value) (string, error) {
+// ConvertString converts v to string.
+func ConvertString(v reflect.Value) (string, error) {
+	if !v.IsValid() {
+		return "", errors.New("invalid value")
+	}
 	if k := v.Kind(); k == reflect.Interface || k == reflect.Ptr {
 		if v.IsNil() {
 			return "", errors.New("value is nil")
@@ -85,6 +92,11 @@ func convertString(v reflect.Value) (string, error) {
 		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		return fmt.Sprintf("%d", v.Interface()), nil
 	default:
+		if v.Type().ConvertibleTo(stringType) {
+			if s, ok := (v.Convert(stringType).Interface()).(string); ok {
+				return s, nil
+			}
+		}
 		return "", errors.Errorf("expected string but got %T", v.Interface())
 	}
 }

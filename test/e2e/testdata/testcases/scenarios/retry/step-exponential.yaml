@@ -1,0 +1,13 @@
+---
+title: exponential retry step
+steps:
+- protocol: http
+  request:
+    method: GET
+    url: "http://{{env.TEST_HTTP_ADDR}}/echo"
+  expect:
+    code: OK
+  retry:
+    exponential:
+      initialInterval: 10ms
+      maxRetries: 1

@@ -1,0 +1,17 @@
+title: retry
+scenarios:
+- filename: retry/step-never.yaml
+  mocks: retry/step.yaml
+  success: false
+  output:
+    stdout: retry/step-never.txt
+- filename: retry/step-constant.yaml
+  mocks: retry/step.yaml
+  success: true
+  output:
+    stdout: retry/step-constant.txt
+- filename: retry/step-exponential.yaml
+  mocks: retry/step.yaml
+  success: true
+  output:
+    stdout: retry/step-exponential.txt

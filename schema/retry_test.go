@@ -37,3 +37,41 @@ func TestNeverBackoff(t *testing.T) {
 		t.Fatal("timeout")
 	}
 }
+
+func TestRetryPolicyConstant_Build(t *testing.T) {
+	t.Run("error", func(t *testing.T) {
+		invalid := "invalid"
+		tests := map[string]struct {
+			policy *RetryPolicyConstant
+			expect string
+		}{
+			"no interval": {
+				policy: &RetryPolicyConstant{},
+				expect: "interval must be specified",
+			},
+			"invalid interval": {
+				policy: &RetryPolicyConstant{
+					Interval: invalid,
+				},
+				expect: `failed to parse interval: time: invalid duration "invalid"`,
+			},
+			"invalid max elapsed time": {
+				policy: &RetryPolicyConstant{
+					Interval:       "1s",
+					MaxElapsedTime: &invalid,
+				},
+				expect: `failed to parse max elapsed time: time: invalid duration "invalid"`,
+			},
+		}
+		for name, test := range tests {
+			test := test
+			t.Run(name, func(t *testing.T) {
+				if _, err := test.policy.Build(); err == nil {
+					t.Fatal("no error")
+				} else if got, expect := err.Error(), test.expect; got != expect {
+					t.Errorf("expect %q but got %q", expect, got)
+				}
+			})
+		}
+	})
+}

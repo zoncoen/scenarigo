@@ -1,0 +1,5 @@
+- protocol: http
+  response:
+    code: 200
+    body:
+      message: hello

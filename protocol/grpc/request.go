@@ -44,7 +44,11 @@ func (r *Request) addIndent(s string, indentNum int) string {
 	indent := strings.Repeat(" ", indentNum)
 	lines := []string{}
 	for _, line := range strings.Split(s, "\n") {
-		lines = append(lines, fmt.Sprintf("%s%s", indent, line))
+		if line == "" {
+			lines = append(lines, line)
+		} else {
+			lines = append(lines, fmt.Sprintf("%s%s", indent, line))
+		}
 	}
 	return strings.Join(lines, "\n")
 }

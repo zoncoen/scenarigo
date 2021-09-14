@@ -212,7 +212,7 @@ func TestRequest_Invoke_Log(t *testing.T) {
 		})
 	}, reporter.WithWriter(&b), reporter.WithVerboseLog())
 
-	expect := `
+	expect := strings.TrimPrefix(`
 === RUN   test.yaml
 --- PASS: test.yaml (0.00s)
         request:
@@ -223,16 +223,14 @@ func TestRequest_Invoke_Log(t *testing.T) {
           message:
             messageId: "1"
             messageBody: hello
-          
         response:
           message:
             messageId: "1"
             messageBody: hello
-          
 PASS
 ok  	test.yaml	0.000s
-`
-	if diff := cmp.Diff(expect, "\n"+testutil.ResetDuration(b.String())); diff != "" {
+`, "\n")
+	if diff := cmp.Diff(expect, testutil.ResetDuration(b.String())); diff != "" {
 		t.Errorf("differs (-want +got):\n%s", diff)
 	}
 }

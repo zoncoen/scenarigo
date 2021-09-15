@@ -1,0 +1,20 @@
+--- FAIL: testdata/testcases/scenarios/retry/step-never.yaml (0.00s)
+    --- FAIL: testdata/testcases/scenarios/retry/step-never.yaml/never_retry_step (0.00s)
+        --- FAIL: testdata/testcases/scenarios/retry/step-never.yaml/never_retry_step/ (0.00s)
+                [0] send request
+                request:
+                  method: GET
+                  url: http://[::]:12345/echo
+                  header:
+                    User-Agent:
+                    - scenarigo/v1.0.0
+                elapsed time: 0.000000 sec
+                   6 |     method: GET
+                   7 |     url: "http://{{env.TEST_HTTP_ADDR}}/echo"
+                   8 |   expect:
+                >  9 |     code: OK
+                                 ^
+                expected OK but got Internal Server Error
+FAIL
+FAIL	testdata/testcases/scenarios/retry/step-never.yaml	0.000s
+FAIL

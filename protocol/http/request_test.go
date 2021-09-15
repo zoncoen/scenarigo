@@ -9,10 +9,12 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/pkg/errors"
+
 	"github.com/zoncoen/scenarigo/context"
 	"github.com/zoncoen/scenarigo/internal/testutil"
 	"github.com/zoncoen/scenarigo/reporter"
@@ -301,7 +303,7 @@ func TestRequest_Invoke_Log(t *testing.T) {
 			})
 		}, reporter.WithWriter(&b), reporter.WithVerboseLog())
 
-		expect := fmt.Sprintf(`
+		expect := fmt.Sprintf(strings.TrimPrefix(`
 === RUN   test.yaml
 --- PASS: test.yaml (0.00s)
         request:
@@ -312,7 +314,6 @@ func TestRequest_Invoke_Log(t *testing.T) {
             - %s
           body:
             message: hey
-          
         response:
           header:
             Content-Length:
@@ -321,11 +322,10 @@ func TestRequest_Invoke_Log(t *testing.T) {
             - application/json
           body:
             message: hey
-          
 PASS
 ok  	test.yaml	0.000s
-`, srv.URL, defaultUserAgent)
-		if diff := cmp.Diff(expect, "\n"+testutil.ResetDuration(removeDateHeader(b.String()))); diff != "" {
+`, "\n"), srv.URL, defaultUserAgent)
+		if diff := cmp.Diff(expect, testutil.ResetDuration(removeDateHeader(b.String()))); diff != "" {
 			t.Errorf("differs (-want +got):\n%s", diff)
 		}
 	})

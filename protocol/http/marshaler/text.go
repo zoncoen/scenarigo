@@ -1,6 +1,10 @@
 package marshaler
 
-import "errors"
+import (
+	"reflect"
+
+	"github.com/zoncoen/scenarigo/internal/reflectutil"
+)
 
 func init() {
 	if err := Register(&textMarshaler{}); err != nil {
@@ -17,9 +21,9 @@ func (m *textMarshaler) MediaType() string {
 
 // Marshal implements RequestMarshaler interface.
 func (m *textMarshaler) Marshal(v interface{}) ([]byte, error) {
-	b, ok := v.([]byte)
-	if !ok {
-		return nil, errors.New("v must be []byte")
+	s, err := reflectutil.ConvertString(reflect.ValueOf(v))
+	if err != nil {
+		return nil, err
 	}
-	return b, nil
+	return []byte(s), nil
 }

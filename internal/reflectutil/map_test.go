@@ -99,7 +99,7 @@ func TestConvertStrings(t *testing.T) {
 		for name, test := range tests {
 			test := test
 			t.Run(name, func(t *testing.T) {
-				got, err := convertStrings(reflect.ValueOf(test.v))
+				got, err := ConvertStrings(reflect.ValueOf(test.v))
 				if err != nil {
 					t.Fatalf("unexpected error: %s", err)
 				}
@@ -129,7 +129,68 @@ func TestConvertStrings(t *testing.T) {
 		for name, test := range tests {
 			test := test
 			t.Run(name, func(t *testing.T) {
-				if _, err := convertStrings(reflect.ValueOf(test.v)); err == nil {
+				if _, err := ConvertStrings(reflect.ValueOf(test.v)); err == nil {
+					t.Fatal("expected error but no error")
+				}
+			})
+		}
+	})
+}
+
+func TestConvertString(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		tests := map[string]struct {
+			v      interface{}
+			expect string
+		}{
+			"string": {
+				v:      "test",
+				expect: "test",
+			},
+			"bool": {
+				v:      true,
+				expect: "true",
+			},
+			"integer": {
+				v:      1,
+				expect: "1",
+			},
+			"[]byte": {
+				v:      []byte("test"),
+				expect: "test",
+			},
+		}
+		for name, test := range tests {
+			test := test
+			t.Run(name, func(t *testing.T) {
+				got, err := ConvertString(reflect.ValueOf(test.v))
+				if err != nil {
+					t.Fatalf("unexpected error: %s", err)
+				}
+				if got != test.expect {
+					t.Errorf("expect %q but got %q", test.expect, got)
+				}
+			})
+		}
+	})
+	t.Run("error", func(t *testing.T) {
+		tests := map[string]struct {
+			v interface{}
+		}{
+			"nil": {
+				v: nil,
+			},
+			"nil (string pointer)": {
+				v: (*string)(nil),
+			},
+			"float64": {
+				v: 1.2,
+			},
+		}
+		for name, test := range tests {
+			test := test
+			t.Run(name, func(t *testing.T) {
+				if _, err := ConvertString(reflect.ValueOf(test.v)); err == nil {
 					t.Fatal("expected error but no error")
 				}
 			})

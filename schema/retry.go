@@ -2,6 +2,7 @@ package schema
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/lestrrat-go/backoff"
@@ -40,6 +41,9 @@ type RetryPolicyConstant struct {
 
 // Build returns p as backoff.Policy.
 func (p *RetryPolicyConstant) Build() (backoff.Policy, error) {
+	if p.Interval == "" {
+		return nil, errors.New("interval must be specified")
+	}
 	interval, err := time.ParseDuration(p.Interval)
 	if err != nil {
 		return nil, xerrors.Errorf("failed to parse interval: %w", err)

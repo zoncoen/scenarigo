@@ -28,6 +28,7 @@ type Config struct {
 	PluginDirectory string       `yaml:"pluginDirectory,omitempty"`
 	Output          OutputConfig `yaml:"output,omitempty"`
 
+	// absolute path to the configuration file
 	Root string `yaml:"-"`
 }
 

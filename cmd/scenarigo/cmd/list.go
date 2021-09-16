@@ -1,48 +1,54 @@
 package cmd
 
 import (
-	"bytes"
 	"fmt"
-	"sort"
+	"io"
+	"os"
+	"path/filepath"
 
 	"github.com/spf13/cobra"
 	"github.com/zoncoen/scenarigo"
-	"github.com/zoncoen/scenarigo/context"
 	"github.com/zoncoen/scenarigo/reporter"
 )
 
 var listCmd = &cobra.Command{
 	Use:           "list",
-	Short:         "list the test scenarios",
-	Long:          "Lists the test scenarios.",
-	Args:          cobra.MinimumNArgs(1),
+	Short:         "list the test scenario files",
+	Long:          "Lists the test scenario files as relative paths from the current directory.",
 	RunE:          list,
 	SilenceErrors: true,
 	SilenceUsage:  true,
 }
 
-var (
-	verboseList bool
-	fileList    bool
-)
-
 func init() {
-	listCmd.Flags().BoolVarP(&verboseList, "verbose", "v", false, "show steps of scenario")
-	listCmd.Flags().BoolVarP(&fileList, "file", "f", false, "show file names only")
 	rootCmd.AddCommand(listCmd)
 }
 
-func sortedScenarioNames(scenarioMap map[string][]string) []string {
-	scenarioNames := []string{}
-	for scenarioName := range scenarioMap {
-		scenarioNames = append(scenarioNames, scenarioName)
-	}
-	sort.Strings(scenarioNames)
-	return scenarioNames
+func list(cmd *cobra.Command, args []string) error {
+	return listWithConfig(cmd, args, configFile)
 }
 
-func list(cmd *cobra.Command, args []string) error {
+func listWithConfig(cmd *cobra.Command, args []string, configPath string) error {
 	opts := []func(*scenarigo.Runner) error{}
+	cfg, err := loadConfig(configPath)
+	if err != nil {
+		return fmt.Errorf("failed to load config: %w", err)
+	}
+	if cfg != nil {
+		if len(args) > 0 {
+			cfg.Scenarios = nil
+		}
+		opts = append(opts, scenarigo.WithConfig(cfg))
+	}
+	if len(args) > 0 {
+		opts = append(opts, scenarigo.WithScenarios(args...))
+	}
+
+	wd, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("failed to get current directory: %w", err)
+	}
+
 	for _, arg := range args {
 		opts = append(opts, scenarigo.WithScenarios(arg))
 	}
@@ -51,28 +57,17 @@ func list(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	var b bytes.Buffer
-	reporterOpts := []reporter.Option{reporter.WithWriter(&b)}
+	var retErr error
+	reporterOpts := []reporter.Option{reporter.WithWriter(io.Discard)}
 	reporter.Run(func(rptr reporter.Reporter) {
 		for _, file := range r.ScenarioFiles() {
-			scenarioMap, err := r.ScenarioMap(context.New(rptr), file)
+			rel, err := filepath.Rel(wd, file)
 			if err != nil {
-				continue
+				retErr = fmt.Errorf("failed to get releative path: %w", err)
+				break
 			}
-			if fileList {
-				fmt.Println(file)
-				continue
-			}
-			for _, name := range sortedScenarioNames(scenarioMap) {
-				fmt.Println(name)
-				if !verboseList {
-					continue
-				}
-				for _, step := range scenarioMap[name] {
-					fmt.Println(step)
-				}
-			}
+			fmt.Fprintln(cmd.OutOrStdout(), rel)
 		}
 	}, reporterOpts...)
-	return nil
+	return retErr
 }

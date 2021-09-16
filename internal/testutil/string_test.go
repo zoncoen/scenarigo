@@ -19,6 +19,8 @@ func TestReplaceOutput(t *testing.T) {
       header:
         User-Agent:
         - scenarigo/%s
+        Date:
+        - Tue, 10 Nov 2009 23:00:00 GMT
     elapsed time: 0.123456 sec
        6 |     method: GET
        7 |     url: "http://{{env.TEST_HTTP_ADDR}}/echo"
@@ -40,6 +42,8 @@ FAIL
       header:
         User-Agent:
         - scenarigo/v1.0.0
+        Date:
+        - Mon, 01 Jan 0001 00:00:00 GMT
     elapsed time: 0.000000 sec
        6 |     method: GET
        7 |     url: "http://{{env.TEST_HTTP_ADDR}}/echo"

@@ -34,16 +34,23 @@ var runCmd = &cobra.Command{
 }
 
 func run(cmd *cobra.Command, args []string) error {
+	return runWithConfig(cmd, args, configFile)
+}
+
+func runWithConfig(cmd *cobra.Command, args []string, configPath string) error {
 	opts := []func(*scenarigo.Runner) error{}
-	cfg, err := loadConfig(configFile)
+	cfg, err := loadConfig(configPath)
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 	if cfg != nil {
+		if len(args) > 0 {
+			cfg.Scenarios = nil
+		}
 		opts = append(opts, scenarigo.WithConfig(cfg))
 	}
-	for _, arg := range args {
-		opts = append(opts, scenarigo.WithScenarios(arg))
+	if len(args) > 0 {
+		opts = append(opts, scenarigo.WithScenarios(args...))
 	}
 	r, err := scenarigo.NewRunner(opts...)
 	if err != nil {
@@ -51,7 +58,7 @@ func run(cmd *cobra.Command, args []string) error {
 	}
 
 	reporterOpts := []reporter.Option{
-		reporter.WithWriter(os.Stdout),
+		reporter.WithWriter(cmd.OutOrStdout()),
 	}
 	if (cfg != nil && cfg.Output.Verbose) || verbose {
 		reporterOpts = append(reporterOpts, reporter.WithVerboseLog())

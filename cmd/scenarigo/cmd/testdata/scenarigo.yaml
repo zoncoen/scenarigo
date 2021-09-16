@@ -1,6 +1,7 @@
 schemaVersion: config/v1
 
-scenarios: []       # Specify test scenario files and directories.
+scenarios:
+  - ./scenarios
 pluginDirectory: ./ # Specify the root directory of plugins.
 
 output:
@@ -11,4 +12,3 @@ output:
   #     filename: ./report.json # Specify a filename for test report output in JSON.
   #   junit:
   #     filename: ./junit.xml # Specify a filename for test report output in JUnit XML format.
-

@@ -413,7 +413,7 @@ func TestRunner_GenerateTestReport(t *testing.T) {
 										Result: reporter.TestResultPassed,
 										SubSteps: []reporter.SubStepReport{
 											{
-												Name:   "testdata/scenarios/included.yaml",
+												Name:   "included.yaml",
 												Result: reporter.TestResultPassed,
 												SubSteps: []reporter.SubStepReport{
 													{

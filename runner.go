@@ -41,6 +41,13 @@ func NewRunner(opts ...func(*Runner) error) (*Runner, error) {
 			return nil, err
 		}
 	}
+	if r.rootDir == "" {
+		wd, err := os.Getwd()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get working directory: %w", err)
+		}
+		r.rootDir = wd
+	}
 	return r, nil
 }
 
@@ -50,10 +57,18 @@ func WithConfig(config *schema.Config) func(*Runner) error {
 		if config == nil {
 			return nil
 		}
+
+		r.rootDir = config.Root
+		scenarios := make([]string, len(config.Scenarios))
+		for i, s := range config.Scenarios {
+			scenarios[i] = filepath.Join(r.rootDir, s)
+		}
+
 		var opts []func(r *Runner) error
-		opts = append(opts, WithScenarios(config.Scenarios...))
+		opts = append(opts, WithScenarios(scenarios...))
 		if config.PluginDirectory != "" {
-			opts = append(opts, WithPluginDir(config.PluginDirectory))
+			opts = append(opts, WithPluginDir(
+				filepath.Join(r.rootDir, config.PluginDirectory)))
 		}
 		for _, opt := range opts {
 			if err := opt(r); err != nil {
@@ -63,7 +78,6 @@ func WithConfig(config *schema.Config) func(*Runner) error {
 		if config.Output.Colored != nil {
 			r.enabledColor = *config.Output.Colored
 		}
-		r.rootDir = config.Root
 		r.reportConfig = config.Output.Report
 		return nil
 	}
@@ -72,6 +86,13 @@ func WithConfig(config *schema.Config) func(*Runner) error {
 // WithScenarios returns a option which finds and sets test scenario files.
 func WithScenarios(paths ...string) func(*Runner) error {
 	return func(r *Runner) error {
+		for i, path := range paths {
+			abs, err := filepath.Abs(path)
+			if err != nil {
+				return fmt.Errorf("failed to find test scenarios: %w", err)
+			}
+			paths[i] = abs
+		}
 		files, err := getAllFiles(paths...)
 		if err != nil {
 			return fmt.Errorf("failed to find test scenarios: %w", err)
@@ -157,34 +178,9 @@ func (r *Runner) setEnabledColor(envColor string) {
 	r.enabledColor = result
 }
 
-// ScenariosFiles returns all scenario file paths.
+// ScenarioFiles returns all scenario file paths.
 func (r *Runner) ScenarioFiles() []string {
 	return r.scenarioFiles
-}
-
-// Scenarios returns map for all scenarios ( key is scenario name and value is steps of scenario ).
-func (r *Runner) ScenarioMap(ctx *context.Context, path string) (map[string][]string, error) {
-	scns, err := schema.LoadScenarios(path)
-	if err != nil {
-		return nil, err
-	}
-
-	scenarioMap := map[string][]string{}
-	ctx.Run(path, func(ctx *context.Context) {
-		for _, scn := range scns {
-			ctx.Run(scn.Title, func(ctx *context.Context) {
-				scenarioName := ctx.Reporter().Name()
-				scenarioMap[scenarioName] = []string{}
-				for _, step := range scn.Steps {
-					ctx.Run(step.Title, func(ctx *context.Context) {
-						stepName := ctx.Reporter().Name()
-						scenarioMap[scenarioName] = append(scenarioMap[scenarioName], stepName)
-					})
-				}
-			})
-		}
-	})
-	return scenarioMap, nil
 }
 
 // Run runs all tests.
@@ -194,7 +190,11 @@ func (r *Runner) Run(ctx *context.Context) {
 	}
 	ctx = ctx.WithEnabledColor(r.enabledColor)
 	for _, f := range r.scenarioFiles {
-		ctx.Run(f, func(ctx *context.Context) {
+		testName, err := filepath.Rel(r.rootDir, f)
+		if err != nil {
+			ctx.Reporter().Fatalf("failed to load scenarios: %s", err)
+		}
+		ctx.Run(testName, func(ctx *context.Context) {
 			scns, err := schema.LoadScenarios(f)
 			if err != nil {
 				ctx.Reporter().Fatalf("failed to load scenarios: %s", err)

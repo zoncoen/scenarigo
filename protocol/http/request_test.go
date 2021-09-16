@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"regexp"
 	"strings"
 	"testing"
 
@@ -303,15 +302,15 @@ func TestRequest_Invoke_Log(t *testing.T) {
 			})
 		}, reporter.WithWriter(&b), reporter.WithVerboseLog())
 
-		expect := fmt.Sprintf(strings.TrimPrefix(`
+		expect := strings.TrimPrefix(`
 === RUN   test.yaml
 --- PASS: test.yaml (0.00s)
         request:
           method: POST
-          url: %s/echo?query=hello
+          url: http://127.0.0.1:12345/echo?query=hello
           header:
             User-Agent:
-            - %s
+            - scenarigo/v1.0.0
           body:
             message: hey
         response:
@@ -320,21 +319,17 @@ func TestRequest_Invoke_Log(t *testing.T) {
             - "18"
             Content-Type:
             - application/json
+            Date:
+            - Mon, 01 Jan 0001 00:00:00 GMT
           body:
             message: hey
 PASS
 ok  	test.yaml	0.000s
-`, "\n"), srv.URL, defaultUserAgent)
-		if diff := cmp.Diff(expect, testutil.ResetDuration(removeDateHeader(b.String()))); diff != "" {
+`, "\n")
+		if diff := cmp.Diff(expect, testutil.ReplaceOutput(b.String())); diff != "" {
 			t.Errorf("differs (-want +got):\n%s", diff)
 		}
 	})
-}
-
-var dateHeaderPattern = regexp.MustCompile(`\s+Date:\n.+`)
-
-func removeDateHeader(str string) string {
-	return dateHeaderPattern.ReplaceAllString(str, "")
 }
 
 func TestRequest_buildRequest(t *testing.T) {

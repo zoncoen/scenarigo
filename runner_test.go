@@ -212,28 +212,11 @@ func TestRunner_ScenarioFiles(t *testing.T) {
 	}
 }
 
-func TestRunner_ScenarioMap(t *testing.T) {
-	runner, err := NewRunner(WithScenarios("testdata"))
+func TestWithConfig(t *testing.T) {
+	wd, err := os.Getwd()
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, file := range runner.ScenarioFiles() {
-		m, err := runner.ScenarioMap(context.FromT(t), file)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if len(m) == 0 {
-			t.Fatal("failed to get scenarios")
-		}
-		for _, steps := range m {
-			if len(steps) == 0 {
-				t.Fatal("failed to get steps from scenario map")
-			}
-		}
-	}
-}
-
-func TestWithConfig(t *testing.T) {
 	pluginDir := "plugins"
 	pluginDirAbs, err := filepath.Abs(pluginDir)
 	if err != nil {
@@ -246,12 +229,24 @@ func TestWithConfig(t *testing.T) {
 	}{
 		"nil": {
 			config: nil,
-			expect: &Runner{},
+			expect: &Runner{
+				rootDir: wd,
+			},
 		},
 		"empty": {
 			config: &schema.Config{},
 			expect: &Runner{
 				scenarioFiles: []string{},
+				rootDir:       wd,
+			},
+		},
+		"root directory": {
+			config: &schema.Config{
+				Root: "/path/to/directory",
+			},
+			expect: &Runner{
+				scenarioFiles: []string{},
+				rootDir:       "/path/to/directory",
 			},
 		},
 		"scenarios": {
@@ -259,7 +254,8 @@ func TestWithConfig(t *testing.T) {
 				Scenarios: []string{"testdata/use_include.yaml"},
 			},
 			expect: &Runner{
-				scenarioFiles: []string{"testdata/use_include.yaml"},
+				scenarioFiles: []string{filepath.Join(wd, "testdata/use_include.yaml")},
+				rootDir:       wd,
 			},
 		},
 		"plugin directory": {
@@ -269,6 +265,7 @@ func TestWithConfig(t *testing.T) {
 			expect: &Runner{
 				scenarioFiles: []string{},
 				pluginDir:     &pluginDirAbs,
+				rootDir:       wd,
 			},
 		},
 		"output colored": {
@@ -280,6 +277,7 @@ func TestWithConfig(t *testing.T) {
 			expect: &Runner{
 				scenarioFiles: []string{},
 				enabledColor:  colored,
+				rootDir:       wd,
 			},
 		},
 		"output report": {
@@ -305,6 +303,7 @@ func TestWithConfig(t *testing.T) {
 						Filename: "report.json",
 					},
 				},
+				rootDir: wd,
 			},
 		},
 	}

@@ -63,10 +63,7 @@ func RunScenario(ctx *context.Context, s *schema.Scenario) *context.Context {
 				ctx.Reporter().SkipNow()
 			}
 
-			if step.Include != "" {
-				step.Include = filepath.Join(filepath.Dir(s.Filepath()), step.Include)
-			}
-			ctx = runStep(ctx, step, idx)
+			ctx = runStep(ctx, s, step, idx)
 
 			// bind values to the scenario context for enable to access from following steps
 			if step.Bind.Vars != nil {

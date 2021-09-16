@@ -2,6 +2,7 @@ package scenarigo
 
 import (
 	"fmt"
+	"path/filepath"
 	"time"
 
 	"github.com/lestrrat-go/backoff"
@@ -15,7 +16,7 @@ import (
 	"github.com/zoncoen/scenarigo/schema"
 )
 
-func runStep(ctx *context.Context, s *schema.Step, stepIdx int) *context.Context {
+func runStep(ctx *context.Context, scenario *schema.Scenario, s *schema.Step, stepIdx int) *context.Context {
 	if s.Vars != nil {
 		vars, err := ctx.ExecuteTemplate(s.Vars)
 		if err != nil {
@@ -35,15 +36,21 @@ func runStep(ctx *context.Context, s *schema.Step, stepIdx int) *context.Context
 	}
 
 	if s.Include != "" {
-		scenarios, err := schema.LoadScenarios(s.Include)
+		baseDir := filepath.Dir(scenario.Filepath())
+		include := filepath.Join(baseDir, s.Include)
+		scenarios, err := schema.LoadScenarios(include)
 		if err != nil {
 			ctx.Reporter().Fatalf(`failed to include "%s" as step: %s`, s.Include, err)
 		}
 		if len(scenarios) != 1 {
 			ctx.Reporter().Fatalf(`failed to include "%s" as step: must be a scenario`, s.Include)
 		}
+		testName, err := filepath.Rel(baseDir, include)
+		if err != nil {
+			ctx.Reporter().Fatalf(`failed to include "%s" as step: %s`, s.Include, err)
+		}
 		currentNode := ctx.Node()
-		ctx.Reporter().Run(scenarios[0].Filepath(), func(rptr reporter.Reporter) {
+		ctx.Reporter().Run(testName, func(rptr reporter.Reporter) {
 			ctx = RunScenario(ctx.WithReporter(rptr).WithNode(scenarios[0].Node), scenarios[0])
 		})
 

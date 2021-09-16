@@ -4,14 +4,13 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
+	"github.com/zoncoen/scenarigo/cmd/scenarigo/cmd/config"
 )
 
 const appName = "scenarigo"
 
-var configFile string
-
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&configFile, "config", "c", "", "specify configuration file path")
+	rootCmd.PersistentFlags().StringVarP(&config.ConfigPath, "config", "c", "", "specify configuration file path")
 }
 
 var rootCmd = &cobra.Command{

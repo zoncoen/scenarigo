@@ -32,7 +32,11 @@ func TestLoad(t *testing.T) {
 			found:    true,
 		},
 		"specify file (not found)": {
-			filename: "../testdata/.invalid.yaml",
+			filename: "testdata/not-found.yaml",
+			fail:     true,
+		},
+		"invalid config": {
+			filename: "testdata/invalid.yaml",
 			fail:     true,
 		},
 	}
@@ -44,14 +48,14 @@ func TestLoad(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if err := os.Chdir(test.cd); err != nil {
-					t.Fatal(err)
-				}
-				defer func() {
+				t.Cleanup(func() {
 					if err := os.Chdir(wd); err != nil {
 						t.Fatal(err)
 					}
-				}()
+				})
+				if err := os.Chdir(test.cd); err != nil {
+					t.Fatal(err)
+				}
 			}
 			cfg, err := Load(test.filename)
 			if test.fail && err == nil {

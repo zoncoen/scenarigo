@@ -7,6 +7,15 @@ import (
 
 func TestInitRun(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
+		wd, err := os.Getwd()
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() {
+			if err := os.Chdir(wd); err != nil {
+				t.Fatal(err)
+			}
+		})
 		dir := t.TempDir()
 		if err := os.Chdir(dir); err != nil {
 			t.Fatal(err)
@@ -28,15 +37,15 @@ func TestInitRun(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			t.Cleanup(func() {
+				if err := os.Chdir(wd); err != nil {
+					t.Fatal(err)
+				}
+			})
 			dir := t.TempDir()
 			if err := os.Chdir(dir); err != nil {
 				t.Fatal(err)
 			}
-			defer func() {
-				if err := os.Chdir(wd); err != nil {
-					t.Fatal(err)
-				}
-			}()
 			if err := initRun(nil, []string{}); err != nil {
 				t.Fatalf("failed to init: %s", err)
 			}

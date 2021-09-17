@@ -32,12 +32,8 @@ var runCmd = &cobra.Command{
 }
 
 func run(cmd *cobra.Command, args []string) error {
-	return runWithConfig(cmd, args, config.ConfigPath)
-}
-
-func runWithConfig(cmd *cobra.Command, args []string, configPath string) error {
 	opts := []func(*scenarigo.Runner) error{}
-	cfg, err := config.Load(configPath)
+	cfg, err := config.Load(config.ConfigPath)
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}

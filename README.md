@@ -66,8 +66,12 @@ $ scenarigo config init
 ```yaml scenarigo.yaml
 schemaVersion: config/v1
 
-scenarios: []       # Specify test scenario files and directories.
-pluginDirectory: ./ # Specify the root directory of plugins.
+scenarios: []               # Specify test scenario files and directories.
+
+pluginDirectory: ./         # Specify the root directory of plugins.
+# plugins:                  # Specify configurations to build plugins.
+#   plugin.so:              # Map keys specify plugin output file path from the root directory of plugins.
+#     src: ./path/to/plugin # Specify the source file or directory of the plugin.
 
 output:
   verbose: false          # Enable verbose output.
@@ -123,7 +127,8 @@ Usage:
 Available Commands:
   config      manage the scenarigo configuration file
   help        Help about any command
-  list        list the test scenarios
+  list        list the test scenario files
+  plugin      provide operations for plugins
   run         run test scenarios
   version     print scenarigo version
 

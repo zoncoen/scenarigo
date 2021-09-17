@@ -26,12 +26,8 @@ func init() {
 }
 
 func list(cmd *cobra.Command, args []string) error {
-	return listWithConfig(cmd, args, config.ConfigPath)
-}
-
-func listWithConfig(cmd *cobra.Command, args []string, configPath string) error {
 	opts := []func(*scenarigo.Runner) error{}
-	cfg, err := config.Load(configPath)
+	cfg, err := config.Load(config.ConfigPath)
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}

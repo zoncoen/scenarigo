@@ -11,6 +11,7 @@ import (
 
 	"github.com/sergi/go-diff/diffmatchpatch"
 	"github.com/spf13/cobra"
+	"github.com/zoncoen/scenarigo/cmd/scenarigo/cmd/config"
 	"github.com/zoncoen/scenarigo/internal/testutil"
 )
 
@@ -98,7 +99,8 @@ ok  	scenarios/pass.yaml	0.000s
 			cmd := &cobra.Command{}
 			var buf bytes.Buffer
 			cmd.SetOut(&buf)
-			err := runWithConfig(cmd, test.args, test.config)
+			config.ConfigPath = test.config
+			err := run(cmd, test.args)
 			if test.expectError && err == nil {
 				t.Fatal("expect error but no error")
 			}

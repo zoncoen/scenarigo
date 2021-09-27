@@ -1,5 +1,21 @@
 # CHANGELOG
 
+<a name="v0.8.1"></a>
+## [v0.8.1] - 2021-09-27
+### Bug Fixes
+- add workaround to avoid the bug of Go 1.17
+
+### Code Refactoring
+- export functions
+
+### Features
+- list command refers to the configuration file
+- remove blank lines from logs
+
+### BREAKING CHANGE
+
+"file" and "verbose" options are removed from the list sub-command.
+
 <a name="v0.8.0"></a>
 ## [v0.8.0] - 2021-09-08
 ### Bug Fixes
@@ -151,6 +167,7 @@ change protocl.Protocol interface
 - first release
 
 
+[v0.8.1]: https://github.com/zoncoen/scenarigo/compare/v0.8.0...v0.8.1
 [v0.8.0]: https://github.com/zoncoen/scenarigo/compare/v0.7.0...v0.8.0
 [v0.7.0]: https://github.com/zoncoen/scenarigo/compare/v0.6.3...v0.7.0
 [v0.6.3]: https://github.com/zoncoen/scenarigo/compare/v0.6.2...v0.6.3

@@ -1,17 +1,17 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/spf13/cobra"
+	"github.com/zoncoen/scenarigo/cmd/scenarigo/cmd/config"
 )
 
 const appName = "scenarigo"
 
-var configFile string
-
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&configFile, "config", "c", "", "specify configuration file path")
+	rootCmd.PersistentFlags().StringVarP(&config.ConfigPath, "config", "c", "", "specify configuration file path")
 }
 
 var rootCmd = &cobra.Command{
@@ -20,6 +20,6 @@ var rootCmd = &cobra.Command{
 }
 
 // Execute executes the root command.
-func Execute() error {
-	return rootCmd.Execute()
+func Execute(ctx context.Context) error {
+	return rootCmd.ExecuteContext(ctx)
 }

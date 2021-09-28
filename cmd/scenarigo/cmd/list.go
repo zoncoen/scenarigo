@@ -8,6 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/zoncoen/scenarigo"
+	"github.com/zoncoen/scenarigo/cmd/scenarigo/cmd/config"
 	"github.com/zoncoen/scenarigo/reporter"
 )
 
@@ -25,12 +26,8 @@ func init() {
 }
 
 func list(cmd *cobra.Command, args []string) error {
-	return listWithConfig(cmd, args, configFile)
-}
-
-func listWithConfig(cmd *cobra.Command, args []string, configPath string) error {
 	opts := []func(*scenarigo.Runner) error{}
-	cfg, err := loadConfig(configPath)
+	cfg, err := config.Load(config.ConfigPath)
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}

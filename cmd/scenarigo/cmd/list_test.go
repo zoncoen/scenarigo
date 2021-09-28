@@ -7,6 +7,7 @@ import (
 
 	"github.com/sergi/go-diff/diffmatchpatch"
 	"github.com/spf13/cobra"
+	"github.com/zoncoen/scenarigo/cmd/scenarigo/cmd/config"
 )
 
 func TestList(t *testing.T) {
@@ -14,7 +15,8 @@ func TestList(t *testing.T) {
 		cmd := &cobra.Command{}
 		var buf bytes.Buffer
 		cmd.SetOut(&buf)
-		if err := listWithConfig(cmd, []string{}, "./testdata/scenarigo.yaml"); err != nil {
+		config.ConfigPath = "./testdata/scenarigo.yaml"
+		if err := list(cmd, []string{}); err != nil {
 			t.Fatal(err)
 		}
 		expect := strings.TrimPrefix(`
@@ -31,7 +33,8 @@ testdata/scenarios/pass.yaml
 		cmd := &cobra.Command{}
 		var buf bytes.Buffer
 		cmd.SetOut(&buf)
-		if err := listWithConfig(cmd, []string{"testdata/scenarios/pass.yaml"}, ""); err != nil {
+		config.ConfigPath = ""
+		if err := list(cmd, []string{"testdata/scenarios/pass.yaml"}); err != nil {
 			t.Fatal(err)
 		}
 		expect := strings.TrimPrefix(`
@@ -47,7 +50,8 @@ testdata/scenarios/pass.yaml
 		cmd := &cobra.Command{}
 		var buf bytes.Buffer
 		cmd.SetOut(&buf)
-		if err := listWithConfig(cmd, []string{"testdata/scenarios/pass.yaml"}, "./testdata/scenarigo.yaml"); err != nil {
+		config.ConfigPath = "./testdata/scenarigo.yaml"
+		if err := list(cmd, []string{"testdata/scenarios/pass.yaml"}); err != nil {
 			t.Fatal(err)
 		}
 		expect := strings.TrimPrefix(`

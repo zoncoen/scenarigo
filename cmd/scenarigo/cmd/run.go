@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/fatih/color"
 	"github.com/pkg/errors"
@@ -11,7 +10,6 @@ import (
 	"github.com/zoncoen/scenarigo/cmd/scenarigo/cmd/config"
 	"github.com/zoncoen/scenarigo/context"
 	"github.com/zoncoen/scenarigo/reporter"
-	"github.com/zoncoen/scenarigo/schema"
 )
 
 // ErrTestFailed is the error returned when the test failed.
@@ -34,12 +32,8 @@ var runCmd = &cobra.Command{
 }
 
 func run(cmd *cobra.Command, args []string) error {
-	return runWithConfig(cmd, args, configFile)
-}
-
-func runWithConfig(cmd *cobra.Command, args []string, configPath string) error {
 	opts := []func(*scenarigo.Runner) error{}
-	cfg, err := loadConfig(configPath)
+	cfg, err := config.Load(config.ConfigPath)
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
@@ -82,18 +76,4 @@ func runWithConfig(cmd *cobra.Command, args []string, configPath string) error {
 		return ErrTestFailed
 	}
 	return nil
-}
-
-func loadConfig(cfgpath string) (*schema.Config, error) {
-	if cfgpath != "" {
-		return schema.LoadConfig(cfgpath, !color.NoColor)
-	}
-	cfg, err := schema.LoadConfig(config.DefaultConfigFileName, !color.NoColor)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	return cfg, nil
 }

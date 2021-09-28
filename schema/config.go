@@ -23,13 +23,19 @@ func init() {
 
 // Config represents a configuration.
 type Config struct {
-	SchemaVersion   string       `yaml:"schemaVersion,omitempty"`
-	Scenarios       []string     `yaml:"scenarios,omitempty"`
-	PluginDirectory string       `yaml:"pluginDirectory,omitempty"`
-	Output          OutputConfig `yaml:"output,omitempty"`
+	SchemaVersion   string                  `yaml:"schemaVersion,omitempty"`
+	Scenarios       []string                `yaml:"scenarios,omitempty"`
+	PluginDirectory string                  `yaml:"pluginDirectory,omitempty"`
+	Plugins         map[string]PluginConfig `yaml:"plugins,omitempty"`
+	Output          OutputConfig            `yaml:"output,omitempty"`
 
 	// absolute path to the configuration file
 	Root string `yaml:"-"`
+}
+
+// PluginConfig represents a plugin configuration.
+type PluginConfig struct {
+	Src string `yaml:"src,omitempty"`
 }
 
 // OutputConfig represents a output configuration.

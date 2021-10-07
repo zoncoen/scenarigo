@@ -22,8 +22,8 @@ func TestLoadConfig(t *testing.T) {
 		expect := &Config{
 			SchemaVersion: "config/v1",
 			Scenarios: []string{
-				"a.yaml",
-				"b.yaml",
+				"scenarios/a.yaml",
+				"scenarios/b.yaml",
 			},
 			PluginDirectory: "plugins",
 			Output: OutputConfig{
@@ -76,6 +76,29 @@ unknown version "config/unknown"`,
          ^
    3 |   - v1
 invalid version: cannot unmarshal []interface {} into Go value of type string`,
+			},
+			"invalid scenarios": {
+				path: "testdata/config/invalid-scenarios.yaml",
+				expect: `1 error occurred:
+   1 | schemaVersion: config/v1
+   2 | scenarios:
+>  3 |   - scenarios/invalid.yaml
+           ^
+scenarios/invalid.yaml: no such file or directory
+
+`,
+			},
+			"invalid plugins": {
+				path: "testdata/config/invalid-plugins.yaml",
+				expect: `1 error occurred:
+   1 | schemaVersion: config/v1
+   2 | plugins:
+   3 |   foo.so:
+>  4 |     src: invalid
+                ^
+invalid: no such file or directory
+
+`,
 			},
 		}
 		for name, test := range tests {

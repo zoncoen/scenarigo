@@ -205,18 +205,6 @@ require google.golang.org/grpc v1.37.1
 				config: "schemaVersion: test",
 				expect: "failed to load config",
 			},
-			"src not found": {
-				config: `
-schemaVersion: config/v1
-plugins:
-  plugin.so:
-    src: src/invalid.go
-`,
-				files: map[string]string{
-					"src/main.go": pluginCode,
-				},
-				expect: "failed to find plugin src",
-			},
 			"build failed": {
 				config: `
 schemaVersion: config/v1

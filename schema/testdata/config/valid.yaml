@@ -1,7 +1,7 @@
 schemaVersion: config/v1
 scenarios:
-  - a.yaml
-  - b.yaml
+  - scenarios/a.yaml
+  - scenarios/b.yaml
 pluginDirectory: plugins
 output:
   verbose: true

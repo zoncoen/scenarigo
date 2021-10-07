@@ -6,9 +6,13 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/fatih/color"
 	"github.com/goccy/go-yaml"
+	"github.com/goccy/go-yaml/ast"
 	"github.com/goccy/go-yaml/parser"
+
 	"github.com/zoncoen/scenarigo/errors"
+	"github.com/zoncoen/scenarigo/internal/filepathutil"
 )
 
 var scehamaVersionPath *yaml.Path
@@ -109,6 +113,9 @@ func LoadConfig(path string, colored bool) (*Config, error) {
 			return nil, err
 		}
 		cfg.Root = root
+		if err := validate(&cfg, f.Docs[0].Body); err != nil {
+			return nil, err
+		}
 		return &cfg, nil
 	default:
 		return nil, errors.WithNodeAndColored(
@@ -117,4 +124,32 @@ func LoadConfig(path string, colored bool) (*Config, error) {
 			colored,
 		)
 	}
+}
+
+func validate(c *Config, node ast.Node) error {
+	var errs []error
+	for i, p := range c.Scenarios {
+		if err := stat(c, p, fmt.Sprintf("scenarios[%d]", i), node); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	for name, p := range c.Plugins {
+		if err := stat(c, p.Src, fmt.Sprintf("plugins.'%s'.src", name), node); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	return errors.Errors(errs...)
+}
+
+func stat(c *Config, p, q string, node ast.Node) error {
+	if _, err := os.Stat(filepathutil.From(c.Root, p)); err != nil {
+		if os.IsNotExist(err) {
+			err = errors.Errorf("%s: no such file or directory", p)
+		}
+		return errors.WithNodeAndColored(
+			errors.WithPath(err, q),
+			node, !color.NoColor,
+		)
+	}
+	return nil
 }

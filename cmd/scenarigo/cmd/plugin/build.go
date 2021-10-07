@@ -17,6 +17,7 @@ import (
 
 	"github.com/zoncoen/scenarigo"
 	"github.com/zoncoen/scenarigo/cmd/scenarigo/cmd/config"
+	"github.com/zoncoen/scenarigo/internal/filepathutil"
 	"github.com/zoncoen/scenarigo/version"
 )
 
@@ -56,9 +57,9 @@ func build(cmd *cobra.Command, args []string) error {
 		os.Chdir(wd)
 	}()
 
-	pluginDir := pathFromRoot(cfg.Root, cfg.PluginDirectory)
+	pluginDir := filepathutil.From(cfg.Root, cfg.PluginDirectory)
 	for out, p := range cfg.Plugins {
-		if err := buildPlugin(ctx(cmd), goCmd, pathFromRoot(cfg.Root, p.Src), pathFromRoot(pluginDir, out), out); err != nil {
+		if err := buildPlugin(ctx(cmd), goCmd, filepathutil.From(cfg.Root, p.Src), filepathutil.From(pluginDir, out), out); err != nil {
 			return fmt.Errorf("failed to build plugin %s: %w", out, err)
 		}
 	}
@@ -152,13 +153,6 @@ func buildPlugin(ctx context.Context, goCmd, src, out, target string) error {
 	}
 
 	return nil
-}
-
-func pathFromRoot(root, path string) string {
-	if filepath.IsAbs(path) {
-		return path
-	}
-	return filepath.Join(root, path)
 }
 
 func execute(ctx context.Context, name string, args ...string) error {

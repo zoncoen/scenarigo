@@ -48,6 +48,9 @@ func ErrorPath(path, message string) error {
 
 // Errors create MultiPathError by error instances.
 func Errors(errs ...error) error {
+	if len(errs) == 0 {
+		return nil
+	}
 	return &MultiPathError{Errs: errs}
 }
 

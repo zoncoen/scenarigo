@@ -72,6 +72,27 @@ func TestErrorQueryf(t *testing.T) {
 	}
 }
 
+func TestErrors(t *testing.T) {
+	t.Run("should be nil if no errors", func(t *testing.T) {
+		if err := Errors(); err != nil {
+			t.Errorf("not nil: %v", err)
+		}
+	})
+	t.Run("should be wrapped by MultiPathError", func(t *testing.T) {
+		err := Errors(errors.New("a"), errors.New("b"))
+		if err == nil {
+			t.Error("no error")
+		}
+		errs, ok := err.(*MultiPathError)
+		if !ok {
+			t.Errorf("expect *MultiPathError but %T", err)
+		}
+		if l := len(errs.Errs); l != 2 {
+			t.Errorf("expect 2 errors but %d error", l)
+		}
+	})
+}
+
 func TestWrap(t *testing.T) {
 	t.Run("wrap pkg/errors instance", func(t *testing.T) {
 		err := Wrap(errors.New("message"), "message2")

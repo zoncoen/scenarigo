@@ -71,7 +71,7 @@ scenarios: []               # Specify test scenario files and directories.
 pluginDirectory: ./         # Specify the root directory of plugins.
 # plugins:                  # Specify configurations to build plugins.
 #   plugin.so:              # Map keys specify plugin output file path from the root directory of plugins.
-#     src: ./path/to/plugin # Specify the source file or directory of the plugin.
+#     src: ./path/to/plugin # Specify the source file, directory, or "go gettable" module path of the plugin.
 
 output:
   verbose: false          # Enable verbose output.

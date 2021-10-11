@@ -3,6 +3,7 @@ package plugin
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -11,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/sergi/go-diff/diffmatchpatch"
+	"github.com/sosedoff/gitkit"
 	"github.com/spf13/cobra"
 
 	"github.com/zoncoen/scenarigo"
@@ -66,6 +68,8 @@ go %s
 		t.Fatal(err)
 	}
 	gomodWithRequire := string(b)
+
+	setupGitServer(t)
 
 	t.Run("sucess", func(t *testing.T) {
 		tests := map[string]struct {
@@ -155,6 +159,50 @@ require google.golang.org/grpc v1.37.1
 					"src/go.mod": gomodWithRequire,
 				},
 			},
+			`src is a "go gettable" remote git repository`: {
+				config: `
+schemaVersion: config/v1
+plugins:
+  gen/plugin.so:
+    src: 127.0.0.1/plugin.git
+`,
+				files:            map[string]string{},
+				expectPluginPath: "gen/plugin.so",
+				expectGoMod:      map[string]string{},
+			},
+			`src is a remote git repository with version`: {
+				config: `
+schemaVersion: config/v1
+plugins:
+  gen/plugin.so:
+    src: 127.0.0.1/plugin.git@v1.0.0
+`,
+				files:            map[string]string{},
+				expectPluginPath: "gen/plugin.so",
+				expectGoMod:      map[string]string{},
+			},
+			`src is a remote git repository with latest version`: {
+				config: `
+schemaVersion: config/v1
+plugins:
+  gen/plugin.so:
+    src: 127.0.0.1/plugin.git@latest
+`,
+				files:            map[string]string{},
+				expectPluginPath: "gen/plugin.so",
+				expectGoMod:      map[string]string{},
+			},
+			`should escape file path of remote repository`: {
+				config: `
+schemaVersion: config/v1
+plugins:
+  gen/plugin.so:
+    src: 127.0.0.1/NeedEscape.git
+`,
+				files:            map[string]string{},
+				expectPluginPath: "gen/plugin.so",
+				expectGoMod:      map[string]string{},
+			},
 		}
 		for name, test := range tests {
 			test := test
@@ -185,7 +233,6 @@ require google.golang.org/grpc v1.37.1
 						dmp := diffmatchpatch.New()
 						diffs := dmp.DiffMain(expect, got, false)
 						t.Errorf("go.mod differs:\n%s", dmp.DiffPrettyText(diffs))
-						fmt.Println(got)
 					}
 				}
 			})
@@ -216,6 +263,24 @@ plugins:
 					"src/main.go": `packag plugin`,
 				},
 				expect: "expected 'package', found packag",
+			},
+			"invalid version": {
+				config: `
+schemaVersion: config/v1
+plugins:
+  plugin.so:
+    src: 127.0.0.1/plugin.git@v2.0.0
+`,
+				expect: "unknown revision v2.0.0",
+			},
+			"can't build remote module": {
+				config: `
+schemaVersion: config/v1
+plugins:
+  plugin.so:
+    src: 127.0.0.1/not-plugin.git
+`,
+				expect: "-buildmode=plugin requires exactly one main package",
 			},
 		}
 		for name, test := range tests {
@@ -328,6 +393,87 @@ func TestFindGoCmd(t *testing.T) {
 					t.Fatalf("unexpected error: %s", err)
 				}
 			})
+		}
+	})
+}
+
+func setupGitServer(t *testing.T) {
+	t.Helper()
+
+	// create git objects for test repositories
+	tempDir := t.TempDir()
+	envs := []string{
+		fmt.Sprintf("GIT_CONFIG_GLOBAL=%s", filepath.Join(tempDir, ".gitconfig")),
+	}
+	ctx := context.Background()
+	if err := executeWithEnvs(ctx, envs, tempDir, "git", "config", "--global", "user.name", "scenarigo-test"); err != nil {
+		t.Fatalf("git config failed: %s", err)
+	}
+	if err := executeWithEnvs(ctx, envs, tempDir, "git", "config", "--global", "user.email", "scenarigo-test@example.com"); err != nil {
+		t.Fatalf("git config failed: %s", err)
+	}
+	repoDir := filepath.Join("testdata", "repos")
+	entries, err := os.ReadDir(repoDir)
+	if err != nil {
+		t.Fatalf("failed to read directory: %s", err)
+	}
+	for _, e := range entries {
+		if !e.IsDir() {
+			continue
+		}
+		wd := filepath.Join(repoDir, e.Name())
+		if err := executeWithEnvs(ctx, envs, wd, "git", "init"); err != nil {
+			t.Fatalf("git init failed: %s", err)
+		}
+		if err := executeWithEnvs(ctx, envs, wd, "git", "add", "-A"); err != nil {
+			t.Fatalf("git add failed: %s", err)
+		}
+		if err := executeWithEnvs(ctx, envs, wd, "git", "commit", "-m", "commit"); err != nil {
+			t.Fatalf("git commit failed: %s", err)
+		}
+		if err := executeWithEnvs(ctx, envs, wd, "git", "tag", "v1.0.0"); err != nil {
+			t.Fatalf("git commit failed: %s", err)
+		}
+		if err := os.Rename(
+			filepath.Join(repoDir, e.Name(), ".git"),
+			filepath.Join(tempDir, fmt.Sprintf("%s", e.Name())),
+		); err != nil {
+			t.Fatalf("failed to rename: %s", err)
+		}
+	}
+
+	git := gitkit.NewSSH(gitkit.Config{
+		Dir:    tempDir,
+		KeyDir: filepath.Join(tempDir, "ssh"),
+	})
+	git.PublicKeyLookupFunc = func(_ string) (*gitkit.PublicKey, error) {
+		return &gitkit.PublicKey{}, nil
+	}
+	if err := git.Listen(":0"); err != nil {
+		t.Fatalf("failed to listen: %s", err)
+	}
+	go git.Serve()
+	t.Cleanup(func() {
+		git.Stop()
+	})
+
+	u, err := url.Parse(fmt.Sprintf("http://%s", git.Address()))
+	if err != nil {
+		t.Fatalf("failed to parse URL: %s", err)
+	}
+	setEnv(t, "GIT_SSH_COMMAND", fmt.Sprintf("ssh -p %s -i %s -oStrictHostKeyChecking=no -F /dev/null", u.Port(), filepath.Join(tempDir, "ssh", "gitkit.rsa")))
+	setEnv(t, "GOPRIVATE", "127.0.0.1")
+}
+
+func setEnv(t *testing.T, key, value string) {
+	t.Helper()
+	v, ok := os.LookupEnv(key)
+	os.Setenv(key, value)
+	t.Cleanup(func() {
+		if ok {
+			os.Setenv(key, v)
+		} else {
+			os.Unsetenv(key)
 		}
 	})
 }

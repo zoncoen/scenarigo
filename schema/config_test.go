@@ -25,7 +25,18 @@ func TestLoadConfig(t *testing.T) {
 				"scenarios/a.yaml",
 				"scenarios/b.yaml",
 			},
-			PluginDirectory: "plugins",
+			PluginDirectory: "gen",
+			Plugins: map[string]PluginConfig{
+				"local.so": {
+					Src: "./plugin",
+				},
+				"remote.so": {
+					Src: "github.com/zoncoen/scenarigo",
+				},
+				"remote-with-version.so": {
+					Src: "github.com/zoncoen/scenarigo@v1.0.0",
+				},
+			},
 			Output: OutputConfig{
 				Verbose: true,
 				Colored: &colored,
@@ -88,15 +99,15 @@ scenarios/invalid.yaml: no such file or directory
 
 `,
 			},
-			"invalid plugins": {
-				path: "testdata/config/invalid-plugins.yaml",
+			"plugin src not found": {
+				path: "testdata/config/invalid-plugin-src-not-found.yaml",
 				expect: `1 error occurred:
    1 | schemaVersion: config/v1
    2 | plugins:
    3 |   foo.so:
 >  4 |     src: invalid
                 ^
-invalid: no such file or directory
+invalid: no such file or directory: malformed module path "invalid": missing dot in first path element
 
 `,
 			},

@@ -49,17 +49,18 @@ func build(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	wd, err := os.Getwd()
-	if err != nil {
-		return fmt.Errorf("failed to get the current directory: %w", err)
-	}
-	defer func() {
-		os.Chdir(wd)
-	}()
-
 	pluginDir := filepathutil.From(cfg.Root, cfg.PluginDirectory)
 	for out, p := range cfg.Plugins {
-		if err := buildPlugin(ctx(cmd), goCmd, filepathutil.From(cfg.Root, p.Src), filepathutil.From(pluginDir, out), out); err != nil {
+		src := filepathutil.From(cfg.Root, p.Src)
+		if _, err := os.Stat(src); err != nil {
+			s, clean, err := downloadModule(ctx(cmd), goCmd, p.Src)
+			defer clean()
+			if err != nil {
+				return fmt.Errorf("failed to build plugin %s: %w", out, err)
+			}
+			src = s
+		}
+		if err := buildPlugin(ctx(cmd), goCmd, src, filepathutil.From(pluginDir, out), out); err != nil {
 			return fmt.Errorf("failed to build plugin %s: %w", out, err)
 		}
 	}
@@ -104,6 +105,69 @@ You can install the required version of Go by the following commands:
 	return goCmd, nil
 }
 
+func downloadModule(ctx context.Context, goCmd, mod string) (string, func(), error) {
+	tempDir, err := os.MkdirTemp("", "scenarigo-plugin-")
+	if err != nil {
+		return "", func() {}, fmt.Errorf("failed to create a temporary directory: %w", err)
+	}
+
+	envs := []string{
+		fmt.Sprintf("GOPATH=%s", tempDir),
+		fmt.Sprintf("GOMODCACHE=%s", filepath.Join(tempDir, "pkg", "mod")),
+	}
+	clean := func() {
+		if err := executeWithEnvs(ctx, envs, tempDir, goCmd, "clean", "-modcache"); err != nil {
+			return
+		}
+		os.RemoveAll(tempDir)
+	}
+
+	if err := executeWithEnvs(ctx, envs, tempDir, goCmd, "get", "-d", mod); err != nil {
+		return "", clean, fmt.Errorf("failed to download %s: %w", mod, err)
+	}
+	if i := strings.Index(mod, "@"); i >= 0 { // trim version
+		mod = mod[:i]
+	}
+	escMod, err := module.EscapePath(mod)
+	if err != nil {
+		return "", clean, fmt.Errorf("failed to escape path %s: %w", mod, err)
+	}
+	src := filepath.Join(tempDir, "pkg", "mod", escMod)
+	src, err = findLatest(filepath.Dir(src), filepath.Base(src))
+	if err != nil {
+		return "", clean, fmt.Errorf("failed to download %s: %w", mod, err)
+	}
+
+	if err := os.Chmod(src, 0o755); err != nil {
+		return "", clean, err
+	}
+	if err := os.Chmod(filepath.Join(src, "go.mod"), 0o644); err != nil {
+		if !os.IsNotExist(err) {
+			return "", clean, err
+		}
+	}
+	if err := os.Chmod(filepath.Join(src, "go.sum"), 0o644); err != nil {
+		if !os.IsNotExist(err) {
+			return "", clean, err
+		}
+	}
+
+	return src, clean, nil
+}
+
+func findLatest(dir, base string) (string, error) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return "", fmt.Errorf("failed to read directory: %w", err)
+	}
+	for i := len(entries) - 1; i >= 0; i-- {
+		if name := entries[i].Name(); strings.HasPrefix(name, base) {
+			return filepath.Join(dir, name), nil
+		}
+	}
+	return "", errors.New("not found")
+}
+
 func buildPlugin(ctx context.Context, goCmd, src, out, target string) error {
 	dir := src
 	files := []string{}
@@ -124,16 +188,13 @@ func buildPlugin(ctx context.Context, goCmd, src, out, target string) error {
 		dir = filepath.Dir(src)
 		files = append(files, src)
 	}
-	if err := os.Chdir(dir); err != nil {
-		return fmt.Errorf("failed to change working directory: %w", err)
-	}
 
 	gomodPath := filepath.Join(dir, "go.mod")
 	if _, err := os.Stat(gomodPath); err != nil {
-		if err := execute(ctx, goCmd, "mod", "init"); err != nil {
+		if err := execute(ctx, dir, goCmd, "mod", "init"); err != nil {
 			// ref. https://github.com/golang/go/wiki/Modules#why-does-go-mod-init-give-the-error-cannot-determine-module-path-for-source-directory
 			if strings.Contains(err.Error(), "cannot determine module path") {
-				if err := execute(ctx, goCmd, "mod", "init", "main"); err != nil {
+				if err := execute(ctx, dir, goCmd, "mod", "init", "main"); err != nil {
 					return fmt.Errorf("failed to initialize go.mod: %w", err)
 				}
 			} else {
@@ -144,20 +205,28 @@ func buildPlugin(ctx context.Context, goCmd, src, out, target string) error {
 	if err := addRequires(gomodPath); err != nil {
 		return err
 	}
-	if err := execute(ctx, goCmd, "mod", "tidy"); err != nil {
+	if err := execute(ctx, dir, goCmd, "mod", "tidy"); err != nil {
 		return fmt.Errorf(`"go mod tidy" failed: %w`, err)
 	}
 
-	if err := execute(ctx, goCmd, append([]string{"build", "-buildmode=plugin", "-o", out}, files...)...); err != nil {
+	if err := execute(ctx, dir, goCmd, append([]string{"build", "-buildmode=plugin", "-o", out}, files...)...); err != nil {
 		return fmt.Errorf(`"go build -buildmode=plugin -o %s" failed: %w`, out, err)
 	}
 
 	return nil
 }
 
-func execute(ctx context.Context, name string, args ...string) error {
+func execute(ctx context.Context, wd, name string, args ...string) error {
+	return executeWithEnvs(ctx, nil, wd, name, args...)
+}
+
+func executeWithEnvs(ctx context.Context, envs []string, wd, name string, args ...string) error {
 	var stderr bytes.Buffer
 	cmd := exec.CommandContext(ctx, name, args...)
+	cmd.Env = append(os.Environ(), envs...)
+	if wd != "" {
+		cmd.Dir = wd
+	}
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
 		return errors.New(strings.TrimSuffix(stderr.String(), "\n"))

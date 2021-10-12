@@ -22,9 +22,17 @@ jobs:
       run: make gen
     - name: Test
       run: make test/ci
-    - name: Upload coverage
+    - name: Upload cmd coverage
       if: matrix.os == 'ubuntu-latest' && startsWith(matrix.go-version, '1.17')
       uses: codecov/codecov-action@v2
       with:
-        file: ./coverage.out
+        file: ./coverage-cmd.out
+        flags: cmd
+        fail_ci_if_error: true
+    - name: Upload module coverage
+      if: matrix.os == 'ubuntu-latest' && startsWith(matrix.go-version, '1.17')
+      uses: codecov/codecov-action@v2
+      with:
+        file: ./coverage-module.out
+        flags: module
         fail_ci_if_error: true

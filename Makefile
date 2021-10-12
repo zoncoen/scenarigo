@@ -82,24 +82,31 @@ $(GOLANGCI_LINT): | $(BIN_DIR)
 	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(BIN_DIR) $(GOLANCI_LINT_VERSION)
 
 .PHONY: test
-E2E_TEST_TARGETS := test/e2e
-TEST_TARGETS := $(shell $(GO) list ./... | grep -v $(E2E_TEST_TARGETS))
+CMD_DIR := cmd
+TEST_TARGETS := $(shell $(GO) list ./... | grep -v $(CMD_DIR))
 test: test/race test/norace
 
 .PHONY: test/ci
 test/ci: coverage test/race
 
 .PHONY: coverage
-coverage: ## measure test coverage
-	@$(GO) test $(TEST_TARGETS) ./$(E2E_TEST_TARGETS)/... -coverprofile=coverage.out -covermode=atomic
+coverage: coverage/cmd coverage/module ## measure test coverage
+
+.PHONY: coverage/cmd
+coverage/cmd:
+	@$(GO) test ./$(CMD_DIR)/... -coverprofile=coverage-cmd.out -covermode=atomic
+
+.PHONY: coverage/module
+coverage/module:
+	@$(GO) test $(TEST_TARGETS) -coverprofile=coverage-module.out -covermode=atomic
 
 .PHONY: test/norace
 test/norace:
-	@$(GO) test $(TEST_TARGETS) ./$(E2E_TEST_TARGETS)/...
+	@$(GO) test ./...
 
 .PHONY: test/race
 test/race:
-	@$(GO) test -race $(TEST_TARGETS) ./$(E2E_TEST_TARGETS)/...
+	@$(GO) test -race ./...
 
 .PHONY: lint
 lint: $(GOLANGCI_LINT) ## run lint

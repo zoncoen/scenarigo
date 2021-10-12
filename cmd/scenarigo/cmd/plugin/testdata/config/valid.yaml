@@ -1,0 +1,7 @@
+schemaVersion: config/v1
+pluginDirectory: ./gen
+plugins:
+  remote.so:
+    src: github.com/zoncoen/scenarigo
+  local.so:
+    src: .

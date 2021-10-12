@@ -5,9 +5,21 @@ coverage:
   status:
     project:
       default:
-        target: auto
-        threshold: 1%
-    patch:
-      default:
         target: 70%
+    patch:
+      default: off
+flag_management:
+  default_rules:
+    statuses:
+    - type: project
+      target: 75%
+    - type: patch
+      target: 75%
+  individual_flags:
+  - name: cmd
+    statuses:
+    - type: project
+      target: 60%
+    - type: patch
+      target: 60%
 comment: off

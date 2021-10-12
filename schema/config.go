@@ -5,11 +5,13 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/fatih/color"
 	"github.com/goccy/go-yaml"
 	"github.com/goccy/go-yaml/ast"
 	"github.com/goccy/go-yaml/parser"
+	"golang.org/x/mod/module"
 
 	"github.com/zoncoen/scenarigo/errors"
 	"github.com/zoncoen/scenarigo/internal/filepathutil"
@@ -135,16 +137,31 @@ func validate(c *Config, node ast.Node) error {
 	}
 	for name, p := range c.Plugins {
 		if err := stat(c, p.Src, fmt.Sprintf("plugins.'%s'.src", name), node); err != nil {
-			errs = append(errs, err)
+			if _, ok := err.(notExist); ok {
+				m := p.Src
+				if i := strings.Index(m, "@"); i >= 0 { // trim version query
+					m = p.Src[:i]
+				}
+				if merr := module.CheckPath(m); merr != nil {
+					err = fmt.Errorf("%s: %w", err, merr)
+				} else {
+					err = nil
+				}
+			}
+			if err != nil {
+				errs = append(errs, err)
+			}
 		}
 	}
 	return errors.Errors(errs...)
 }
 
+type notExist error
+
 func stat(c *Config, p, q string, node ast.Node) error {
 	if _, err := os.Stat(filepathutil.From(c.Root, p)); err != nil {
 		if os.IsNotExist(err) {
-			err = errors.Errorf("%s: no such file or directory", p)
+			err = notExist(errors.Errorf("%s: no such file or directory", p))
 		}
 		return errors.WithNodeAndColored(
 			errors.WithPath(err, q),

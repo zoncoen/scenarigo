@@ -2,7 +2,8 @@ vendor
 .envrc
 .bin
 /test/e2e/testdata/gen
-coverage.out
+coverage-cmd.out
+coverage-module.out
 .CHANGELOG.md
 /.goreleaser.yml
 dist

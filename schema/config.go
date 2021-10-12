@@ -131,12 +131,12 @@ func LoadConfig(path string, colored bool) (*Config, error) {
 func validate(c *Config, node ast.Node) error {
 	var errs []error
 	for i, p := range c.Scenarios {
-		if err := stat(c, p, fmt.Sprintf("scenarios[%d]", i), node); err != nil {
+		if err := stat(c, p, (&yaml.PathBuilder{}).Root().Child("scenarios").Index(uint(i)).Build(), node); err != nil {
 			errs = append(errs, err)
 		}
 	}
 	for name, p := range c.Plugins {
-		if err := stat(c, p.Src, fmt.Sprintf("plugins.'%s'.src", name), node); err != nil {
+		if err := stat(c, p.Src, (&yaml.PathBuilder{}).Root().Child("plugins").Child(name).Child("src").Build(), node); err != nil {
 			if _, ok := err.(notExist); ok {
 				m := p.Src
 				if i := strings.Index(m, "@"); i >= 0 { // trim version query
@@ -158,13 +158,13 @@ func validate(c *Config, node ast.Node) error {
 
 type notExist error
 
-func stat(c *Config, p, q string, node ast.Node) error {
+func stat(c *Config, p string, path *yaml.Path, node ast.Node) error {
 	if _, err := os.Stat(filepathutil.From(c.Root, p)); err != nil {
 		if os.IsNotExist(err) {
 			err = notExist(errors.Errorf("%s: no such file or directory", p))
 		}
 		return errors.WithNodeAndColored(
-			errors.WithPath(err, q),
+			errors.WithPath(err, strings.TrimPrefix(path.String(), "$.")),
 			node, !color.NoColor,
 		)
 	}

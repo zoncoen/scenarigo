@@ -8,14 +8,17 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 
 	"github.com/fatih/color"
 	"github.com/pkg/errors"
 
 	"github.com/zoncoen/scenarigo/context"
+	"github.com/zoncoen/scenarigo/plugin"
 	"github.com/zoncoen/scenarigo/reporter"
 	"github.com/zoncoen/scenarigo/schema"
+	"github.com/zoncoen/scenarigo/template"
 
 	// Register default protocols.
 	_ "github.com/zoncoen/scenarigo/protocol/grpc"
@@ -25,6 +28,8 @@ import (
 // Runner represents a test runner.
 type Runner struct {
 	pluginDir       *string
+	pluginSetups    map[string]plugin.SetupFunc
+	pluginTeardowns map[string]func(ctx *context.Context)
 	scenarioFiles   []string
 	scenarioReaders []io.Reader
 	enabledColor    bool
@@ -34,7 +39,10 @@ type Runner struct {
 
 // NewRunner returns a new test runner.
 func NewRunner(opts ...func(*Runner) error) (*Runner, error) {
-	r := &Runner{}
+	r := &Runner{
+		pluginSetups:    map[string]plugin.SetupFunc{},
+		pluginTeardowns: map[string]func(ctx *context.Context){},
+	}
 	r.enabledColor = !color.NoColor
 	for _, opt := range opts {
 		if err := opt(r); err != nil {
@@ -66,13 +74,23 @@ func WithConfig(config *schema.Config) func(*Runner) error {
 
 		var opts []func(r *Runner) error
 		opts = append(opts, WithScenarios(scenarios...))
+		pluginDir := r.rootDir
 		if config.PluginDirectory != "" {
-			opts = append(opts, WithPluginDir(
-				filepath.Join(r.rootDir, config.PluginDirectory)))
+			pluginDir = filepath.Join(r.rootDir, config.PluginDirectory)
+			opts = append(opts, WithPluginDir(pluginDir))
 		}
 		for _, opt := range opts {
 			if err := opt(r); err != nil {
 				return err
+			}
+		}
+		for out, p := range config.Plugins {
+			if p.Setup != "" {
+				setup, err := lookupSetup(filepath.Join(pluginDir, out), p.Setup)
+				if err != nil {
+					return fmt.Errorf("failed to register setup function: %s: %w", out, err)
+				}
+				r.pluginSetups[out] = setup
 			}
 		}
 		if config.Output.Colored != nil {
@@ -81,6 +99,25 @@ func WithConfig(config *schema.Config) func(*Runner) error {
 		r.reportConfig = config.Output.Report
 		return nil
 	}
+}
+
+func lookupSetup(path, tmpl string) (plugin.SetupFunc, error) {
+	p, err := loadPlugin(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open plugin: %w", err)
+	}
+	v, err := template.Execute(tmpl, p)
+	if err != nil {
+		return nil, err
+	}
+	setup, ok := v.(plugin.SetupFunc)
+	if !ok {
+		setup, ok = v.(func(*context.Context) (*context.Context, func(*context.Context)))
+		if !ok {
+			return nil, errors.Errorf("must be plugin.Setup but %T", v)
+		}
+	}
+	return setup, nil
 }
 
 // WithScenarios returns a option which finds and sets test scenario files.
@@ -189,6 +226,33 @@ func (r *Runner) Run(ctx *context.Context) {
 		ctx = ctx.WithPluginDir(*r.pluginDir)
 	}
 	ctx = ctx.WithEnabledColor(r.enabledColor)
+	if len(r.pluginSetups) > 0 {
+		ctx.Run("setup", func(ctx *context.Context) {
+			var keys sort.StringSlice
+			for out := range r.pluginSetups {
+				keys = append(keys, out)
+			}
+			sort.Sort(keys)
+			for _, out := range keys {
+				if ctx.Reporter().Failed() {
+					break
+				}
+				ctx.Run(out, func(ctx *context.Context) {
+					newCtx, teardown := r.pluginSetups[out](ctx)
+					if newCtx != nil {
+						ctx = newCtx
+					}
+					if teardown != nil {
+						r.pluginTeardowns[out] = teardown
+					}
+				})
+			}
+		})
+		if ctx.Reporter().Failed() {
+			r.teardown(ctx)
+			return
+		}
+	}
 	for _, f := range r.scenarioFiles {
 		testName, err := filepath.Rel(r.rootDir, f)
 		if err != nil {
@@ -225,7 +289,25 @@ func (r *Runner) Run(ctx *context.Context) {
 			}
 		})
 	}
+	r.teardown(ctx)
 	r.writeTestReport(ctx)
+}
+
+func (r *Runner) teardown(ctx *context.Context) {
+	if len(r.pluginTeardowns) == 0 {
+		return
+	}
+	ctx.Run("teardown", func(ctx *context.Context) {
+		var keys sort.StringSlice
+		for out := range r.pluginTeardowns {
+			keys = append(keys, out)
+		}
+		for _, out := range keys {
+			ctx.Run(out, func(ctx *context.Context) {
+				r.pluginTeardowns[out](ctx)
+			})
+		}
+	})
 }
 
 func (r *Runner) writeTestReport(ctx *context.Context) {

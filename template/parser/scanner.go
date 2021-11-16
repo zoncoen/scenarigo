@@ -153,6 +153,10 @@ scan:
 		break scan
 	}
 	str := b.String()
+	switch str {
+	case "true", "false":
+		return s.pos - runesLen(str), token.BOOL, str
+	}
 	return s.pos - runesLen(str), token.IDENT, str
 }
 

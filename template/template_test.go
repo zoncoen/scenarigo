@@ -69,6 +69,14 @@ func TestTemplate_Execute(t *testing.T) {
 			str:    "{{1}}",
 			expect: 1,
 		},
+		"true": {
+			str:    "{{true}}",
+			expect: true,
+		},
+		"false": {
+			str:    "{{false}}",
+			expect: false,
+		},
 		"add": {
 			str:    `foo-{{ "bar" + "-" + "baz" }}`,
 			expect: "foo-bar-baz",

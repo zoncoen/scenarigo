@@ -92,6 +92,15 @@ func (t *Template) executeBasicLit(lit *ast.BasicLit) (interface{}, error) {
 			return nil, errors.Wrapf(err, `invalid AST: "%s" is not a integer`, lit.Value)
 		}
 		return i, nil
+	case token.BOOL:
+		switch lit.Value {
+		case "true":
+			return true, nil
+		case "false":
+			return false, nil
+		default:
+			return nil, errors.Errorf(`invalid bool literal "%s"`, lit.Value)
+		}
 	default:
 		return nil, errors.Errorf(`unknown basic literal "%s"`, lit.Kind.String())
 	}

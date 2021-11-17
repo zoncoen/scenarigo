@@ -1,3 +1,4 @@
+ok  	setup	0.000s
 --- FAIL: testdata/testcases/scenarios/retry/step-never.yaml (0.00s)
     --- FAIL: testdata/testcases/scenarios/retry/step-never.yaml/never_retry_step (0.00s)
         --- FAIL: testdata/testcases/scenarios/retry/step-never.yaml/never_retry_step/ (0.00s)
@@ -18,3 +19,4 @@
 FAIL
 FAIL	testdata/testcases/scenarios/retry/step-never.yaml	0.000s
 FAIL
+ok  	teardown	0.000s

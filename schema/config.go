@@ -41,7 +41,8 @@ type Config struct {
 
 // PluginConfig represents a plugin configuration.
 type PluginConfig struct {
-	Src string `yaml:"src,omitempty"`
+	Src   string `yaml:"src,omitempty"`
+	Setup string `yaml:"setup,omitempty"`
 }
 
 // OutputConfig represents a output configuration.

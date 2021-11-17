@@ -12,21 +12,26 @@ import (
 	"github.com/zoncoen/scenarigo/schema"
 )
 
-var plgMu sync.Mutex
+var (
+	plgMu      sync.Mutex
+	pluginOpen = func(path string) (lookupper, error) {
+		return plugin.Open(path)
+	}
+)
 
 // loadPlugin loads the plugin safely.
 // plugin.Open's documentation says 'this is safe for concurrent use by multiple goroutines' ( https://golang.org/pkg/plugin/#Open )
 // BUT we encountered `recursive call during initialization - linker skew` error when loading multiple plugins concurrently.
-func loadPlugin(ctx *context.Context, path string) *plugin.Plugin {
+func loadPlugin(path string) (*plug, error) {
 	// TODO: It is not yet known if this process is accurate. If you find a better way, you need to fix this process.
 	// see related PR: https://github.com/zoncoen/scenarigo/pull/78
 	plgMu.Lock()
 	defer plgMu.Unlock()
-	p, err := plugin.Open(path)
+	p, err := pluginOpen(path)
 	if err != nil {
-		ctx.Reporter().Fatalf("failed to open plugin: %s", err)
+		return nil, err
 	}
-	return p
+	return &plug{p}, nil
 }
 
 // RunScenario runs a test scenario s.
@@ -39,8 +44,11 @@ func RunScenario(ctx *context.Context, s *schema.Scenario) *context.Context {
 			if root := ctx.PluginDir(); root != "" {
 				path = filepath.Join(root, path)
 			}
-			p := loadPlugin(ctx, path)
-			plugs[name] = &plug{p}
+			p, err := loadPlugin(path)
+			if err != nil {
+				ctx.Reporter().Fatalf("failed to open plugin: %s", err)
+			}
+			plugs[name] = p
 		}
 		ctx = ctx.WithPlugins(plugs)
 	}
@@ -104,12 +112,13 @@ type plug struct {
 
 // ExtractByKey implements query.KeyExtractor interface.
 func (p *plug) ExtractByKey(key string) (interface{}, bool) {
-	if sym, err := p.Lookup(key); err == nil {
-		// If sym is a pointer to a variable, return the actual variable for convenience.
-		if v := reflect.ValueOf(sym); v.Kind() == reflect.Ptr {
-			return v.Elem().Interface(), true
-		}
-		return sym, true
+	sym, err := p.Lookup(key)
+	if err != nil {
+		return nil, false
 	}
-	return nil, false
+	// If sym is a pointer to a variable, return the actual variable for convenience.
+	if v := reflect.ValueOf(sym); v.Kind() == reflect.Ptr {
+		return v.Elem().Interface(), true
+	}
+	return sym, true
 }

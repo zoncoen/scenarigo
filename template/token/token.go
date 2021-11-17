@@ -9,6 +9,7 @@ const (
 
 	STRING // "text"
 	INT    // 123
+	BOOL   // true
 	IDENT  // vars
 
 	ADD  // +
@@ -37,6 +38,8 @@ func (t Token) String() string {
 		return "string"
 	case INT:
 		return "int"
+	case BOOL:
+		return "bool"
 	case IDENT:
 		return "ident"
 	case ADD:

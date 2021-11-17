@@ -2,17 +2,20 @@ package scenarigo
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	goplugin "plugin"
 	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 
 	"github.com/zoncoen/scenarigo/context"
+	"github.com/zoncoen/scenarigo/plugin"
 	"github.com/zoncoen/scenarigo/reporter"
 	"github.com/zoncoen/scenarigo/schema"
 )
@@ -53,13 +56,11 @@ func TestRunner(t *testing.T) {
 	tests := map[string]struct {
 		path  string
 		yaml  string
-		setup func(*testing.T) func()
+		setup func(*context.Context) func(*context.Context)
 	}{
 		"run step with include": {
 			path: filepath.Join("testdata", "use_include.yaml"),
-			setup: func(t *testing.T) func() {
-				t.Helper()
-
+			setup: func(ctx *context.Context) func(*context.Context) {
 				mux := http.NewServeMux()
 				mux.HandleFunc("/echo", func(w http.ResponseWriter, r *http.Request) {
 					defer r.Body.Close()
@@ -69,10 +70,10 @@ func TestRunner(t *testing.T) {
 
 				s := httptest.NewServer(mux)
 				if err := os.Setenv("TEST_ADDR", s.URL); err != nil {
-					t.Fatalf("unexpected error: %s", err)
+					ctx.Reporter().Fatalf("unexpected error: %s", err)
 				}
 
-				return func() {
+				return func(*context.Context) {
 					s.Close()
 					os.Unsetenv("TEST_ADDR")
 				}
@@ -95,9 +96,7 @@ steps:
     body:
       message: "hello"
 `,
-			setup: func(t *testing.T) func() {
-				t.Helper()
-
+			setup: func(ctx *context.Context) func(*context.Context) {
 				mux := http.NewServeMux()
 				mux.HandleFunc("/echo", func(w http.ResponseWriter, r *http.Request) {
 					defer r.Body.Close()
@@ -107,10 +106,10 @@ steps:
 
 				s := httptest.NewServer(mux)
 				if err := os.Setenv("TEST_ADDR", s.URL); err != nil {
-					t.Fatalf("unexpected error: %s", err)
+					ctx.Reporter().Fatalf("unexpected error: %s", err)
 				}
 
-				return func() {
+				return func(*context.Context) {
 					s.Close()
 					os.Unsetenv("TEST_ADDR")
 				}
@@ -118,9 +117,6 @@ steps:
 		},
 	}
 	for _, test := range tests {
-		teardown := test.setup(t)
-		defer teardown()
-
 		var opts []func(*Runner) error
 		if test.path != "" {
 			opts = append(opts, WithScenarios(test.path))
@@ -131,6 +127,11 @@ steps:
 		runner, err := NewRunner(opts...)
 		if err != nil {
 			t.Fatal(err)
+		}
+		if test.setup != nil {
+			runner.pluginSetups["setup"] = func(ctx *plugin.Context) (*plugin.Context, func(*plugin.Context)) {
+				return ctx, test.setup(ctx)
+			}
 		}
 		var b bytes.Buffer
 		ok := reporter.Run(func(rptr reporter.Reporter) {
@@ -222,6 +223,12 @@ func TestWithConfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	pluginOpen = func(_ string) (lookupper, error) {
+		return mapLookupper{
+			"Setup":     setup,
+			"SetupFunc": setupFunc,
+		}, nil
+	}
 	colored := true
 	tests := map[string]struct {
 		config *schema.Config
@@ -266,6 +273,39 @@ func TestWithConfig(t *testing.T) {
 				scenarioFiles: []string{},
 				pluginDir:     &pluginDirAbs,
 				rootDir:       wd,
+			},
+		},
+		"plugin setup (function)": {
+			config: &schema.Config{
+				Plugins: map[string]schema.PluginConfig{
+					"simple.so": {
+						Setup: "{{Setup}}",
+					},
+					"http.so": {}, // no setup function
+				},
+			},
+			expect: &Runner{
+				scenarioFiles: []string{},
+				pluginSetups: map[string]plugin.SetupFunc{
+					"simple.so": nil,
+				},
+				rootDir: wd,
+			},
+		},
+		"plugin setup (variable)": {
+			config: &schema.Config{
+				Plugins: map[string]schema.PluginConfig{
+					"simple.so": {
+						Setup: "{{SetupFunc}}",
+					},
+				},
+			},
+			expect: &Runner{
+				scenarioFiles: []string{},
+				pluginSetups: map[string]plugin.SetupFunc{
+					"simple.so": nil,
+				},
+				rootDir: wd,
 			},
 		},
 		"output colored": {
@@ -315,12 +355,41 @@ func TestWithConfig(t *testing.T) {
 			}
 			if diff := cmp.Diff(test.expect, got,
 				cmp.AllowUnexported(Runner{}),
+				cmp.FilterPath(func(p cmp.Path) bool {
+					switch p.String() {
+					case "pluginSetups", "pluginTeardowns":
+						return true
+					}
+					return false
+				}, cmp.Ignore()),
 			); diff != "" {
 				t.Errorf("differs (-want +got):\n%s", diff)
+			}
+			if g, e := len(got.pluginSetups), len(test.expect.pluginSetups); g != e {
+				t.Errorf("expect %d setups but got %d", e, g)
+			}
+			if g, e := len(got.pluginTeardowns), len(test.expect.pluginTeardowns); g != e {
+				t.Errorf("expect %d teardowns but got %d", e, g)
 			}
 		})
 	}
 }
+
+type mapLookupper map[string]interface{}
+
+func (m mapLookupper) Lookup(name string) (goplugin.Symbol, error) {
+	if v, ok := m[name]; ok {
+		return goplugin.Symbol(v), nil
+	}
+	return nil, fmt.Errorf("%q not found", name)
+}
+
+func setup(ctx *plugin.Context) (*plugin.Context, func(*plugin.Context)) {
+	ctx.Reporter().Log("setup")
+	return ctx, nil
+}
+
+var setupFunc = plugin.SetupFunc(setup)
 
 func TestWriteTestReport(t *testing.T) {
 	tests := map[string]struct {

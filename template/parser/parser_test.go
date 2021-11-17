@@ -42,6 +42,18 @@ func TestParser_Parse(t *testing.T) {
 					Rdbrace: 9,
 				},
 			},
+			"just a bool": {
+				src: `{{true}}`,
+				expected: &ast.ParameterExpr{
+					Ldbrace: 1,
+					X: &ast.BasicLit{
+						ValuePos: 3,
+						Kind:     token.BOOL,
+						Value:    "true",
+					},
+					Rdbrace: 7,
+				},
+			},
 			"just a parameter": {
 				src: "{{test}}",
 				expected: &ast.ParameterExpr{

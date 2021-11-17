@@ -150,6 +150,26 @@ func TestScanner_Scan(t *testing.T) {
 					},
 				},
 			},
+			"just a BOOL": {
+				src: `{{true}}`,
+				expected: []result{
+					{
+						pos: 1,
+						tok: token.LDBRACE,
+						lit: "{{",
+					},
+					{
+						pos: 3,
+						tok: token.BOOL,
+						lit: "true",
+					},
+					{
+						pos: 7,
+						tok: token.RDBRACE,
+						lit: "}}",
+					},
+				},
+			},
 			"just a IDENT": {
 				src: "{{  test  }}",
 				expected: []result{

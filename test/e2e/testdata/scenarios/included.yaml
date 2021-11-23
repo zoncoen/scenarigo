@@ -1,12 +1,12 @@
 ---
 title: included scenario
 plugins:
-  simple: simple.so
+  complex: complex.so
 steps:
 - title: step plugin
   vars:
-    step: step 
-  ref: '{{plugins.simple.DumpVarsStep}}'
+    step: step
+  ref: '{{plugins.complex.DumpVarsStep}}'
   bind:
     vars:
       include: true

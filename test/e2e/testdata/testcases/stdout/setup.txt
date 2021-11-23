@@ -1,0 +1,47 @@
+=== RUN   setup
+=== RUN   setup/setup.so
+=== RUN   setup/setup.so/1
+=== RUN   setup/setup.so/2
+--- PASS: setup (0.00s)
+    --- PASS: setup/setup.so (0.00s)
+        --- PASS: setup/setup.so/1 (0.00s)
+                setup 1
+        --- PASS: setup/setup.so/2 (0.00s)
+                setup 2
+PASS
+ok  	setup	0.000s
+=== RUN   testdata/testcases/scenarios/setup.yaml
+=== RUN   testdata/testcases/scenarios/setup.yaml/scenario_with_setup
+=== PAUSE testdata/testcases/scenarios/setup.yaml/scenario_with_setup
+=== CONT  testdata/testcases/scenarios/setup.yaml/scenario_with_setup
+=== RUN   testdata/testcases/scenarios/setup.yaml/scenario_with_setup/setup
+=== RUN   testdata/testcases/scenarios/setup.yaml/scenario_with_setup/setup/setup
+=== RUN   testdata/testcases/scenarios/setup.yaml/scenario_with_setup/step_1
+=== RUN   testdata/testcases/scenarios/setup.yaml/scenario_with_setup/step_2
+=== RUN   testdata/testcases/scenarios/setup.yaml/scenario_with_setup/step_3
+=== RUN   testdata/testcases/scenarios/setup.yaml/scenario_with_setup/teardown
+=== RUN   testdata/testcases/scenarios/setup.yaml/scenario_with_setup/teardown/setup
+--- FAIL: testdata/testcases/scenarios/setup.yaml (0.00s)
+    --- FAIL: testdata/testcases/scenarios/setup.yaml/scenario_with_setup (0.00s)
+        --- PASS: testdata/testcases/scenarios/setup.yaml/scenario_with_setup/setup (0.00s)
+            --- PASS: testdata/testcases/scenarios/setup.yaml/scenario_with_setup/setup/setup (0.00s)
+                    setup each scenario
+        --- PASS: testdata/testcases/scenarios/setup.yaml/scenario_with_setup/step_1 (0.00s)
+                nop step
+                Run {{plugins.setup.NopStep}}: elapsed time: 0.000000 sec
+        --- FAIL: testdata/testcases/scenarios/setup.yaml/scenario_with_setup/step_2 (0.00s)
+                fail step
+        --- SKIP: testdata/testcases/scenarios/setup.yaml/scenario_with_setup/step_3 (0.00s)
+        --- PASS: testdata/testcases/scenarios/setup.yaml/scenario_with_setup/teardown (0.00s)
+            --- PASS: testdata/testcases/scenarios/setup.yaml/scenario_with_setup/teardown/setup (0.00s)
+                    teardown each scenario
+FAIL
+FAIL	testdata/testcases/scenarios/setup.yaml	0.000s
+FAIL
+=== RUN   teardown
+=== RUN   teardown/setup.so
+--- PASS: teardown (0.00s)
+    --- PASS: teardown/setup.so (0.00s)
+            teardown 2
+PASS
+ok  	teardown	0.000s

@@ -24,7 +24,3 @@ type StepFunc func(ctx *context.Context, step *schema.Step) *context.Context
 func (f StepFunc) Run(ctx *context.Context, step *schema.Step) *context.Context {
 	return f(ctx, step)
 }
-
-// SetupFunc represents a setup function.
-// If it returns non-nil teardown, the function will be called after running tests.
-type SetupFunc func(ctx *Context) (newCtx *Context, teardown func(*Context))

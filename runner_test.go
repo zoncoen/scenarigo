@@ -2,13 +2,11 @@ package scenarigo
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	goplugin "plugin"
 	"strings"
 	"testing"
 
@@ -129,7 +127,7 @@ steps:
 			t.Fatal(err)
 		}
 		if test.setup != nil {
-			runner.pluginSetups["setup"] = func(ctx *plugin.Context) (*plugin.Context, func(*plugin.Context)) {
+			runner.pluginSetup["setup"] = func(ctx *plugin.Context) (*plugin.Context, func(*plugin.Context)) {
 				return ctx, test.setup(ctx)
 			}
 		}
@@ -223,12 +221,6 @@ func TestWithConfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	pluginOpen = func(_ string) (lookupper, error) {
-		return mapLookupper{
-			"Setup":     setup,
-			"SetupFunc": setupFunc,
-		}, nil
-	}
 	colored := true
 	tests := map[string]struct {
 		config *schema.Config
@@ -273,39 +265,6 @@ func TestWithConfig(t *testing.T) {
 				scenarioFiles: []string{},
 				pluginDir:     &pluginDirAbs,
 				rootDir:       wd,
-			},
-		},
-		"plugin setup (function)": {
-			config: &schema.Config{
-				Plugins: map[string]schema.PluginConfig{
-					"simple.so": {
-						Setup: "{{Setup}}",
-					},
-					"http.so": {}, // no setup function
-				},
-			},
-			expect: &Runner{
-				scenarioFiles: []string{},
-				pluginSetups: map[string]plugin.SetupFunc{
-					"simple.so": nil,
-				},
-				rootDir: wd,
-			},
-		},
-		"plugin setup (variable)": {
-			config: &schema.Config{
-				Plugins: map[string]schema.PluginConfig{
-					"simple.so": {
-						Setup: "{{SetupFunc}}",
-					},
-				},
-			},
-			expect: &Runner{
-				scenarioFiles: []string{},
-				pluginSetups: map[string]plugin.SetupFunc{
-					"simple.so": nil,
-				},
-				rootDir: wd,
 			},
 		},
 		"output colored": {
@@ -357,7 +316,7 @@ func TestWithConfig(t *testing.T) {
 				cmp.AllowUnexported(Runner{}),
 				cmp.FilterPath(func(p cmp.Path) bool {
 					switch p.String() {
-					case "pluginSetups", "pluginTeardowns":
+					case "pluginSetup", "pluginTeardown":
 						return true
 					}
 					return false
@@ -365,31 +324,9 @@ func TestWithConfig(t *testing.T) {
 			); diff != "" {
 				t.Errorf("differs (-want +got):\n%s", diff)
 			}
-			if g, e := len(got.pluginSetups), len(test.expect.pluginSetups); g != e {
-				t.Errorf("expect %d setups but got %d", e, g)
-			}
-			if g, e := len(got.pluginTeardowns), len(test.expect.pluginTeardowns); g != e {
-				t.Errorf("expect %d teardowns but got %d", e, g)
-			}
 		})
 	}
 }
-
-type mapLookupper map[string]interface{}
-
-func (m mapLookupper) Lookup(name string) (goplugin.Symbol, error) {
-	if v, ok := m[name]; ok {
-		return goplugin.Symbol(v), nil
-	}
-	return nil, fmt.Errorf("%q not found", name)
-}
-
-func setup(ctx *plugin.Context) (*plugin.Context, func(*plugin.Context)) {
-	ctx.Reporter().Log("setup")
-	return ctx, nil
-}
-
-var setupFunc = plugin.SetupFunc(setup)
 
 func TestWriteTestReport(t *testing.T) {
 	tests := map[string]struct {

@@ -1,0 +1,9 @@
+title: retry
+scenarios:
+- filename: setup.yaml
+  success: false
+  output:
+    stdout: setup.txt
+  verbose: true
+  plugins:
+  - setup.so

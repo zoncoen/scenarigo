@@ -11,7 +11,7 @@ import (
 var (
 	dddPattern         = regexp.MustCompile(`\d\.\d\ds`)
 	ddddPattern        = regexp.MustCompile(`\d\.\d\d\ds`)
-	elapsedTimePattern = regexp.MustCompile(`elapsed time: .+`)
+	elapsedTimePattern = regexp.MustCompile(`elapsed time(:)? .+`)
 	ipv4AddrPattern    = regexp.MustCompile(`127.0.0.1:\d+`)
 	ipv6AddrPattern    = regexp.MustCompile(`\[::\]:\d+`)
 	userAgentPattern   = regexp.MustCompile(fmt.Sprintf(`- scenarigo/%s`, version.String()))

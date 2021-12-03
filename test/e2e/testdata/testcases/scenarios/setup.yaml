@@ -1,0 +1,10 @@
+title: scenario with setup
+plugins:
+  setup: setup.so
+steps:
+- title: step 1
+  ref: '{{plugins.setup.NopStep}}'
+- title: step 2
+  ref: '{{plugins.setup.FailStep}}'
+- title: step 3
+  ref: '{{plugins.setup.NopStep}}'

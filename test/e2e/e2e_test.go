@@ -4,6 +4,8 @@ package scenarigo
 
 import (
 	"bytes"
+	gocontext "context"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -11,6 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/goccy/go-yaml"
 	"github.com/sergi/go-diff/diffmatchpatch"
@@ -19,6 +22,9 @@ import (
 	"github.com/zoncoen/scenarigo"
 	"github.com/zoncoen/scenarigo/context"
 	"github.com/zoncoen/scenarigo/internal/testutil"
+	"github.com/zoncoen/scenarigo/logger"
+	"github.com/zoncoen/scenarigo/mock"
+	"github.com/zoncoen/scenarigo/mock/protocol"
 	"github.com/zoncoen/scenarigo/reporter"
 	"github.com/zoncoen/scenarigo/schema"
 	"github.com/zoncoen/scenarigo/testdata/gen/pb/test"
@@ -59,15 +65,17 @@ func TestE2E(t *testing.T) {
 
 			for _, scenario := range tc.Scenarios {
 				t.Run(scenario.Filename, func(t *testing.T) {
+					if scenario.Mocks != "" {
+						teardown := runMockServer(t, filepath.Join(dir, "mocks", scenario.Mocks), !scenario.Success)
+						defer teardown(t)
+					}
+
 					config := &schema.Config{
 						PluginDirectory: "testdata/gen/plugins",
 						Plugins:         map[string]schema.PluginConfig{},
 					}
-					if scenario.Mocks != "" {
-						f := filepath.Join(dir, "mocks", scenario.Mocks)
-						config.Plugins["mock.so"] = schema.PluginConfig{
-							Setup: fmt.Sprintf("{{SetupServerFunc(%q, %t)}}", f, !scenario.Success),
-						}
+					for _, p := range scenario.Plugins {
+						config.Plugins[p] = schema.PluginConfig{}
 					}
 
 					r, err := scenarigo.NewRunner(
@@ -79,9 +87,13 @@ func TestE2E(t *testing.T) {
 					}
 
 					var b bytes.Buffer
+					opts := []reporter.Option{reporter.WithWriter(&b)}
+					if scenario.Verbose {
+						opts = append(opts, reporter.WithVerboseLog())
+					}
 					ok := reporter.Run(func(rptr reporter.Reporter) {
 						r.Run(context.New(rptr))
-					}, reporter.WithWriter(&b))
+					}, opts...)
 					if ok != scenario.Success {
 						t.Errorf("expect %t but got %t", scenario.Success, ok)
 					}
@@ -118,6 +130,8 @@ type TestScenario struct {
 	Mocks    string       `yaml:"mocks"`
 	Success  bool         `yaml:"success"`
 	Output   ExpectOutput `yaml:"output"`
+	Verbose  bool         `yaml:"verbose"`
+	Plugins  []string     `yaml:"plugins"`
 }
 
 type ExpectOutput struct {
@@ -156,5 +170,57 @@ func startGRPCServer(t *testing.T) func() {
 		s.Stop()
 		os.Unsetenv("TEST_GRPC_SERVER_ADDR")
 		os.Unsetenv("TEST_TOKEN")
+	}
+}
+
+func runMockServer(t *testing.T, filename string, ignoreMocksRemainError bool) func(*testing.T) {
+	t.Helper()
+
+	f, err := os.Open(filename)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	var config mock.ServerConfig
+	if err := yaml.NewDecoder(f, yaml.Strict()).Decode(&config); err != nil {
+		t.Fatal(err)
+	}
+	srv, err := mock.NewServer(&config, logger.NewNopLogger())
+	if err != nil {
+		t.Fatal(err)
+	}
+	ch := make(chan error)
+	go func() {
+		ch <- srv.Start(gocontext.Background())
+	}()
+	ctx, cancel := gocontext.WithTimeout(gocontext.Background(), time.Second)
+	defer cancel()
+	if err := srv.Wait(ctx); err != nil {
+		t.Fatalf("failed to wait: %s", err)
+	}
+	addrs, err := srv.Addrs()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for p, addr := range addrs {
+		os.Setenv(fmt.Sprintf("TEST_%s_ADDR", strings.ToUpper(p)), addr)
+	}
+	return func(t *testing.T) {
+		c, cancel := gocontext.WithTimeout(gocontext.Background(), time.Second)
+		defer cancel()
+		if err := srv.Stop(c); err != nil {
+			mrerr := &protocol.MocksRemainError{}
+			if errors.As(err, &mrerr) {
+				if ignoreMocksRemainError {
+					err = nil
+				}
+			}
+			if err != nil {
+				t.Fatalf("failed to stop: %s", err)
+			}
+		}
+		if err := <-ch; err != nil {
+			t.Fatalf("failed to start: %s", err)
+		}
 	}
 }

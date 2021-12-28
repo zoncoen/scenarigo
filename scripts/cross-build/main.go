@@ -19,13 +19,13 @@ import (
 )
 
 var (
-	go116   *semver.Version
+	go117   *semver.Version
 	rootDir = os.Getenv("PJ_ROOT")
 )
 
 func init() {
 	var err error
-	go116, err = semver.NewVersion("1.16.0")
+	go117, err = semver.NewVersion("1.17.0")
 	if err != nil {
 		panic(err)
 	}
@@ -75,7 +75,7 @@ func getVers(token string) ([]string, error) {
 		if err != nil {
 			continue
 		}
-		if !v.LessThan(go116) {
+		if !v.LessThan(go117) {
 			vers = append(vers, ver)
 		}
 	}

@@ -11,6 +11,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	"golang.org/x/mod/modfile"
 	"golang.org/x/mod/module"
@@ -34,6 +35,8 @@ This command requires go command in $PATH.
 	SilenceErrors: true,
 	SilenceUsage:  true,
 }
+
+var warnColor = color.New(color.Bold, color.FgYellow)
 
 func build(cmd *cobra.Command, args []string) error {
 	cfg, err := config.Load(config.ConfigPath)
@@ -60,7 +63,7 @@ func build(cmd *cobra.Command, args []string) error {
 			}
 			src = s
 		}
-		if err := buildPlugin(ctx(cmd), goCmd, src, filepathutil.From(pluginDir, out), out); err != nil {
+		if err := buildPlugin(cmd, goCmd, src, filepathutil.From(pluginDir, out), out); err != nil {
 			return fmt.Errorf("failed to build plugin %s: %w", out, err)
 		}
 	}
@@ -168,7 +171,8 @@ func findLatest(dir, base string) (string, error) {
 	return "", errors.New("not found")
 }
 
-func buildPlugin(ctx context.Context, goCmd, src, out, target string) error {
+func buildPlugin(cmd *cobra.Command, goCmd, src, out, target string) error {
+	ctx := ctx(cmd)
 	dir := src
 	files := []string{}
 	if info, err := os.Stat(src); err != nil {
@@ -202,7 +206,7 @@ func buildPlugin(ctx context.Context, goCmd, src, out, target string) error {
 			}
 		}
 	}
-	if err := addRequires(gomodPath); err != nil {
+	if err := updateGoMod(cmd, goCmd, gomodPath); err != nil {
 		return err
 	}
 	if err := execute(ctx, dir, goCmd, "mod", "tidy"); err != nil {
@@ -234,7 +238,60 @@ func executeWithEnvs(ctx context.Context, envs []string, wd, name string, args .
 	return nil
 }
 
-func addRequires(gomodPath string) error {
+func updateGoMod(cmd *cobra.Command, goCmd, gomodPath string) error {
+	goVersion, requires, err := requiredModules()
+	if err != nil {
+		return err
+	}
+
+	if err := editGoMod(cmd, goCmd, gomodPath, func(gomod *modfile.File) error {
+		replaces := map[string]string{}
+		for _, r := range gomod.Replace {
+			replaces[r.Old.Path] = r.Old.Version
+		}
+		if err := gomod.AddGoStmt(goVersion.Version); err != nil {
+			return err
+		}
+		for _, r := range requires {
+			if err := gomod.AddRequire(r.Mod.Path, r.Mod.Version); err != nil {
+				return fmt.Errorf("failed to edit %s: %w", gomodPath, err)
+			}
+			// must use the same module version as scenarigo for building plugins
+			if v, ok := replaces[r.Mod.Path]; ok {
+				if err := gomod.DropReplace(r.Mod.Path, v); err != nil {
+					return fmt.Errorf("failed to edit %s: %w", gomodPath, err)
+				}
+			}
+		}
+		return nil
+	}); err != nil {
+		return fmt.Errorf("failed to edit require directives: %s", err)
+	}
+
+	if err := editGoMod(cmd, goCmd, gomodPath, func(gomod *modfile.File) error {
+		current := map[string]string{}
+		for _, r := range gomod.Require {
+			current[r.Mod.Path] = r.Mod.Version
+		}
+		for _, r := range requires {
+			if v, ok := current[r.Mod.Path]; ok {
+				if r.Mod.Version != v {
+					fmt.Fprintf(cmd.OutOrStdout(), "%s: %s replace %s %s => %s\n", warnColor.Sprint("WARN"), gomodPath, r.Mod.Path, v, r.Mod.Version)
+					if err := gomod.AddReplace(r.Mod.Path, v, r.Mod.Path, r.Mod.Version); err != nil {
+						return fmt.Errorf("failed to edit %s: %w", gomodPath, err)
+					}
+				}
+			}
+		}
+		return nil
+	}); err != nil {
+		return fmt.Errorf("failed to edit replace directives: %s", err)
+	}
+
+	return nil
+}
+
+func editGoMod(cmd *cobra.Command, goCmd, gomodPath string, edit func(*modfile.File) error) error {
 	b, err := os.ReadFile(gomodPath)
 	if err != nil {
 		return fmt.Errorf("failed to read %s: %w", gomodPath, err)
@@ -243,20 +300,16 @@ func addRequires(gomodPath string) error {
 	if err != nil {
 		return fmt.Errorf("failed to parse %s: %w", gomodPath, err)
 	}
-	requires, err := requiredModules()
-	if err != nil {
-		return err
-	}
-	for _, r := range requires {
-		if err := gomod.AddRequire(r.Mod.Path, r.Mod.Version); err != nil {
-			return fmt.Errorf("failed to edit %s: %w", gomodPath, err)
-		}
+
+	if err := edit(gomod); err != nil {
+		return fmt.Errorf("failed to edit %s: %w", gomodPath, err)
 	}
 	gomod.Cleanup()
 	edited, err := gomod.Format()
 	if err != nil {
 		return fmt.Errorf("failed to edit %s: %w", gomodPath, err)
 	}
+
 	f, err := os.Create(gomodPath)
 	if err != nil {
 		return fmt.Errorf("failed to edit %s: %w", gomodPath, err)
@@ -265,21 +318,25 @@ func addRequires(gomodPath string) error {
 	if _, err := f.Write(edited); err != nil {
 		return fmt.Errorf("failed to edit %s: %w", gomodPath, err)
 	}
+	if err := execute(ctx(cmd), filepath.Dir(gomodPath), goCmd, "mod", "tidy"); err != nil {
+		return fmt.Errorf(`"go mod tidy" failed: %w`, err)
+	}
+
 	return nil
 }
 
-func requiredModules() ([]*modfile.Require, error) {
+func requiredModules() (*modfile.Go, []*modfile.Require, error) {
 	gomod, err := modfile.Parse("go.mod", scenarigo.GoModBytes, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse go.mod of scenarigo: %s", err)
+		return nil, nil, fmt.Errorf("failed to parse go.mod of scenarigo: %s", err)
 	}
 	if v := version.String(); !strings.HasSuffix(v, "-dev") {
-		return append([]*modfile.Require{{
+		return gomod.Go, append([]*modfile.Require{{
 			Mod: module.Version{
 				Path:    "github.com/zoncoen/scenarigo",
 				Version: v,
 			},
 		}}, gomod.Require...), nil
 	}
-	return gomod.Require, nil
+	return gomod.Go, gomod.Require, nil
 }

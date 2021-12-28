@@ -58,12 +58,12 @@ func Greet() string {
 	return "Hello, world!"
 }
 `
-	gomod := fmt.Sprintf(`module main
+	gomod := `module main
 
-go %s
-`, goVersion)
+go 1.17
+`
 
-	b, err := os.ReadFile(fmt.Sprintf("testdata/go%s.mod", goVersion))
+	b, err := os.ReadFile("testdata/go1.17.mod")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -152,6 +152,38 @@ func Greet() string {
 go %s
 
 require google.golang.org/grpc v1.37.1
+`, goVersion),
+				},
+				expectPluginPath: "plugin.so",
+				expectGoMod: map[string]string{
+					"src/go.mod": gomodWithRequire,
+				},
+			},
+			"update go.mod (remove replace)": {
+				config: `
+schemaVersion: config/v1
+plugins:
+  plugin.so:
+    src: src/main.go
+`,
+				files: map[string]string{
+					"src/main.go": `package main
+
+import (
+	_ "google.golang.org/grpc"
+)
+
+func Greet() string {
+	return "Hello, world!"
+}
+`,
+					"src/go.mod": fmt.Sprintf(`module main
+
+go %s
+
+require google.golang.org/grpc v1.37.1
+
+replace google.golang.org/grpc v1.37.1 => google.golang.org/grpc v1.40.0
 `, goVersion),
 				},
 				expectPluginPath: "plugin.so",

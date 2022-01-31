@@ -1,5 +1,15 @@
 # CHANGELOG
 
+<a name="v0.10.0"></a>
+## [v0.10.0] - 2021-12-28
+### Bug Fixes
+- update the go directive of go.mod
+- **plugin:** use the same module version as scenarigo for building plugins
+
+### BREAKING CHANGE
+
+This package requires Go 1.17 or later.
+
 <a name="v0.9.0"></a>
 ## [v0.9.0] - 2021-12-03
 ### Bug Fixes
@@ -184,6 +194,7 @@ change protocl.Protocol interface
 - first release
 
 
+[v0.10.0]: https://github.com/zoncoen/scenarigo/compare/v0.9.0...v0.10.0
 [v0.9.0]: https://github.com/zoncoen/scenarigo/compare/v0.8.1...v0.9.0
 [v0.8.1]: https://github.com/zoncoen/scenarigo/compare/v0.8.0...v0.8.1
 [v0.8.0]: https://github.com/zoncoen/scenarigo/compare/v0.7.0...v0.8.0

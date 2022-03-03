@@ -92,6 +92,14 @@ func TestExecute(t *testing.T) {
 				"env": {"test"},
 			},
 		},
+		"map with template key": {
+			in: map[string]string{
+				`{{"1"}}`: "one",
+			},
+			expected: map[string]string{
+				"1": "one",
+			},
+		},
 		"[]string": {
 			in:       []string{`{{"one"}}`, "two", `{{"three"}}`},
 			expected: []string{"one", "two", "three"},
@@ -114,6 +122,10 @@ func TestExecute(t *testing.T) {
 					Key:   "name",
 					Value: `{{"Bob"}}`,
 				},
+				yaml.MapItem{
+					Key:   "{{1}}",
+					Value: "one",
+				},
 			},
 			expected: yaml.MapSlice{
 				yaml.MapItem{
@@ -123,6 +135,24 @@ func TestExecute(t *testing.T) {
 				yaml.MapItem{
 					Key:   "name",
 					Value: "Bob",
+				},
+				yaml.MapItem{
+					Key:   1,
+					Value: "one",
+				},
+			},
+		},
+		"yaml.MapSlice (Key is nil)": {
+			in: yaml.MapSlice{
+				yaml.MapItem{
+					Key:   nil,
+					Value: "value",
+				},
+			},
+			expected: yaml.MapSlice{
+				yaml.MapItem{
+					Key:   nil,
+					Value: "value",
 				},
 			},
 		},

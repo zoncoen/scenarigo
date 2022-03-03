@@ -51,12 +51,17 @@ func execute(in reflect.Value, data interface{}) (reflect.Value, error) {
 		for _, k := range v.MapKeys() {
 			e := v.MapIndex(k)
 			if !isNil(e) {
+				keyStr := fmt.Sprint(k.Interface())
+				key, err := execute(k, data)
+				if err != nil {
+					return reflect.Value{}, errors.WithPath(err, keyStr)
+				}
 				x, err := convert(v.Type().Elem())(execute(e, data))
 				if err != nil {
-					key := fmt.Sprint(k.Interface())
-					return reflect.Value{}, errors.WithPath(err, key)
+					return reflect.Value{}, errors.WithPath(err, keyStr)
 				}
-				v.SetMapIndex(k, x)
+				v.SetMapIndex(k, reflect.Value{}) //delete old value
+				v.SetMapIndex(key, x)
 			}
 		}
 	case reflect.Slice:
@@ -79,12 +84,20 @@ func execute(in reflect.Value, data interface{}) (reflect.Value, error) {
 		}
 		switch v.Type() {
 		case yamlMapItemType:
+			key := v.FieldByName("Key")
+			keyStr := fmt.Sprint(key.Interface())
+			if !isNil(key) {
+				x, err := execute(key, data)
+				if err != nil {
+					return reflect.Value{}, errors.WithPath(err, keyStr)
+				}
+				key.Set(x)
+			}
 			value := v.FieldByName("Value")
 			if !isNil(value) {
 				x, err := execute(value, data)
 				if err != nil {
-					key := fmt.Sprint(v.FieldByName("Key").Interface())
-					return reflect.Value{}, errors.WithPath(err, key)
+					return reflect.Value{}, errors.WithPath(err, keyStr)
 				}
 				value.Set(x)
 			}

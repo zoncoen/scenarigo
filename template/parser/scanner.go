@@ -67,20 +67,29 @@ func (s *scanner) skipSpaces() {
 }
 
 func (s *scanner) scanRawString() (int, token.Token, string) {
+	pos := s.pos
 	var b strings.Builder
 scan:
 	for {
 		switch ch := s.read(); ch {
 		case eof:
 			if b.Len() == 0 {
-				return s.pos, token.EOF, ""
+				return pos, token.EOF, ""
 			}
 			break scan
+		case '\\':
+			switch next := s.read(); next {
+			case '\\', '{':
+				b.WriteRune(next)
+			default:
+				b.WriteRune(ch)
+				s.unread(next)
+			}
 		case '{':
 			next := s.read()
 			if next == '{' {
 				if b.Len() == 0 {
-					return s.pos - 2, token.LDBRACE, "{{"
+					return pos, token.LDBRACE, "{{"
 				}
 				s.unread(ch)
 				s.unread(next)
@@ -93,7 +102,7 @@ scan:
 		}
 	}
 	str := b.String()
-	return s.pos - runesLen(str), token.STRING, str
+	return pos, token.STRING, str
 }
 
 func (s *scanner) scanString() (int, token.Token, string) {

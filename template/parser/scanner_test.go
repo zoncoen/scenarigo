@@ -85,6 +85,41 @@ func TestScanner_Scan(t *testing.T) {
 					},
 				},
 			},
+			`escape \`: {
+				src: `\\`,
+				expected: []result{
+					{
+						pos: 1,
+						tok: token.STRING,
+						lit: `\`,
+					},
+				},
+			},
+			`escape {`: {
+				src: `\{\{`,
+				expected: []result{
+					{
+						pos: 1,
+						tok: token.STRING,
+						lit: "{{",
+					},
+				},
+			},
+			`escape complex`: {
+				src: `{\{\\{{`,
+				expected: []result{
+					{
+						pos: 1,
+						tok: token.STRING,
+						lit: `{{\`,
+					},
+					{
+						pos: 6,
+						tok: token.LDBRACE,
+						lit: "{{",
+					},
+				},
+			},
 			"trailing {": {
 				src: "test {",
 				expected: []result{

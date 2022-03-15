@@ -11,7 +11,7 @@ type setupMap map[string]plugin.SetupFunc
 
 func (sm setupMap) setup(ctx *plugin.Context) (*plugin.Context, func(*plugin.Context)) {
 	if len(sm) == 0 {
-		return ctx, nil
+		return ctx, func(_ *plugin.Context) {}
 	}
 	var keys sort.StringSlice
 	teardowns := map[string]func(*plugin.Context){}
@@ -41,7 +41,7 @@ func (sm setupMap) setup(ctx *plugin.Context) (*plugin.Context, func(*plugin.Con
 	})
 	ctx = setupCtx.WithReporter(ctx.Reporter())
 	if len(teardowns) == 0 {
-		return ctx, nil
+		return ctx, func(_ *plugin.Context) {}
 	}
 	return ctx, func(ctx *plugin.Context) {
 		ctx.Run("teardown", func(ctx *plugin.Context) {

@@ -13,7 +13,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 
 	"github.com/zoncoen/scenarigo/context"
-	"github.com/zoncoen/scenarigo/plugin"
 	"github.com/zoncoen/scenarigo/reporter"
 	"github.com/zoncoen/scenarigo/schema"
 )
@@ -126,14 +125,16 @@ steps:
 		if err != nil {
 			t.Fatal(err)
 		}
-		if test.setup != nil {
-			runner.pluginSetup["setup"] = func(ctx *plugin.Context) (*plugin.Context, func(*plugin.Context)) {
-				return ctx, test.setup(ctx)
-			}
-		}
 		var b bytes.Buffer
 		ok := reporter.Run(func(rptr reporter.Reporter) {
-			runner.Run(context.New(rptr))
+			ctx := context.New(rptr)
+			if test.setup != nil {
+				teardown := test.setup(ctx)
+				if teardown != nil {
+					defer teardown(ctx)
+				}
+			}
+			runner.Run(ctx)
 		}, reporter.WithWriter(&b))
 		if !ok {
 			t.Fatalf("scenario failed:\n%s", b.String())

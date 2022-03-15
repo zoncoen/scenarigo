@@ -26,8 +26,7 @@ import (
 // Runner represents a test runner.
 type Runner struct {
 	pluginDir       *string
-	pluginSetup     setupMap
-	pluginTeardown  func(*plugin.Context)
+	plugins         map[string]schema.PluginConfig
 	scenarioFiles   []string
 	scenarioReaders []io.Reader
 	enabledColor    bool
@@ -37,9 +36,7 @@ type Runner struct {
 
 // NewRunner returns a new test runner.
 func NewRunner(opts ...func(*Runner) error) (*Runner, error) {
-	r := &Runner{
-		pluginSetup: setupMap{},
-	}
+	r := &Runner{}
 	r.enabledColor = !color.NoColor
 	for _, opt := range opts {
 		if err := opt(r); err != nil {
@@ -81,15 +78,7 @@ func WithConfig(config *schema.Config) func(*Runner) error {
 				return err
 			}
 		}
-		for out := range config.Plugins {
-			p, err := plugin.Open(filepath.Join(pluginDir, out))
-			if err != nil {
-				return fmt.Errorf("failed to open plugin: %s: %w", out, err)
-			}
-			if setup := p.GetSetup(); setup != nil {
-				r.pluginSetup[out] = setup
-			}
-		}
+		r.plugins = config.Plugins
 		if config.Output.Colored != nil {
 			r.enabledColor = *config.Output.Colored
 		}
@@ -200,15 +189,33 @@ func (r *Runner) ScenarioFiles() []string {
 
 // Run runs all tests.
 func (r *Runner) Run(ctx *context.Context) {
+	// setup context
 	if r.pluginDir != nil {
 		ctx = ctx.WithPluginDir(*r.pluginDir)
 	}
 	ctx = ctx.WithEnabledColor(r.enabledColor)
-	ctx, r.pluginTeardown = r.pluginSetup.setup(ctx)
+
+	// open plugins
+	pluginDir := r.rootDir
+	if dir := ctx.PluginDir(); dir != "" {
+		pluginDir = dir
+	}
+	sm := make(setupMap)
+	for out := range r.plugins {
+		p, err := plugin.Open(filepath.Join(pluginDir, out))
+		if err != nil {
+			ctx.Reporter().Fatalf("failed to open plugin: %s: %s", out, err)
+		}
+		if setup := p.GetSetup(); setup != nil {
+			sm[out] = setup
+		}
+	}
+	ctx, teardown := sm.setup(ctx)
 	if ctx.Reporter().Failed() {
-		r.teardown(ctx)
+		teardown(ctx)
 		return
 	}
+
 	for _, f := range r.scenarioFiles {
 		testName, err := filepath.Rel(r.rootDir, f)
 		if err != nil {
@@ -245,15 +252,8 @@ func (r *Runner) Run(ctx *context.Context) {
 			}
 		})
 	}
-	r.teardown(ctx)
+	teardown(ctx)
 	r.writeTestReport(ctx)
-}
-
-func (r *Runner) teardown(ctx *context.Context) {
-	if r.pluginTeardown == nil {
-		return
-	}
-	r.pluginTeardown(ctx)
 }
 
 func (r *Runner) writeTestReport(ctx *context.Context) {

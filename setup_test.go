@@ -14,20 +14,17 @@ import (
 
 func TestSetupMap_Setup(t *testing.T) {
 	tests := map[string]struct {
-		setups   setupMap
-		failed   bool
-		teardown bool
-		expect   string
+		setups setupMap
+		failed bool
+		expect string
 	}{
 		"nil": {
-			setups:   nil,
-			failed:   false,
-			teardown: false,
+			setups: nil,
+			failed: false,
 		},
 		"empty": {
-			setups:   setupMap{},
-			failed:   false,
-			teardown: false,
+			setups: setupMap{},
+			failed: false,
 		},
 		"no teardown": {
 			setups: setupMap{
@@ -44,8 +41,7 @@ func TestSetupMap_Setup(t *testing.T) {
 					return ctx, nil
 				},
 			},
-			failed:   false,
-			teardown: false,
+			failed: false,
 			expect: `
 === RUN   setup
 === RUN   setup/a
@@ -98,8 +94,7 @@ ok  	setup	0.000s
 					}
 				},
 			},
-			failed:   false,
-			teardown: true,
+			failed: false,
 			expect: `
 === RUN   setup
 === RUN   setup/a
@@ -158,8 +153,7 @@ ok  	teardown	0.000s
 					}
 				},
 			},
-			failed:   true,
-			teardown: true,
+			failed: true,
 			expect: `
 === RUN   setup
 === RUN   setup/a
@@ -216,8 +210,7 @@ ok  	teardown	0.000s
 					}
 				},
 			},
-			failed:   true,
-			teardown: true,
+			failed: true,
 			expect: `
 === RUN   setup
 === RUN   setup/a
@@ -255,8 +248,7 @@ FAIL
 					return nil, nil
 				},
 			},
-			failed:   false,
-			teardown: false,
+			failed: false,
 			expect: `
 === RUN   setup
 === RUN   setup/a
@@ -276,16 +268,7 @@ ok  	setup	0.000s
 			reporter.Run(func(r reporter.Reporter) {
 				ctx := context.New(r)
 				ctx, teardown := test.setups.setup(ctx)
-				if teardown != nil {
-					if !test.teardown {
-						t.Fatal("unexpected teardown")
-					}
-					teardown(ctx)
-				} else {
-					if test.teardown {
-						t.Fatal("no teardown")
-					}
-				}
+				teardown(ctx)
 				if failed := ctx.Reporter().Failed(); failed != test.failed {
 					t.Fatalf("expect failed %t but got %t", test.failed, failed)
 				}

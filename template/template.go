@@ -291,6 +291,11 @@ func (t *Template) executeLeftArrowExpr(e *ast.LeftArrowExpr, data interface{}) 
 		return nil, errors.Errorf(`expect template function but got %T`, e)
 	}
 
+	// without arg in map key
+	if e.Arg == nil {
+		return &lazyFunc{f}, nil
+	}
+
 	v, err = t.executeLeftArrowExprArg(e.Arg, data)
 	if err != nil {
 		return nil, err
@@ -303,21 +308,19 @@ func (t *Template) executeLeftArrowExpr(e *ast.LeftArrowExpr, data interface{}) 
 		if err := yaml.NewDecoder(strings.NewReader(argStr), yaml.UseOrderedMap(), yaml.Strict()).Decode(v); err != nil {
 			return err
 		}
-
 		// Restore functions that are replaced into strings.
 		// See the "HACK" comment of *Template.executeParameterExpr method.
-		executed, err := Execute(v, t.argFuncs)
+		arg, err := Execute(v, t.argFuncs)
 		if err != nil {
 			return err
 		}
 		// NOTE: Decode method ensures that v is a pointer.
 		rv := reflect.ValueOf(v).Elem()
-		ev, err := convert(rv.Type())(reflect.ValueOf(executed), nil)
+		ev, err := convert(rv.Type())(reflect.ValueOf(arg), nil)
 		if err != nil {
 			return err
 		}
 		rv.Set(ev)
-
 		return nil
 	})
 	if err != nil {
@@ -351,4 +354,8 @@ func (s *funcStash) save(f interface{}) string {
 type Func interface {
 	Exec(arg interface{}) (interface{}, error)
 	UnmarshalArg(unmarshal func(interface{}) error) (interface{}, error)
+}
+
+type lazyFunc struct {
+	f Func
 }

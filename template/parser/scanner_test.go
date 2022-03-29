@@ -85,6 +85,41 @@ func TestScanner_Scan(t *testing.T) {
 					},
 				},
 			},
+			`escape \`: {
+				src: `\\`,
+				expected: []result{
+					{
+						pos: 1,
+						tok: token.STRING,
+						lit: `\`,
+					},
+				},
+			},
+			`escape {`: {
+				src: `\{\{`,
+				expected: []result{
+					{
+						pos: 1,
+						tok: token.STRING,
+						lit: "{{",
+					},
+				},
+			},
+			`escape complex`: {
+				src: `{\{\\{{`,
+				expected: []result{
+					{
+						pos: 1,
+						tok: token.STRING,
+						lit: `{{\`,
+					},
+					{
+						pos: 6,
+						tok: token.LDBRACE,
+						lit: "{{",
+					},
+				},
+			},
 			"trailing {": {
 				src: "test {",
 				expected: []result{
@@ -556,6 +591,31 @@ func TestScanner_Scan(t *testing.T) {
 						pos: 60,
 						tok: token.LINEBREAK,
 						lit: "",
+					},
+				},
+			},
+			"YAML arg function without arg": {
+				src: "{{test <-}}",
+				expected: []result{
+					{
+						pos: 1,
+						tok: token.LDBRACE,
+						lit: "{{",
+					},
+					{
+						pos: 3,
+						tok: token.IDENT,
+						lit: "test",
+					},
+					{
+						pos: 8,
+						tok: token.LARROW,
+						lit: "<-",
+					},
+					{
+						pos: 10,
+						tok: token.RDBRACE,
+						lit: "}}",
 					},
 				},
 			},

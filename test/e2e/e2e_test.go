@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"os"
 	"path/filepath"
@@ -185,7 +186,9 @@ func runMockServer(t *testing.T, filename string, ignoreMocksRemainError bool) f
 	if err := yaml.NewDecoder(f, yaml.Strict()).Decode(&config); err != nil {
 		t.Fatal(err)
 	}
-	srv, err := mock.NewServer(&config, logger.NewNopLogger())
+	var b bytes.Buffer
+	l := logger.NewLogger(log.New(&b, "", log.LstdFlags), logger.LogLevelAll)
+	srv, err := mock.NewServer(&config, l)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -221,6 +224,9 @@ func runMockServer(t *testing.T, filename string, ignoreMocksRemainError bool) f
 		}
 		if err := <-ch; err != nil {
 			t.Fatalf("failed to start: %s", err)
+		}
+		if t.Failed() {
+			t.Log(b.String())
 		}
 	}
 }

@@ -1,0 +1,27 @@
+title: left arrow function
+plugins:
+  complex: complex.so
+vars:
+  text: test
+steps:
+- title: POST /echo
+  vars:
+    message:
+      '{{plugins.complex.Join <-}}':
+        prefix: preout-
+        text:
+          '{{plugins.complex.Join <-}}':
+            prefix: prein-
+            text: '{{vars.text}}'
+            suffix: -sufin
+        suffix: -sufout
+  protocol: http
+  request:
+    method: POST
+    url: "http://{{env.TEST_HTTP_ADDR}}/echo"
+    body:
+      message: "{{vars.message}}"
+  expect:
+    code: 200
+    body:
+      message: preout-prein-test-sufin-sufout

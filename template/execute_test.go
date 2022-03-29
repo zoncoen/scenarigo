@@ -92,6 +92,14 @@ func TestExecute(t *testing.T) {
 				"env": {"test"},
 			},
 		},
+		"map with template key": {
+			in: map[string]string{
+				`{{"1"}}`: "one",
+			},
+			expected: map[string]string{
+				"1": "one",
+			},
+		},
 		"[]string": {
 			in:       []string{`{{"one"}}`, "two", `{{"three"}}`},
 			expected: []string{"one", "two", "three"},
@@ -114,6 +122,10 @@ func TestExecute(t *testing.T) {
 					Key:   "name",
 					Value: `{{"Bob"}}`,
 				},
+				yaml.MapItem{
+					Key:   "{{1}}",
+					Value: "one",
+				},
 			},
 			expected: yaml.MapSlice{
 				yaml.MapItem{
@@ -123,6 +135,24 @@ func TestExecute(t *testing.T) {
 				yaml.MapItem{
 					Key:   "name",
 					Value: "Bob",
+				},
+				yaml.MapItem{
+					Key:   1,
+					Value: "one",
+				},
+			},
+		},
+		"yaml.MapSlice (Key is nil)": {
+			in: yaml.MapSlice{
+				yaml.MapItem{
+					Key:   nil,
+					Value: "value",
+				},
+			},
+			expected: yaml.MapSlice{
+				yaml.MapItem{
+					Key:   nil,
+					Value: "value",
 				},
 			},
 		},
@@ -179,6 +209,85 @@ func TestExecute(t *testing.T) {
 				"a": "{{b}}",
 				"b": "{{c}}",
 				"c": "test",
+			},
+		},
+		"left arrow function (map)": {
+			in: map[string]interface{}{
+				"{{echo <-}}": map[string]interface{}{
+					"message": map[string]interface{}{
+						"{{join <-}}": map[string]interface{}{
+							"prefix": "pre-",
+							"text": map[string]interface{}{
+								"{{call <-}}": map[string]interface{}{
+									"f":   "{{f}}",
+									"arg": "{{text}}",
+								},
+							},
+							"suffix": "-suf",
+						},
+					},
+				},
+			},
+			expected: "pre-test-suf",
+			vars: map[string]interface{}{
+				"echo": &echoFunc{},
+				"join": &joinFunc{},
+				"call": &callFunc{},
+				"f":    func(s string) string { return s },
+				"text": "test",
+			},
+		},
+		"left arrow function (yaml.MapSlice)": {
+			in: yaml.MapSlice{
+				yaml.MapItem{
+					Key: "{{echo <-}}",
+					Value: yaml.MapSlice{
+						yaml.MapItem{
+							Key: "message",
+							Value: yaml.MapSlice{
+								yaml.MapItem{
+									Key: "{{join <-}}",
+									Value: yaml.MapSlice{
+										yaml.MapItem{
+											Key:   "prefix",
+											Value: "pre-",
+										},
+										yaml.MapItem{
+											Key: "text",
+											Value: yaml.MapSlice{
+												yaml.MapItem{
+													Key: "{{call <-}}",
+													Value: yaml.MapSlice{
+														yaml.MapItem{
+															Key:   "f",
+															Value: "{{f}}",
+														},
+														yaml.MapItem{
+															Key:   "arg",
+															Value: "{{text}}",
+														},
+													},
+												},
+											},
+										},
+										yaml.MapItem{
+											Key:   "suffix",
+											Value: "-suf",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: "pre-test-suf",
+			vars: map[string]interface{}{
+				"echo": &echoFunc{},
+				"join": &joinFunc{},
+				"call": &callFunc{},
+				"f":    func(s string) string { return s },
+				"text": "test",
 			},
 		},
 	}

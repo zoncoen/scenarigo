@@ -340,6 +340,22 @@ func TestParser_Parse(t *testing.T) {
 					Rdbrace: 10,
 				},
 			},
+			"YAML arg function without arg": {
+				src: "{{test <-}}",
+				expected: &ast.ParameterExpr{
+					Ldbrace: 1,
+					X: &ast.LeftArrowExpr{
+						Fun: &ast.Ident{
+							NamePos: 3,
+							Name:    "test",
+						},
+						Larrow:  8,
+						Rdbrace: 10,
+						Arg:     nil,
+					},
+					Rdbrace: 10,
+				},
+			},
 			"add": {
 				src: `{{"foo"+"-"+"1"}}`,
 				expected: &ast.ParameterExpr{

@@ -67,20 +67,29 @@ func (s *scanner) skipSpaces() {
 }
 
 func (s *scanner) scanRawString() (int, token.Token, string) {
+	pos := s.pos
 	var b strings.Builder
 scan:
 	for {
 		switch ch := s.read(); ch {
 		case eof:
 			if b.Len() == 0 {
-				return s.pos, token.EOF, ""
+				return pos, token.EOF, ""
 			}
 			break scan
+		case '\\':
+			switch next := s.read(); next {
+			case '\\', '{':
+				b.WriteRune(next)
+			default:
+				b.WriteRune(ch)
+				s.unread(next)
+			}
 		case '{':
 			next := s.read()
 			if next == '{' {
 				if b.Len() == 0 {
-					return s.pos - 2, token.LDBRACE, "{{"
+					return pos, token.LDBRACE, "{{"
 				}
 				s.unread(ch)
 				s.unread(next)
@@ -93,7 +102,7 @@ scan:
 		}
 	}
 	str := b.String()
-	return s.pos - runesLen(str), token.STRING, str
+	return pos, token.STRING, str
 }
 
 func (s *scanner) scanString() (int, token.Token, string) {
@@ -173,16 +182,19 @@ func (s *scanner) scan() (int, token.Token, string) {
 	if !s.isReadingParameter {
 		if s.expectColon {
 			s.expectColon = false
-			if ch := s.read(); ch != ':' {
+			switch ch := s.read(); ch {
+			case ':':
+				b, err := io.ReadAll(s.r)
+				if err != nil {
+					return s.pos, token.ILLEGAL, err.Error()
+				}
+				s.yamlScanner = newYAMLScanner(string(b), s.pos)
+				return s.scan()
+			case eof:
+				return s.pos, token.EOF, ""
+			default:
 				return s.pos - 1, token.ILLEGAL, string(ch)
 			}
-			b, err := io.ReadAll(s.r)
-			if err != nil {
-				return s.pos, token.ILLEGAL, err.Error()
-			}
-
-			s.yamlScanner = newYAMLScanner(string(b), s.pos)
-			return s.scan()
 		}
 
 		pos, tok, lit := s.scanRawString()

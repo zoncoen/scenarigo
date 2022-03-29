@@ -211,6 +211,85 @@ func TestExecute(t *testing.T) {
 				"c": "test",
 			},
 		},
+		"left arrow function (map)": {
+			in: map[string]interface{}{
+				"{{echo <-}}": map[string]interface{}{
+					"message": map[string]interface{}{
+						"{{join <-}}": map[string]interface{}{
+							"prefix": "pre-",
+							"text": map[string]interface{}{
+								"{{call <-}}": map[string]interface{}{
+									"f":   "{{f}}",
+									"arg": "{{text}}",
+								},
+							},
+							"suffix": "-suf",
+						},
+					},
+				},
+			},
+			expected: "pre-test-suf",
+			vars: map[string]interface{}{
+				"echo": &echoFunc{},
+				"join": &joinFunc{},
+				"call": &callFunc{},
+				"f":    func(s string) string { return s },
+				"text": "test",
+			},
+		},
+		"left arrow function (yaml.MapSlice)": {
+			in: yaml.MapSlice{
+				yaml.MapItem{
+					Key: "{{echo <-}}",
+					Value: yaml.MapSlice{
+						yaml.MapItem{
+							Key: "message",
+							Value: yaml.MapSlice{
+								yaml.MapItem{
+									Key: "{{join <-}}",
+									Value: yaml.MapSlice{
+										yaml.MapItem{
+											Key:   "prefix",
+											Value: "pre-",
+										},
+										yaml.MapItem{
+											Key: "text",
+											Value: yaml.MapSlice{
+												yaml.MapItem{
+													Key: "{{call <-}}",
+													Value: yaml.MapSlice{
+														yaml.MapItem{
+															Key:   "f",
+															Value: "{{f}}",
+														},
+														yaml.MapItem{
+															Key:   "arg",
+															Value: "{{text}}",
+														},
+													},
+												},
+											},
+										},
+										yaml.MapItem{
+											Key:   "suffix",
+											Value: "-suf",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: "pre-test-suf",
+			vars: map[string]interface{}{
+				"echo": &echoFunc{},
+				"join": &joinFunc{},
+				"call": &callFunc{},
+				"f":    func(s string) string { return s },
+				"text": "test",
+			},
+		},
 	}
 	for name, test := range tests {
 		test := test

@@ -1,0 +1,10 @@
+title: retry
+scenarios:
+- filename: left-arrow-function.yaml
+  mocks: left-arrow-function.yaml
+  success: true
+  output:
+    stdout: left-arrow-function.txt
+  verbose: false
+  plugins:
+  - complex.so

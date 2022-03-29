@@ -1,0 +1,10 @@
+mocks:
+- protocol: http
+  expect:
+    path: /echo
+    body:
+      message: preout-prein-test-sufin-sufout
+  response:
+    code: 200
+    body:
+      message: '{{request.body.message}}'

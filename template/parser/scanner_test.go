@@ -594,6 +594,31 @@ func TestScanner_Scan(t *testing.T) {
 					},
 				},
 			},
+			"YAML arg function without arg": {
+				src: "{{test <-}}",
+				expected: []result{
+					{
+						pos: 1,
+						tok: token.LDBRACE,
+						lit: "{{",
+					},
+					{
+						pos: 3,
+						tok: token.IDENT,
+						lit: "test",
+					},
+					{
+						pos: 8,
+						tok: token.LARROW,
+						lit: "<-",
+					},
+					{
+						pos: 10,
+						tok: token.RDBRACE,
+						lit: "}}",
+					},
+				},
+			},
 			"add": {
 				src: `{{"test"+"1"}}`,
 				expected: []result{

@@ -182,16 +182,19 @@ func (s *scanner) scan() (int, token.Token, string) {
 	if !s.isReadingParameter {
 		if s.expectColon {
 			s.expectColon = false
-			if ch := s.read(); ch != ':' {
+			switch ch := s.read(); ch {
+			case ':':
+				b, err := io.ReadAll(s.r)
+				if err != nil {
+					return s.pos, token.ILLEGAL, err.Error()
+				}
+				s.yamlScanner = newYAMLScanner(string(b), s.pos)
+				return s.scan()
+			case eof:
+				return s.pos, token.EOF, ""
+			default:
 				return s.pos - 1, token.ILLEGAL, string(ch)
 			}
-			b, err := io.ReadAll(s.r)
-			if err != nil {
-				return s.pos, token.ILLEGAL, err.Error()
-			}
-
-			s.yamlScanner = newYAMLScanner(string(b), s.pos)
-			return s.scan()
 		}
 
 		pos, tok, lit := s.scanRawString()

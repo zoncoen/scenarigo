@@ -1,0 +1,11 @@
+- protocol: http
+  expect:
+    path: /echo
+    header:
+      Content-Type: application/json
+    body:
+      message: '{{assert.notZero}}'
+  response:
+    code: 200
+    body:
+      message: '{{request.body.message}}'

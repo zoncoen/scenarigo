@@ -21,7 +21,7 @@ func TestHandler(t *testing.T) {
 		body   string
 	}
 	type step struct {
-		request *http.Request
+		request func() *http.Request
 		expect  *expect
 	}
 	t.Run("success", func(t *testing.T) {
@@ -29,15 +29,36 @@ func TestHandler(t *testing.T) {
 			filename string
 			steps    []step
 		}{
-			"minimal": {
+			"http": {
 				filename: "testdata/http.yaml",
 				steps: []step{
 					{
-						request: httptest.NewRequest("GET", "/", nil),
+						request: func() *http.Request {
+							return httptest.NewRequest("GET", "/", nil)
+						},
 						expect: &expect{
-							code:   200,
-							header: http.Header{},
-							body:   `{"message": "hello"}`,
+							code: 200,
+							header: http.Header{
+								"Content-Type": []string{"application/json"},
+							},
+							body: `{"message": "hello"}`,
+						},
+					},
+				},
+			},
+			"http with expect": {
+				filename: "testdata/http-expect.yaml",
+				steps: []step{
+					{
+						request: func() *http.Request {
+							return httptest.NewRequest("POST", "/echo", strings.NewReader(`{"message":"hello"}`))
+						},
+						expect: &expect{
+							code: 200,
+							header: http.Header{
+								"Content-Type": []string{"application/json"},
+							},
+							body: `{"message": "hello"}`,
 						},
 					},
 				},
@@ -59,7 +80,7 @@ func TestHandler(t *testing.T) {
 				h := NewHandler(iter, logger.NewNopLogger())
 				for _, step := range test.steps {
 					rec := httptest.NewRecorder()
-					h.ServeHTTP(rec, step.request)
+					h.ServeHTTP(rec, step.request())
 					if got, expect := rec.Code, step.expect.code; got != expect {
 						t.Errorf("expect code %d but got %d", expect, got)
 					}
@@ -85,7 +106,9 @@ func TestHandler(t *testing.T) {
 				filename: "testdata/invalid-protocol.yaml",
 				steps: []step{
 					{
-						request: httptest.NewRequest("GET", "/", nil),
+						request: func() *http.Request {
+							return httptest.NewRequest("GET", "/", nil)
+						},
 						expect: &expect{
 							code: 500,
 							header: http.Header{
@@ -100,21 +123,80 @@ func TestHandler(t *testing.T) {
 				filename: "testdata/http.yaml",
 				steps: []step{
 					{
-						request: httptest.NewRequest("GET", "/", nil),
+						request: func() *http.Request {
+							return httptest.NewRequest("GET", "/", nil)
+						},
 						expect: &expect{
-							code:   200,
-							header: http.Header{},
-							body:   `{"message": "hello"}`,
+							code: 200,
+							header: http.Header{
+								"Content-Type": []string{"application/json"},
+							},
+							body: `{"message": "hello"}`,
 						},
 					},
 					{
-						request: httptest.NewRequest("GET", "/", nil),
+						request: func() *http.Request {
+							return httptest.NewRequest("GET", "/", nil)
+						},
 						expect: &expect{
 							code: 500,
 							header: http.Header{
 								"Content-Type": []string{"text/plain; charset=utf-8"},
 							},
 							body: "no mocks remain",
+						},
+					},
+				},
+			},
+			"http invalid path": {
+				filename: "testdata/http-expect.yaml",
+				steps: []step{
+					{
+						request: func() *http.Request {
+							return httptest.NewRequest("POST", "/", strings.NewReader(`{"message":"hello"}`))
+						},
+						expect: &expect{
+							code: 500,
+							header: http.Header{
+								"Content-Type": []string{"text/plain; charset=utf-8"},
+							},
+							body: `assertion error: .path: expected /echo but got /`,
+						},
+					},
+				},
+			},
+			"http invalid header": {
+				filename: "testdata/http-expect.yaml",
+				steps: []step{
+					{
+						request: func() *http.Request {
+							r := httptest.NewRequest("POST", "/echo", strings.NewReader("hello"))
+							r.Header.Add("Content-Type", "text/plain")
+							return r
+						},
+						expect: &expect{
+							code: 500,
+							header: http.Header{
+								"Content-Type": []string{"text/plain; charset=utf-8"},
+							},
+							body: `assertion error: .header.Content-Type: doesn't contain expected value: last error: expected application/json but got text/plain`,
+						},
+					},
+				},
+			},
+			"http invalid body": {
+				filename: "testdata/http-expect.yaml",
+				steps: []step{
+					{
+						request: func() *http.Request {
+							return httptest.NewRequest("POST", "/echo", strings.NewReader(`{"message":""}`))
+						},
+						expect: &expect{
+							code: 500,
+							header: http.Header{
+								"Content-Type": []string{"text/plain; charset=utf-8"},
+							},
+							body: `assertion error: .body.message: expected not zero value`,
 						},
 					},
 				},
@@ -136,7 +218,7 @@ func TestHandler(t *testing.T) {
 				h := NewHandler(iter, logger.NewNopLogger())
 				for _, step := range test.steps {
 					rec := httptest.NewRecorder()
-					h.ServeHTTP(rec, step.request)
+					h.ServeHTTP(rec, step.request())
 					if got, expect := rec.Code, step.expect.code; got != expect {
 						t.Errorf("expect code %d but got %d", expect, got)
 					}

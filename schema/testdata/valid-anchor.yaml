@@ -14,4 +14,3 @@ steps:
     expect:
       body:
         message: "{{request.body}}"
-

@@ -12,9 +12,9 @@ import (
 
 // Expect represents expected response values.
 type Expect struct {
-	Code   string        `yaml:"code"`
-	Header yaml.MapSlice `yaml:"header"`
-	Body   interface{}   `yaml:"body"`
+	Code   string        `yaml:"code,omitempty"`
+	Header yaml.MapSlice `yaml:"header,omitempty"`
+	Body   interface{}   `yaml:"body,omitempty"`
 }
 
 // Build implements protocol.AssertionBuilder interface.

@@ -76,7 +76,7 @@ func execute(in reflect.Value, data interface{}) (reflect.Value, error) {
 						return reflect.Value{}, fmt.Errorf("failed to execute left arrow function: %w", err)
 					}
 					v = res
-					continue
+					break
 				}
 				x, err := convert(e.Type())(execute(e, data))
 				if err != nil {
@@ -122,7 +122,7 @@ func execute(in reflect.Value, data interface{}) (reflect.Value, error) {
 							return reflect.Value{}, fmt.Errorf("failed to execute left arrow function: %w", err)
 						}
 						v = res
-						continue
+						break
 					}
 				}
 				x, err := convert(e.Type())(execute(e, data))

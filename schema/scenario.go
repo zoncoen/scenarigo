@@ -5,26 +5,24 @@ import (
 	"github.com/goccy/go-yaml/ast"
 	"github.com/pkg/errors"
 
-	"github.com/zoncoen/scenarigo/assert"
-	"github.com/zoncoen/scenarigo/context"
 	"github.com/zoncoen/scenarigo/protocol"
 )
 
 // Scenario represents a test scenario.
 type Scenario struct {
-	Title       string                 `yaml:"title"`
-	Description string                 `yaml:"description"`
-	Plugins     map[string]string      `yaml:"plugins"`
-	Vars        map[string]interface{} `yaml:"vars"`
-	Steps       []*Step                `yaml:"steps"`
+	Title       string                 `yaml:"title,omitempty"`
+	Description string                 `yaml:"description,omitempty"`
+	Plugins     map[string]string      `yaml:"plugins,omitempty"`
+	Vars        map[string]interface{} `yaml:"vars,omitempty"`
+	Steps       []*Step                `yaml:"steps,omitempty"`
 
 	// The strict YAML decoder fails to decode if finds an unknown field.
 	// Anchors is the field for enabling to define YAML anchors by avoiding the error.
 	// This field doesn't need to hold some data because anchors expand by the decoder.
-	Anchors anchors `yaml:"anchors"`
+	Anchors anchors `yaml:"anchors,omitempty"`
 
-	filepath string // YAML filepath
-	Node     ast.Node
+	filepath string   // YAML filepath
+	Node     ast.Node `yaml:"-"`
 }
 
 // Filepath returns YAML filepath of s.
@@ -34,88 +32,77 @@ func (s *Scenario) Filepath() string {
 
 // Step represents a step of scenario.
 type Step struct {
-	Title       string                 `yaml:"title"`
-	Description string                 `yaml:"description"`
-	Vars        map[string]interface{} `yaml:"vars"`
-	Protocol    string                 `yaml:"protocol"`
-	Request     Request                `yaml:"request"`
-	Expect      Expect                 `yaml:"expect"`
-	Include     string                 `yaml:"include"`
-	Ref         string                 `yaml:"ref"`
-	Bind        Bind                   `yaml:"bind"`
-	Retry       *RetryPolicy           `yaml:"retry"`
+	Title       string                    `yaml:"title,omitempty"`
+	Description string                    `yaml:"description,omitempty"`
+	Vars        map[string]interface{}    `yaml:"vars,omitempty"`
+	Protocol    string                    `yaml:"protocol,omitempty"`
+	Request     protocol.Invoker          `yaml:"request,omitempty"`
+	Expect      protocol.AssertionBuilder `yaml:"expect,omitempty"`
+	Include     string                    `yaml:"include,omitempty"`
+	Ref         interface{}               `yaml:"ref,omitempty"`
+	Bind        Bind                      `yaml:"bind,omitempty"`
+	Retry       *RetryPolicy              `yaml:"retry,omitempty"`
 }
 
-type stepUnmarshaller Step
+type rawMessage []byte
+
+// UnmarshalYAML implements yaml.Unmarshaler interface.
+func (r *rawMessage) UnmarshalYAML(b []byte) error {
+	*r = b
+	return nil
+}
+
+type stepUnmarshaller struct {
+	Title       string                 `yaml:"title,omitempty"`
+	Description string                 `yaml:"description,omitempty"`
+	Vars        map[string]interface{} `yaml:"vars,omitempty"`
+	Protocol    string                 `yaml:"protocol,omitempty"`
+	Include     string                 `yaml:"include,omitempty"`
+	Ref         interface{}            `yaml:"ref,omitempty"`
+	Bind        Bind                   `yaml:"bind,omitempty"`
+	Retry       *RetryPolicy           `yaml:"retry,omitempty"`
+
+	Request rawMessage `yaml:"request,omitempty"`
+	Expect  rawMessage `yaml:"expect,omitempty"`
+}
 
 // UnmarshalYAML implements yaml.Unmarshaler interface.
 func (s *Step) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	if err := unmarshal((*stepUnmarshaller)(s)); err != nil {
+	// unmarshal into stepUnmarshaller instead of Step for dynamic unmarshalling Request/Expect
+	var unmarshaled stepUnmarshaller
+	if err := unmarshal(&unmarshaled); err != nil {
 		return err
 	}
 
+	s.Title = unmarshaled.Title
+	s.Description = unmarshaled.Description
+	s.Vars = unmarshaled.Vars
+	s.Protocol = unmarshaled.Protocol
+	s.Include = unmarshaled.Include
+	s.Ref = unmarshaled.Ref
+	s.Bind = unmarshaled.Bind
+	s.Retry = unmarshaled.Retry
+
 	p := protocol.Get(s.Protocol)
 	if p == nil {
-		if s.Request.bytes != nil || s.Expect.bytes != nil {
+		if unmarshaled.Request != nil || unmarshaled.Expect != nil {
 			return errors.Errorf("unknown protocol: %s", s.Protocol)
 		}
 		return nil
 	}
-	if s.Request.bytes != nil {
-		invoker, err := p.UnmarshalRequest(s.Request.bytes)
+	if unmarshaled.Request != nil {
+		invoker, err := p.UnmarshalRequest(unmarshaled.Request)
 		if err != nil {
 			return err
 		}
-		s.Request.Invoker = invoker
+		s.Request = invoker
 	}
-	builder, err := p.UnmarshalExpect(s.Expect.bytes)
+	builder, err := p.UnmarshalExpect(unmarshaled.Expect)
 	if err != nil {
 		return err
 	}
-	s.Expect.AssertionBuilder = builder
+	s.Expect = builder
 
-	return nil
-}
-
-// Request represents a request.
-type Request struct {
-	protocol.Invoker
-	bytes []byte
-}
-
-// Invoke sends the request.
-func (r *Request) Invoke(ctx *context.Context) (*context.Context, interface{}, error) {
-	if r.Invoker == nil {
-		return ctx, nil, errors.New("invalid request")
-	}
-	return r.Invoker.Invoke(ctx)
-}
-
-// UnmarshalYAML implements yaml.Unmarshaler interface.
-func (r *Request) UnmarshalYAML(bytes []byte) error {
-	r.bytes = bytes
-	return nil
-}
-
-// Expect represents a expect response.
-type Expect struct {
-	protocol.AssertionBuilder
-	bytes []byte
-}
-
-// Build builds the assertion which asserts the response.
-func (e *Expect) Build(ctx *context.Context) (assert.Assertion, error) {
-	if e.AssertionBuilder == nil {
-		return assert.AssertionFunc(func(v interface{}) error {
-			return nil
-		}), nil
-	}
-	return e.AssertionBuilder.Build(ctx)
-}
-
-// UnmarshalYAML implements yaml.Unmarshaler interface.
-func (e *Expect) UnmarshalYAML(bytes []byte) error {
-	e.bytes = bytes
 	return nil
 }
 

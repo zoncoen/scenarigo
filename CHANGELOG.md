@@ -1,7 +1,19 @@
 # CHANGELOG
 
+<a name="v0.11.0"></a>
+## [v0.11.0] - 2022-04-15
+### Bug Fixes
+- **plugin:** fix issue with plugin build failure in Go1.18
+
+### Features
+- enable to marshal scenarios into YAML
+- **mock:** enable to assert request
+- **template:** allow writing left arrow function call in map syntax
+- **template:** enable to use template in map keys
+- **template:** enable to escape { by \
+
 <a name="v0.10.0"></a>
-## [v0.10.0] - 2021-12-28
+## [v0.10.0] - 2022-01-31
 ### Bug Fixes
 - update the go directive of go.mod
 - **plugin:** use the same module version as scenarigo for building plugins
@@ -194,6 +206,7 @@ change protocl.Protocol interface
 - first release
 
 
+[v0.11.0]: https://github.com/zoncoen/scenarigo/compare/v0.10.0...v0.11.0
 [v0.10.0]: https://github.com/zoncoen/scenarigo/compare/v0.9.0...v0.10.0
 [v0.9.0]: https://github.com/zoncoen/scenarigo/compare/v0.8.1...v0.9.0
 [v0.8.1]: https://github.com/zoncoen/scenarigo/compare/v0.8.0...v0.8.1

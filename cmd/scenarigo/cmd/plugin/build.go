@@ -100,7 +100,7 @@ func findGoCmd(ctx context.Context) (string, error) {
 
 You can install the required version of Go by the following commands:
 
-	go get golang.org/dl/%s
+	go install golang.org/dl/%s
 	%s download
 `, goVersion, v, goVersion, goVersion)
 		}
@@ -113,10 +113,11 @@ func downloadModule(ctx context.Context, goCmd, mod string) (string, func(), err
 	if err != nil {
 		return "", func() {}, fmt.Errorf("failed to create a temporary directory: %w", err)
 	}
+	goDir := filepath.Join(tempDir, "go")
 
 	envs := []string{
-		fmt.Sprintf("GOPATH=%s", tempDir),
-		fmt.Sprintf("GOMODCACHE=%s", filepath.Join(tempDir, "pkg", "mod")),
+		fmt.Sprintf("GOPATH=%s", goDir),
+		fmt.Sprintf("GOMODCACHE=%s", filepath.Join(goDir, "pkg", "mod")),
 	}
 	clean := func() {
 		if err := executeWithEnvs(ctx, envs, tempDir, goCmd, "clean", "-modcache"); err != nil {
@@ -125,7 +126,10 @@ func downloadModule(ctx context.Context, goCmd, mod string) (string, func(), err
 		os.RemoveAll(tempDir)
 	}
 
-	if err := executeWithEnvs(ctx, envs, tempDir, goCmd, "get", "-d", mod); err != nil {
+	if err := execute(ctx, tempDir, goCmd, "mod", "init", "main"); err != nil {
+		return "", clean, fmt.Errorf("failed to initialize go.mod: %w", err)
+	}
+	if err := executeWithEnvs(ctx, envs, tempDir, goCmd, downloadCmd(mod)...); err != nil {
 		return "", clean, fmt.Errorf("failed to download %s: %w", mod, err)
 	}
 	if i := strings.Index(mod, "@"); i >= 0 { // trim version
@@ -135,7 +139,7 @@ func downloadModule(ctx context.Context, goCmd, mod string) (string, func(), err
 	if err != nil {
 		return "", clean, fmt.Errorf("failed to escape path %s: %w", mod, err)
 	}
-	src := filepath.Join(tempDir, "pkg", "mod", escMod)
+	src := filepath.Join(goDir, "pkg", "mod", escMod)
 	src, err = findLatest(filepath.Dir(src), filepath.Base(src))
 	if err != nil {
 		return "", clean, fmt.Errorf("failed to download %s: %w", mod, err)

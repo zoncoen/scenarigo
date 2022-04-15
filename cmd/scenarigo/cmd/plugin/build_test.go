@@ -481,7 +481,7 @@ func setupGitServer(t *testing.T) {
 	git.PublicKeyLookupFunc = func(_ string) (*gitkit.PublicKey, error) {
 		return &gitkit.PublicKey{}, nil
 	}
-	if err := git.Listen(":0"); err != nil {
+	if err := git.Listen("127.0.0.1:0"); err != nil {
 		t.Fatalf("failed to listen: %s", err)
 	}
 	go git.Serve()

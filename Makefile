@@ -19,11 +19,16 @@ $(BIN_DIR):
 	@mkdir -p $(BIN_DIR)
 
 PROTOC := $(BIN_DIR)/protoc
-PROTOC_VERSION := 3.11.4
-PROTOC_ZIP := protoc-$(PROTOC_VERSION)-$(UNAME_OS)-$(UNAME_ARCH).zip
+PROTOC_VERSION := 3.20.0
+PROTOC_OS := $(UNAME_OS)
 ifeq "$(UNAME_OS)" "Darwin"
-	PROTOC_ZIP=protoc-$(PROTOC_VERSION)-osx-$(UNAME_ARCH).zip
+	PROTOC_OS = osx
 endif
+PROTOC_ARCH := $(UNAME_ARCH)
+ifeq "$(UNAME_ARCH)" "arm64"
+	PROTOC_ARCH = aarch_64
+endif
+PROTOC_ZIP := protoc-$(PROTOC_VERSION)-$(PROTOC_OS)-$(PROTOC_ARCH).zip
 $(PROTOC): | $(BIN_DIR)
 	@curl -sSOL \
 		"https://github.com/protocolbuffers/protobuf/releases/download/v$(PROTOC_VERSION)/$(PROTOC_ZIP)"

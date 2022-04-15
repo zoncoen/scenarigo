@@ -21,11 +21,11 @@ import (
 
 // Expect represents expected response values.
 type Expect struct {
-	Code    string        `yaml:"code"`
-	Message interface{}   `yaml:"message"`
-	Status  ExpectStatus  `yaml:"status"`
-	Header  yaml.MapSlice `yaml:"header"`
-	Trailer yaml.MapSlice `yaml:"trailer"`
+	Code    string        `yaml:"code,omitempty"`
+	Message interface{}   `yaml:"message,omitempty"`
+	Status  ExpectStatus  `yaml:"status,omitempty"`
+	Header  yaml.MapSlice `yaml:"header,omitempty"`
+	Trailer yaml.MapSlice `yaml:"trailer,omitempty"`
 
 	// for backward compatibility
 	Body interface{} `yaml:"body,omitempty"`

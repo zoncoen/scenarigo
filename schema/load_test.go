@@ -3,51 +3,65 @@ package schema
 import (
 	"bytes"
 	"io"
+	"os"
 	"strings"
 	"testing"
 
 	"github.com/goccy/go-yaml"
 	"github.com/google/go-cmp/cmp"
 	"github.com/pkg/errors"
+	"github.com/sergi/go-diff/diffmatchpatch"
 	"github.com/zoncoen/scenarigo/assert"
 	"github.com/zoncoen/scenarigo/context"
 	"github.com/zoncoen/scenarigo/protocol"
 )
 
 type testProtocol struct {
-	name            string
-	request, expect interface{}
+	name string
 }
 
 func (p *testProtocol) Name() string { return p.name }
 
 func (p *testProtocol) UnmarshalRequest(b []byte) (protocol.Invoker, error) {
-	if err := yaml.Unmarshal(b, &p.request); err != nil {
+	var r request
+	if err := yaml.Unmarshal(b, &r); err != nil {
+		if errors.Is(err, io.EOF) {
+			return nil, nil
+		}
 		return nil, err
 	}
-	return nil, nil
+	return &r, nil
 }
 
 func (p *testProtocol) UnmarshalExpect(b []byte) (protocol.AssertionBuilder, error) {
-	if b == nil {
-		return &testAssertionBuilder{}, nil
-	}
-	if err := yaml.NewDecoder(bytes.NewBuffer(b), yaml.UseOrderedMap()).Decode(&p.expect); err != nil {
+	var e expect
+	if err := yaml.NewDecoder(bytes.NewBuffer(b), yaml.UseOrderedMap()).Decode(&e); err != nil {
+		if errors.Is(err, io.EOF) {
+			return nil, nil
+		}
 		return nil, err
 	}
-	return &testAssertionBuilder{}, nil
+	return &e, nil
 }
 
-type testAssertionBuilder struct{}
+type request map[interface{}]interface{}
 
-func (*testAssertionBuilder) Build(_ *context.Context) (assert.Assertion, error) { return nil, nil }
+func (r request) Invoke(ctx *context.Context) (*context.Context, interface{}, error) {
+	return ctx, nil, nil
+}
+
+type expect map[interface{}]interface{}
+
+func (e expect) Build(_ *context.Context) (assert.Assertion, error) {
+	return assert.Build(e), nil
+}
 
 func TestLoadScenarios(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		tests := map[string]struct {
-			path                              string
-			scenarios                         []*Scenario
-			request, expect, assertionBuilder interface{}
+			path             string
+			scenarios        []*Scenario
+			assertionBuilder interface{}
 		}{
 			"valid": {
 				path: "testdata/valid.yaml",
@@ -63,29 +77,22 @@ func TestLoadScenarios(t *testing.T) {
 								Description: "check to respond same message",
 								Vars:        nil,
 								Protocol:    "test",
-								Expect: Expect{
-									AssertionBuilder: &testAssertionBuilder{},
-									bytes:            nil,
+								Request: &request{
+									"body": map[string]interface{}{
+										"message": "{{vars.message}}",
+									},
+								},
+								Expect: &expect{
+									"body": yaml.MapSlice{
+										yaml.MapItem{
+											Key:   "message",
+											Value: "{{request.body}}",
+										},
+									},
 								},
 							},
 						},
 						filepath: "testdata/valid.yaml",
-					},
-				},
-				request: map[string]interface{}{
-					"body": map[string]interface{}{
-						"message": "{{vars.message}}",
-					},
-				},
-				expect: yaml.MapSlice{
-					{
-						Key: "body",
-						Value: yaml.MapSlice{
-							{
-								Key:   "message",
-								Value: "{{request.body}}",
-							},
-						},
 					},
 				},
 			},
@@ -103,29 +110,22 @@ func TestLoadScenarios(t *testing.T) {
 								Description: "check to respond same message",
 								Vars:        nil,
 								Protocol:    "test",
-								Expect: Expect{
-									AssertionBuilder: &testAssertionBuilder{},
-									bytes:            nil,
+								Request: &request{
+									"body": map[string]interface{}{
+										"message": "{{vars.message}}",
+									},
+								},
+								Expect: &expect{
+									"body": yaml.MapSlice{
+										yaml.MapItem{
+											Key:   "message",
+											Value: "{{request.body}}",
+										},
+									},
 								},
 							},
 						},
 						filepath: "testdata/valid-anchor.yaml",
-					},
-				},
-				request: map[string]interface{}{
-					"body": map[string]interface{}{
-						"message": "{{vars.message}}",
-					},
-				},
-				expect: yaml.MapSlice{
-					{
-						Key: "body",
-						Value: yaml.MapSlice{
-							{
-								Key:   "message",
-								Value: "{{request.body}}",
-							},
-						},
 					},
 				},
 			},
@@ -145,8 +145,6 @@ func TestLoadScenarios(t *testing.T) {
 						filepath: "testdata/valid-without-protocol.yaml",
 					},
 				},
-				request: map[interface{}]interface{}{},
-				expect:  map[interface{}]interface{}{},
 			},
 			"without expect": {
 				path: "testdata/valid-without-expect.yaml",
@@ -162,30 +160,23 @@ func TestLoadScenarios(t *testing.T) {
 								Description: "check to respond same message",
 								Vars:        nil,
 								Protocol:    "test",
-								Expect: Expect{
-									AssertionBuilder: &testAssertionBuilder{},
-									bytes:            nil,
+								Request: &request{
+									"body": map[string]interface{}{
+										"message": "{{vars.message}}",
+									},
 								},
 							},
 						},
 						filepath: "testdata/valid-without-expect.yaml",
 					},
 				},
-				request: map[string]interface{}{
-					"body": map[string]interface{}{
-						"message": "{{vars.message}}",
-					},
-				},
-				expect: map[interface{}]interface{}{},
 			},
 		}
 		for name, test := range tests {
 			test := test
 			t.Run(name, func(t *testing.T) {
 				p := &testProtocol{
-					name:    "test",
-					request: map[interface{}]interface{}{},
-					expect:  map[interface{}]interface{}{},
+					name: "test",
 				}
 				protocol.Register(p)
 				defer protocol.Unregister(p.Name())
@@ -196,16 +187,10 @@ func TestLoadScenarios(t *testing.T) {
 				}
 				if diff := cmp.Diff(test.scenarios, got,
 					cmp.AllowUnexported(
-						Scenario{}, Request{}, Expect{},
+						Scenario{},
 					),
 					cmp.FilterPath(func(path cmp.Path) bool {
 						s := path.String()
-						if s == "Steps.Request" {
-							return true
-						}
-						if s == "Steps.Expect.bytes" {
-							return true
-						}
 						if s == "Node" {
 							return true
 						}
@@ -213,12 +198,6 @@ func TestLoadScenarios(t *testing.T) {
 					}, cmp.Ignore()),
 				); diff != "" {
 					t.Errorf("scenario differs (-want +got):\n%s", diff)
-				}
-				if diff := cmp.Diff(test.request, p.request); diff != "" {
-					t.Errorf("request differs (-want +got):\n%s", diff)
-				}
-				if diff := cmp.Diff(test.expect, p.expect); diff != "" {
-					t.Errorf("expect differs (-want +got):\n%s", diff)
 				}
 				for i, scn := range got {
 					if g, e := scn.filepath, test.path; g != e {
@@ -269,9 +248,8 @@ func TestLoadScenarios(t *testing.T) {
 func TestLoadScenariosFromReader(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		tests := map[string]struct {
-			yaml            string
-			scenarios       []*Scenario
-			request, expect interface{}
+			yaml      string
+			scenarios []*Scenario
 		}{
 			"valid": {
 				yaml: `
@@ -301,22 +279,19 @@ steps:
 								Description: "check to respond same message",
 								Vars:        nil,
 								Protocol:    "test",
-							},
-						},
-					},
-				},
-				request: map[string]interface{}{
-					"body": map[string]interface{}{
-						"message": "{{vars.message}}",
-					},
-				},
-				expect: yaml.MapSlice{
-					{
-						Key: "body",
-						Value: yaml.MapSlice{
-							{
-								Key:   "message",
-								Value: "{{request.body}}",
+								Request: &request{
+									"body": map[string]interface{}{
+										"message": "{{vars.message}}",
+									},
+								},
+								Expect: &expect{
+									"body": yaml.MapSlice{
+										yaml.MapItem{
+											Key:   "message",
+											Value: "{{request.body}}",
+										},
+									},
+								},
 							},
 						},
 					},
@@ -327,9 +302,7 @@ steps:
 			test := test
 			t.Run(name, func(t *testing.T) {
 				p := &testProtocol{
-					name:    "test",
-					request: map[interface{}]interface{}{},
-					expect:  map[interface{}]interface{}{},
+					name: "test",
 				}
 				protocol.Register(p)
 				defer protocol.Unregister(p.Name())
@@ -340,16 +313,10 @@ steps:
 				}
 				if diff := cmp.Diff(test.scenarios, got,
 					cmp.AllowUnexported(
-						Scenario{}, Request{}, Expect{},
+						Scenario{},
 					),
 					cmp.FilterPath(func(path cmp.Path) bool {
 						s := path.String()
-						if s == "Steps.Request" {
-							return true
-						}
-						if s == "Steps.Expect" {
-							return true
-						}
 						if s == "Node" {
 							return true
 						}
@@ -357,12 +324,6 @@ steps:
 					}, cmp.Ignore()),
 				); diff != "" {
 					t.Errorf("scenario differs (-want +got):\n%s", diff)
-				}
-				if diff := cmp.Diff(test.request, p.request); diff != "" {
-					t.Errorf("request differs (-want +got):\n%s", diff)
-				}
-				if diff := cmp.Diff(test.expect, p.expect); diff != "" {
-					t.Errorf("expect differs (-want +got):\n%s", diff)
 				}
 				for i, scn := range got {
 					if g, e := scn.filepath, ""; g != e {
@@ -406,3 +367,37 @@ type errReader struct {
 }
 
 func (r errReader) Read(_ []byte) (int, error) { return 0, r.err }
+
+func TestMarshalYAML(t *testing.T) {
+	filename := "testdata/valid.yaml"
+
+	p := &testProtocol{
+		name: "test",
+	}
+	protocol.Register(p)
+	defer protocol.Unregister(p.Name())
+
+	scenarios, err := LoadScenarios(filename)
+	if err != nil {
+		t.Fatalf("failed to load scenarios: %s", err)
+	}
+
+	var buf bytes.Buffer
+	enc := yaml.NewEncoder(&buf)
+	for _, s := range scenarios {
+		if err := enc.Encode(s); err != nil {
+			t.Fatalf("failed to marshal to YAML: %s", err)
+		}
+	}
+
+	b, err := os.ReadFile(filename)
+	if err != nil {
+		t.Fatalf("failed to read file: %s", err)
+	}
+
+	if got, expect := buf.String(), string(b); got != expect {
+		dmp := diffmatchpatch.New()
+		diffs := dmp.DiffMain(expect, got, false)
+		t.Errorf("differs:\n%s", dmp.DiffPrettyText(diffs))
+	}
+}

@@ -58,7 +58,7 @@ func runStep(ctx *context.Context, scenario *schema.Scenario, s *schema.Step, st
 		ctx = ctx.WithNode(currentNode)
 		return ctx
 	}
-	if s.Ref != "" {
+	if s.Ref != nil {
 		x, err := ctx.ExecuteTemplate(s.Ref)
 		if err != nil {
 			ctx.Reporter().Fatal(

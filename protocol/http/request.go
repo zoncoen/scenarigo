@@ -24,8 +24,8 @@ var defaultUserAgent = fmt.Sprintf("scenarigo/%s", version.String())
 // Request represents a request.
 type Request struct {
 	Client string      `yaml:"client,omitempty"`
-	Method string      `yaml:"method"`
-	URL    string      `yaml:"url"`
+	Method string      `yaml:"method,omitempty"`
+	URL    string      `yaml:"url,omitempty"`
 	Query  interface{} `yaml:"query,omitempty"`
 	Header interface{} `yaml:"header,omitempty"`
 	Body   interface{} `yaml:"body,omitempty"`

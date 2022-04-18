@@ -2,10 +2,12 @@ package cmd
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -30,6 +32,11 @@ func TestRun(t *testing.T) {
 
 	os.Setenv("TEST_ADDR", srv.URL)
 	defer os.Unsetenv("TEST_ADDR")
+
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("failed to get current directory: %s", err)
+	}
 
 	tests := map[string]struct {
 		args         []string
@@ -91,6 +98,19 @@ ok  	scenarios/pass.yaml	0.000s
 			expectOutput: strings.TrimPrefix(`
 ok  	scenarios/pass.yaml	0.000s
 `, "\n"),
+		},
+		"plugin not found": {
+			config:      "./testdata/scenarigo-plugin-not-found.yaml",
+			args:        []string{"testdata/scenarios/pass.yaml"},
+			expectError: true,
+			expectOutput: strings.TrimPrefix(fmt.Sprintf(`
+--- FAIL: setup (0.00s)
+    --- FAIL: setup/plugin.so (0.00s)
+            failed to open plugin: plugin.Open("%s"): realpath failed
+FAIL
+FAIL	setup	0.000s
+FAIL
+`, filepath.Join(wd, "testdata", "plugin.so")), "\n"),
 		},
 	}
 	for name, test := range tests {

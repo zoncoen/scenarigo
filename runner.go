@@ -204,7 +204,11 @@ func (r *Runner) Run(ctx *context.Context) {
 	for out := range r.plugins {
 		p, err := plugin.Open(filepath.Join(pluginDir, out))
 		if err != nil {
-			ctx.Reporter().Fatalf("failed to open plugin: %s: %s", out, err)
+			sm[out] = func(ctx *context.Context) (*context.Context, func(*context.Context)) {
+				ctx.Reporter().Fatalf("failed to open plugin: %s", err)
+				return nil, nil
+			}
+			continue
 		}
 		if setup := p.GetSetup(); setup != nil {
 			sm[out] = setup
@@ -219,7 +223,7 @@ func (r *Runner) Run(ctx *context.Context) {
 	for _, f := range r.scenarioFiles {
 		testName, err := filepath.Rel(r.rootDir, f)
 		if err != nil {
-			ctx.Reporter().Fatalf("failed to load scenarios: %s", err)
+			testName = f
 		}
 		ctx.Run(testName, func(ctx *context.Context) {
 			scns, err := schema.LoadScenarios(f)

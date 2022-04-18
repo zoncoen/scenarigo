@@ -1,0 +1,11 @@
+schemaVersion: config/v1
+
+scenarios:
+  - ./scenarios
+pluginDirectory: ./
+plugins:
+  plugin.so:
+    src: .
+
+output:
+  verbose: false

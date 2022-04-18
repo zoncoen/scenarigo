@@ -72,7 +72,6 @@ pluginDirectory: ./         # Specify the root directory of plugins.
 # plugins:                  # Specify configurations to build plugins.
 #   plugin.so:              # Map keys specify plugin output file path from the root directory of plugins.
 #     src: ./path/to/plugin # Specify the source file, directory, or "go gettable" module path of the plugin.
-#     setup: '{{Setup}}'    # Specify the setup function by the template string. This function will be called before running tests only once.
 
 output:
   verbose: false          # Enable verbose output.

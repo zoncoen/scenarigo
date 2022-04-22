@@ -224,6 +224,17 @@ plugins:
 				expectPluginPath: "gen/plugin.so",
 				expectGoMod:      map[string]string{},
 			},
+			`src is a sub direcotry of remote git repository`: {
+				config: `
+schemaVersion: config/v1
+plugins:
+  gen/plugin.so:
+    src: 127.0.0.1/sub.git/plugin@v1.0.0
+`,
+				files:            map[string]string{},
+				expectPluginPath: "gen/plugin.so",
+				expectGoMod:      map[string]string{},
+			},
 			`should escape file path of remote repository`: {
 				config: `
 schemaVersion: config/v1

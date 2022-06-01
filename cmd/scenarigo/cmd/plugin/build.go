@@ -65,7 +65,9 @@ func build(cmd *cobra.Command, args []string) error {
 			mod = m
 			src = s
 		}
-		if err := buildPlugin(cmd, goCmd, mod, src, filepathutil.From(pluginDir, out)); err != nil {
+		// NOTE: All module names must be unique and different from the standard modules.
+		defaultModName := filepath.Join("plugins", strings.TrimSuffix(out, ".so"))
+		if err := buildPlugin(cmd, goCmd, mod, src, filepathutil.From(pluginDir, out), defaultModName); err != nil {
 			return fmt.Errorf("failed to build plugin %s: %w", out, err)
 		}
 	}
@@ -82,32 +84,46 @@ func ctx(cmd *cobra.Command) context.Context {
 
 func findGoCmd(ctx context.Context) (string, error) {
 	goVersion := runtime.Version()
-	if goCmd, err := exec.LookPath(goVersion); err == nil {
-		return goCmd, nil
-	}
 	goCmd, err := exec.LookPath("go")
-	if err != nil {
-		return "", fmt.Errorf("go command required: %w", err)
+	var verr error
+	if err == nil {
+		verr = checkGoVersion(ctx, goCmd, goVersion)
+		if verr == nil {
+			return goCmd, nil
+		}
 	}
+	if goCmd, err := exec.LookPath(goVersion); err == nil {
+		if err := checkGoVersion(ctx, goCmd, goVersion); err == nil {
+			return goCmd, nil
+		}
+	}
+	if err == nil {
+		return "", verr
+	}
+	return "", fmt.Errorf("go command required: %w", err)
+}
+
+func checkGoVersion(ctx context.Context, goCmd, ver string) error {
 	var stdout bytes.Buffer
 	cmd := exec.CommandContext(ctx, goCmd, "version")
 	cmd.Stdout = &stdout
 	if err := cmd.Run(); err != nil {
-		return "", err
+		return err
 	}
 	items := strings.Split(stdout.String(), " ")
-	if len(items) == 4 {
-		if v := items[2]; v != goVersion {
-			return "", fmt.Errorf(`required %s but installed %s
+	if len(items) != 4 {
+		return errors.New("invalid version output or scenarigo bug")
+	}
+	if v := items[2]; v != ver {
+		return fmt.Errorf(`required %s but installed %s
 
 You can install the required version of Go by the following commands:
 
-	go install golang.org/dl/%s
+	go install golang.org/dl/%s@latest
 	%s download
-`, goVersion, v, goVersion, goVersion)
-		}
+`, ver, v, ver, ver)
 	}
-	return goCmd, nil
+	return nil
 }
 
 func downloadModule(ctx context.Context, goCmd, p string) (string, string, func(), error) {
@@ -128,7 +144,7 @@ func downloadModule(ctx context.Context, goCmd, p string) (string, string, func(
 		os.RemoveAll(tempDir)
 	}
 
-	if err := execute(ctx, tempDir, goCmd, "mod", "init", "main"); err != nil {
+	if err := execute(ctx, tempDir, goCmd, "mod", "init", "download_module"); err != nil {
 		return "", "", clean, fmt.Errorf("failed to initialize go.mod: %w", err)
 	}
 	if err := executeWithEnvs(ctx, envs, tempDir, goCmd, downloadCmd(p)...); err != nil {
@@ -186,7 +202,7 @@ func modSrcPath(tempDir, mod string) (string, string, error) {
 	return "", "", errors.New("module not found on go.mod")
 }
 
-func buildPlugin(cmd *cobra.Command, goCmd, mod, src, out string) error {
+func buildPlugin(cmd *cobra.Command, goCmd, mod, src, out, defaultModName string) error {
 	ctx := ctx(cmd)
 	dir := mod
 	info, err := os.Stat(mod)
@@ -203,7 +219,7 @@ func buildPlugin(cmd *cobra.Command, goCmd, mod, src, out string) error {
 		if err := execute(ctx, dir, goCmd, "mod", "init"); err != nil {
 			// ref. https://github.com/golang/go/wiki/Modules#why-does-go-mod-init-give-the-error-cannot-determine-module-path-for-source-directory
 			if strings.Contains(err.Error(), "cannot determine module path") {
-				if err := execute(ctx, dir, goCmd, "mod", "init", "main"); err != nil {
+				if err := execute(ctx, dir, goCmd, "mod", "init", defaultModName); err != nil {
 					return fmt.Errorf("failed to initialize go.mod: %w", err)
 				}
 			} else {

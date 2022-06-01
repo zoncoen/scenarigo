@@ -3,6 +3,8 @@ package plugin
 import (
 	"context"
 	"fmt"
+	"io"
+	"log"
 	"net/url"
 	"os"
 	"os/exec"
@@ -15,7 +17,6 @@ import (
 	"github.com/sosedoff/gitkit"
 	"github.com/spf13/cobra"
 
-	"github.com/zoncoen/scenarigo"
 	"github.com/zoncoen/scenarigo/cmd/scenarigo/cmd/config"
 )
 
@@ -37,17 +38,6 @@ func init() {
 }
 
 func TestBuild(t *testing.T) {
-	// replace go.mod content for testing
-	testGoMod, err := os.ReadFile("testdata/scenarigo.mod")
-	if err != nil {
-		t.Fatal(err)
-	}
-	gomodBytes := scenarigo.GoModBytes
-	scenarigo.GoModBytes = testGoMod
-	t.Cleanup(func() {
-		scenarigo.GoModBytes = gomodBytes
-	})
-
 	goVersion := strings.TrimPrefix(runtime.Version(), "go")
 	if parts := strings.Split(goVersion, "."); len(parts) > 2 {
 		goVersion = fmt.Sprintf("%s.%s", parts[0], parts[1])
@@ -58,12 +48,14 @@ func Greet() string {
 	return "Hello, world!"
 }
 `
-	gomod := `module main
+	gomod := func(m string) string {
+		return fmt.Sprintf(`module %s
 
 go 1.17
-`
+`, m)
+	}
 
-	b, err := os.ReadFile("testdata/go1.17.mod")
+	b, err := os.ReadFile("testdata/go1.17.mod.golden")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -77,6 +69,7 @@ go 1.17
 			files            map[string]string
 			expectPluginPath string
 			expectGoMod      map[string]string
+			skipOpen         bool
 		}{
 			"no plugins": {
 				config: `
@@ -95,7 +88,7 @@ plugins:
 				},
 				expectPluginPath: "plugin.so",
 				expectGoMod: map[string]string{
-					"src/go.mod": gomod,
+					"src/go.mod": gomod("plugins/plugin"),
 				},
 			},
 			"src is a directory": {
@@ -110,7 +103,7 @@ plugins:
 				},
 				expectPluginPath: "gen/plugin.so",
 				expectGoMod: map[string]string{
-					"src/go.mod": gomod,
+					"src/go.mod": gomod("plugins/gen/plugin"),
 				},
 			},
 			"specify pluginDirectory": {
@@ -126,7 +119,7 @@ plugins:
 				},
 				expectPluginPath: "gen/plugin.so",
 				expectGoMod: map[string]string{
-					"src/go.mod": gomod,
+					"src/go.mod": gomod("plugins/plugin"),
 				},
 			},
 			"update go.mod": {
@@ -147,7 +140,7 @@ func Greet() string {
 	return "Hello, world!"
 }
 `,
-					"src/go.mod": fmt.Sprintf(`module main
+					"src/go.mod": fmt.Sprintf(`module plugins/plugin
 
 go %s
 
@@ -177,7 +170,7 @@ func Greet() string {
 	return "Hello, world!"
 }
 `,
-					"src/go.mod": fmt.Sprintf(`module main
+					"src/go.mod": fmt.Sprintf(`module plugins/plugin
 
 go %s
 
@@ -212,6 +205,7 @@ plugins:
 				files:            map[string]string{},
 				expectPluginPath: "gen/plugin.so",
 				expectGoMod:      map[string]string{},
+				skipOpen:         true,
 			},
 			`src is a remote git repository with latest version`: {
 				config: `
@@ -223,6 +217,7 @@ plugins:
 				files:            map[string]string{},
 				expectPluginPath: "gen/plugin.so",
 				expectGoMod:      map[string]string{},
+				skipOpen:         true,
 			},
 			`src is a sub direcotry of remote git repository`: {
 				config: `
@@ -239,11 +234,11 @@ plugins:
 				config: `
 schemaVersion: config/v1
 plugins:
-  gen/plugin.so:
+  gen/NeedEscape.so:
     src: 127.0.0.1/NeedEscape.git
 `,
 				files:            map[string]string{},
-				expectPluginPath: "gen/plugin.so",
+				expectPluginPath: "gen/NeedEscape.so",
 				expectGoMod:      map[string]string{},
 			},
 		}
@@ -265,6 +260,9 @@ plugins:
 				if test.expectPluginPath != "" {
 					if _, err := os.Stat(filepath.Join(tmpDir, test.expectPluginPath)); err != nil {
 						t.Fatalf("plugin not found: %s", err)
+					}
+					if !test.skipOpen {
+						openPlugin(t, filepath.Join(tmpDir, test.expectPluginPath))
 					}
 				}
 				for path, expect := range test.expectGoMod {
@@ -485,6 +483,7 @@ func setupGitServer(t *testing.T) {
 		}
 	}
 
+	log.Default().SetOutput(io.Discard)
 	git := gitkit.NewSSH(gitkit.Config{
 		Dir:    tempDir,
 		KeyDir: filepath.Join(tempDir, "ssh"),

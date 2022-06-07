@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -12,10 +13,13 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/sergi/go-diff/diffmatchpatch"
 	"github.com/sosedoff/gitkit"
 	"github.com/spf13/cobra"
+	"golang.org/x/mod/modfile"
+	"golang.org/x/mod/module"
 
 	"github.com/zoncoen/scenarigo/cmd/scenarigo/cmd/config"
 )
@@ -252,7 +256,6 @@ plugins:
 					create(t, filepath.Join(tmpDir, p), content)
 				}
 				cmd := &cobra.Command{}
-				cmd.Context()
 				config.ConfigPath = configPath
 				if err := build(cmd, []string{}); err != nil {
 					t.Fatal(err)
@@ -436,6 +439,462 @@ func TestFindGoCmd(t *testing.T) {
 			})
 		}
 	})
+}
+
+func TestUpdateGoMod(t *testing.T) {
+	tests := map[string]struct {
+		gomod        string
+		src          string
+		requires     []*modfile.Require
+		expect       string
+		expectStdout string
+	}{
+		"do nothing": {
+			gomod: `module plugin_module
+
+go 1.17
+`,
+			expect: `module plugin_module
+
+go 1.17
+`,
+		},
+		"do nothing (no requires)": {
+			gomod: `module plugin_module
+
+go 1.17
+
+require google.golang.org/grpc v1.37.1
+
+require (
+	github.com/golang/protobuf v1.4.2 // indirect
+	golang.org/x/net v0.0.0-20190311183353-d8887717615a // indirect
+	golang.org/x/sys v0.0.0-20190215142949-d0b11bdaac8a // indirect
+	golang.org/x/text v0.3.0 // indirect
+	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013 // indirect
+	google.golang.org/protobuf v1.25.0 // indirect
+)
+`,
+			src: `package main
+
+import (
+	_ "google.golang.org/grpc"
+)
+`,
+			expect: `module plugin_module
+
+go 1.17
+
+require google.golang.org/grpc v1.37.1
+
+require (
+	github.com/golang/protobuf v1.4.2 // indirect
+	golang.org/x/net v0.0.0-20190311183353-d8887717615a // indirect
+	golang.org/x/sys v0.0.0-20190215142949-d0b11bdaac8a // indirect
+	golang.org/x/text v0.3.0 // indirect
+	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013 // indirect
+	google.golang.org/protobuf v1.25.0 // indirect
+)
+`,
+		},
+		"do nothing (not used)": {
+			gomod: `module plugin_module
+
+go 1.17
+`,
+			requires: []*modfile.Require{
+				{
+					Mod: module.Version{
+						Path:    "google.golang.org/grpc",
+						Version: "v1.37.1",
+					},
+				},
+			},
+			expect: `module plugin_module
+
+go 1.17
+`,
+		},
+		"add require": {
+			gomod: `module plugin_module
+
+go 1.17
+`,
+			src: `package main
+
+import (
+	_ "google.golang.org/grpc"
+)
+`,
+			requires: []*modfile.Require{
+				{
+					Mod: module.Version{
+						Path:    "google.golang.org/grpc",
+						Version: "v1.37.1",
+					},
+				},
+			},
+			expect: `module plugin_module
+
+go 1.17
+
+require google.golang.org/grpc v1.37.1
+
+require (
+	github.com/golang/protobuf v1.4.2 // indirect
+	golang.org/x/net v0.0.0-20190311183353-d8887717615a // indirect
+	golang.org/x/sys v0.0.0-20190215142949-d0b11bdaac8a // indirect
+	golang.org/x/text v0.3.0 // indirect
+	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013 // indirect
+	google.golang.org/protobuf v1.25.0 // indirect
+)
+`,
+		},
+		"overwrite require": {
+			gomod: `module plugin_module
+
+go 1.17
+
+require google.golang.org/grpc v1.37.1
+
+require (
+	github.com/golang/protobuf v1.4.2 // indirect
+	golang.org/x/net v0.0.0-20190311183353-d8887717615a // indirect
+	golang.org/x/sys v0.0.0-20190215142949-d0b11bdaac8a // indirect
+	golang.org/x/text v0.3.0 // indirect
+	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013 // indirect
+	google.golang.org/protobuf v1.25.0 // indirect
+)
+`,
+			src: `package main
+
+import (
+	_ "google.golang.org/grpc"
+)
+`,
+			requires: []*modfile.Require{
+				{
+					Mod: module.Version{
+						Path:    "google.golang.org/grpc",
+						Version: "v1.40.0",
+					},
+				},
+			},
+			expect: `module plugin_module
+
+go 1.17
+
+require google.golang.org/grpc v1.40.0
+
+require (
+	github.com/golang/protobuf v1.4.3 // indirect
+	golang.org/x/net v0.0.0-20200822124328-c89045814202 // indirect
+	golang.org/x/sys v0.0.0-20200323222414-85ca7c5b95cd // indirect
+	golang.org/x/text v0.3.0 // indirect
+	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013 // indirect
+	google.golang.org/protobuf v1.25.0 // indirect
+)
+`,
+		},
+		"do nothing (same version)": {
+			gomod: `module plugin_module
+
+go 1.17
+
+require google.golang.org/grpc v1.37.1
+
+require (
+	github.com/golang/protobuf v1.4.2 // indirect
+	golang.org/x/net v0.0.0-20190311183353-d8887717615a // indirect
+	golang.org/x/sys v0.0.0-20190215142949-d0b11bdaac8a // indirect
+	golang.org/x/text v0.3.0 // indirect
+	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013 // indirect
+	google.golang.org/protobuf v1.25.0 // indirect
+)
+`,
+			src: `package main
+
+import (
+	_ "google.golang.org/grpc"
+)
+`,
+			requires: []*modfile.Require{
+				{
+					Mod: module.Version{
+						Path:    "google.golang.org/grpc",
+						Version: "v1.37.1",
+					},
+				},
+			},
+			expect: `module plugin_module
+
+go 1.17
+
+require google.golang.org/grpc v1.37.1
+
+require (
+	github.com/golang/protobuf v1.4.2 // indirect
+	golang.org/x/net v0.0.0-20190311183353-d8887717615a // indirect
+	golang.org/x/sys v0.0.0-20190215142949-d0b11bdaac8a // indirect
+	golang.org/x/text v0.3.0 // indirect
+	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013 // indirect
+	google.golang.org/protobuf v1.25.0 // indirect
+)
+`,
+		},
+		"add replace": {
+			gomod: `module plugin_module
+
+go 1.17
+
+require github.com/zoncoen/scenarigo v0.11.2
+
+require (
+	github.com/fatih/color v1.13.0 // indirect
+	github.com/goccy/go-yaml v1.9.5 // indirect
+	github.com/golang/protobuf v1.5.2 // indirect
+	github.com/hashicorp/errwrap v1.0.0 // indirect
+	github.com/hashicorp/go-multierror v1.1.1 // indirect
+	github.com/mattn/go-colorable v0.1.12 // indirect
+	github.com/mattn/go-isatty v0.0.14 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
+	github.com/zoncoen/query-go v1.1.0 // indirect
+	golang.org/x/net v0.0.0-20210813160813-60bc85c4be6d // indirect
+	golang.org/x/sys v0.0.0-20211205182925-97ca703d548d // indirect
+	golang.org/x/text v0.3.7 // indirect
+	golang.org/x/xerrors v0.0.0-20220411194840-2f41105eb62f // indirect
+	google.golang.org/genproto v0.0.0-20220413183235-5e96e2839df9 // indirect
+	google.golang.org/grpc v1.46.0 // indirect
+	google.golang.org/protobuf v1.28.0 // indirect
+)
+`,
+			src: `package main
+
+import (
+	_ "github.com/zoncoen/scenarigo/protocol/grpc"
+)
+`,
+			requires: []*modfile.Require{
+				{
+					Mod: module.Version{
+						Path:    "google.golang.org/grpc",
+						Version: "v1.40.0",
+					},
+				},
+			},
+			expect: `module plugin_module
+
+go 1.17
+
+require github.com/zoncoen/scenarigo v0.11.2
+
+require (
+	github.com/fatih/color v1.13.0 // indirect
+	github.com/goccy/go-yaml v1.9.5 // indirect
+	github.com/golang/protobuf v1.5.2 // indirect
+	github.com/hashicorp/errwrap v1.0.0 // indirect
+	github.com/hashicorp/go-multierror v1.1.1 // indirect
+	github.com/mattn/go-colorable v0.1.12 // indirect
+	github.com/mattn/go-isatty v0.0.14 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
+	github.com/zoncoen/query-go v1.1.0 // indirect
+	golang.org/x/net v0.0.0-20210813160813-60bc85c4be6d // indirect
+	golang.org/x/sys v0.0.0-20211205182925-97ca703d548d // indirect
+	golang.org/x/text v0.3.7 // indirect
+	golang.org/x/xerrors v0.0.0-20220411194840-2f41105eb62f // indirect
+	google.golang.org/genproto v0.0.0-20220413183235-5e96e2839df9 // indirect
+	google.golang.org/grpc v1.46.0 // indirect
+	google.golang.org/protobuf v1.28.0 // indirect
+)
+
+replace google.golang.org/grpc v1.46.0 => google.golang.org/grpc v1.40.0
+`,
+			expectStdout: `WARN: /path/to/go.mod replace google.golang.org/grpc v1.46.0 => v1.40.0
+`,
+		},
+		"overwrite replace": {
+			gomod: `module plugin_module
+
+go 1.17
+
+require github.com/zoncoen/scenarigo v0.11.2
+
+require (
+	github.com/fatih/color v1.13.0 // indirect
+	github.com/goccy/go-yaml v1.9.5 // indirect
+	github.com/golang/protobuf v1.5.2 // indirect
+	github.com/hashicorp/errwrap v1.0.0 // indirect
+	github.com/hashicorp/go-multierror v1.1.1 // indirect
+	github.com/mattn/go-colorable v0.1.12 // indirect
+	github.com/mattn/go-isatty v0.0.14 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
+	github.com/zoncoen/query-go v1.1.0 // indirect
+	golang.org/x/net v0.0.0-20210813160813-60bc85c4be6d // indirect
+	golang.org/x/sys v0.0.0-20211205182925-97ca703d548d // indirect
+	golang.org/x/text v0.3.7 // indirect
+	golang.org/x/xerrors v0.0.0-20220411194840-2f41105eb62f // indirect
+	google.golang.org/genproto v0.0.0-20220413183235-5e96e2839df9 // indirect
+	google.golang.org/grpc v1.46.0 // indirect
+	google.golang.org/protobuf v1.28.0 // indirect
+)
+`,
+			src: `package main
+
+import (
+	_ "github.com/zoncoen/scenarigo/protocol/grpc"
+)
+`,
+			requires: []*modfile.Require{
+				{
+					Mod: module.Version{
+						Path:    "google.golang.org/grpc",
+						Version: "v1.40.1",
+					},
+				},
+			},
+			expect: `module plugin_module
+
+go 1.17
+
+require github.com/zoncoen/scenarigo v0.11.2
+
+require (
+	github.com/fatih/color v1.13.0 // indirect
+	github.com/goccy/go-yaml v1.9.5 // indirect
+	github.com/golang/protobuf v1.5.2 // indirect
+	github.com/hashicorp/errwrap v1.0.0 // indirect
+	github.com/hashicorp/go-multierror v1.1.1 // indirect
+	github.com/mattn/go-colorable v0.1.12 // indirect
+	github.com/mattn/go-isatty v0.0.14 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
+	github.com/zoncoen/query-go v1.1.0 // indirect
+	golang.org/x/net v0.0.0-20210813160813-60bc85c4be6d // indirect
+	golang.org/x/sys v0.0.0-20211205182925-97ca703d548d // indirect
+	golang.org/x/text v0.3.7 // indirect
+	golang.org/x/xerrors v0.0.0-20220411194840-2f41105eb62f // indirect
+	google.golang.org/genproto v0.0.0-20220413183235-5e96e2839df9 // indirect
+	google.golang.org/grpc v1.46.0 // indirect
+	google.golang.org/protobuf v1.28.0 // indirect
+)
+
+replace google.golang.org/grpc v1.46.0 => google.golang.org/grpc v1.40.1
+`,
+			expectStdout: `WARN: /path/to/go.mod replace google.golang.org/grpc v1.46.0 => v1.40.1
+`,
+		},
+		"do nothing (alredy replaced)": {
+			gomod: `module plugin_module
+
+go 1.17
+
+require github.com/zoncoen/scenarigo v0.11.2
+
+require (
+	github.com/fatih/color v1.13.0 // indirect
+	github.com/goccy/go-yaml v1.9.5 // indirect
+	github.com/golang/protobuf v1.5.2 // indirect
+	github.com/hashicorp/errwrap v1.0.0 // indirect
+	github.com/hashicorp/go-multierror v1.1.1 // indirect
+	github.com/mattn/go-colorable v0.1.12 // indirect
+	github.com/mattn/go-isatty v0.0.14 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
+	github.com/zoncoen/query-go v1.1.0 // indirect
+	golang.org/x/net v0.0.0-20210813160813-60bc85c4be6d // indirect
+	golang.org/x/sys v0.0.0-20211205182925-97ca703d548d // indirect
+	golang.org/x/text v0.3.7 // indirect
+	golang.org/x/xerrors v0.0.0-20220411194840-2f41105eb62f // indirect
+	google.golang.org/genproto v0.0.0-20220413183235-5e96e2839df9 // indirect
+	google.golang.org/grpc v1.46.0 // indirect
+	google.golang.org/protobuf v1.28.0 // indirect
+)
+
+replace google.golang.org/grpc v1.46.0 => google.golang.org/grpc v1.40.0
+`,
+			src: `package main
+
+import (
+	_ "github.com/zoncoen/scenarigo/protocol/grpc"
+)
+`,
+			requires: []*modfile.Require{
+				{
+					Mod: module.Version{
+						Path:    "google.golang.org/grpc",
+						Version: "v1.40.0",
+					},
+				},
+			},
+			expect: `module plugin_module
+
+go 1.17
+
+require github.com/zoncoen/scenarigo v0.11.2
+
+require (
+	github.com/fatih/color v1.13.0 // indirect
+	github.com/goccy/go-yaml v1.9.5 // indirect
+	github.com/golang/protobuf v1.5.2 // indirect
+	github.com/hashicorp/errwrap v1.0.0 // indirect
+	github.com/hashicorp/go-multierror v1.1.1 // indirect
+	github.com/mattn/go-colorable v0.1.12 // indirect
+	github.com/mattn/go-isatty v0.0.14 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
+	github.com/zoncoen/query-go v1.1.0 // indirect
+	golang.org/x/net v0.0.0-20210813160813-60bc85c4be6d // indirect
+	golang.org/x/sys v0.0.0-20211205182925-97ca703d548d // indirect
+	golang.org/x/text v0.3.7 // indirect
+	golang.org/x/xerrors v0.0.0-20220411194840-2f41105eb62f // indirect
+	google.golang.org/genproto v0.0.0-20220413183235-5e96e2839df9 // indirect
+	google.golang.org/grpc v1.46.0 // indirect
+	google.golang.org/protobuf v1.28.0 // indirect
+)
+
+replace google.golang.org/grpc v1.46.0 => google.golang.org/grpc v1.40.0
+`,
+			expectStdout: "", // don't print the warn log if already replaced
+		},
+	}
+	for name, test := range tests {
+		test := test
+		t.Run(name, func(t *testing.T) {
+			tmpDir := t.TempDir()
+			gomod := filepath.Join(tmpDir, "go.mod")
+			create(t, gomod, test.gomod)
+			if test.src != "" {
+				create(t, filepath.Join(tmpDir, "main.go"), test.src)
+			}
+
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			goCmd, err := findGoCmd(ctx)
+			if err != nil {
+				t.Fatalf("failed to find go command: %s", err)
+			}
+
+			cmd := &cobra.Command{}
+			var stdout bytes.Buffer
+			cmd.SetOutput(&stdout)
+			if err := updateGoMod(cmd, goCmd, gomod, test.requires); err != nil {
+				t.Fatalf("failed to update go.mod: %s", err)
+			}
+
+			b, err := os.ReadFile(gomod)
+			if err != nil {
+				t.Fatalf("failed read go.mod: %s", err)
+			}
+			if got := string(b); got != test.expect {
+				dmp := diffmatchpatch.New()
+				diffs := dmp.DiffMain(test.expect, got, false)
+				t.Errorf("go.mod differs:\n%s", dmp.DiffPrettyText(diffs))
+			}
+
+			if got := strings.ReplaceAll(stdout.String(), gomod, "/path/to/go.mod"); got != test.expectStdout {
+				dmp := diffmatchpatch.New()
+				diffs := dmp.DiffMain(test.expectStdout, got, false)
+				t.Errorf("stdout differs:\n%s", dmp.DiffPrettyText(diffs))
+			}
+		})
+	}
 }
 
 func setupGitServer(t *testing.T) {

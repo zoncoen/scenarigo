@@ -22,6 +22,16 @@ import (
 	"github.com/zoncoen/scenarigo/version"
 )
 
+var gomodVer string
+
+func init() {
+	gomod, err := modfile.Parse("go.mod", scenarigo.GoModBytes, nil)
+	if err != nil {
+		panic(fmt.Errorf("failed to parse go.mod of scenarigo: %s", err))
+	}
+	gomodVer = gomod.Go.Version
+}
+
 var buildCmd = &cobra.Command{
 	Use:   "build",
 	Short: "build plugins",
@@ -227,7 +237,11 @@ func buildPlugin(cmd *cobra.Command, goCmd, mod, src, out, defaultModName string
 			}
 		}
 	}
-	if err := updateGoMod(cmd, goCmd, gomodPath); err != nil {
+	requires, err := requiredModules()
+	if err != nil {
+		return err
+	}
+	if err := updateGoMod(cmd, goCmd, gomodPath, requires); err != nil {
 		return err
 	}
 
@@ -256,19 +270,14 @@ func executeWithEnvs(ctx context.Context, envs []string, wd, name string, args .
 	return nil
 }
 
-func updateGoMod(cmd *cobra.Command, goCmd, gomodPath string) error {
-	goVersion, requires, err := requiredModules()
-	if err != nil {
-		return err
-	}
-
+func updateGoMod(cmd *cobra.Command, goCmd, gomodPath string, requires []*modfile.Require) error {
+	replaces := map[string]modfile.Replace{}
 	if err := editGoMod(cmd, goCmd, gomodPath, func(gomod *modfile.File) error {
-		replaces := map[string]string{}
 		for _, r := range gomod.Replace {
-			replaces[r.Old.Path] = r.Old.Version
+			replaces[r.Old.Path] = *r
 		}
-		if err := gomod.AddGoStmt(goVersion.Version); err != nil {
-			return err
+		if err := gomod.AddGoStmt(gomodVer); err != nil {
+			return fmt.Errorf("failed to edit %s: %w", gomodPath, err)
 		}
 		for _, r := range requires {
 			if err := gomod.AddRequire(r.Mod.Path, r.Mod.Version); err != nil {
@@ -276,7 +285,7 @@ func updateGoMod(cmd *cobra.Command, goCmd, gomodPath string) error {
 			}
 			// must use the same module version as scenarigo for building plugins
 			if v, ok := replaces[r.Mod.Path]; ok {
-				if err := gomod.DropReplace(r.Mod.Path, v); err != nil {
+				if err := gomod.DropReplace(r.Mod.Path, v.Old.Version); err != nil {
 					return fmt.Errorf("failed to edit %s: %w", gomodPath, err)
 				}
 			}
@@ -294,7 +303,9 @@ func updateGoMod(cmd *cobra.Command, goCmd, gomodPath string) error {
 		for _, r := range requires {
 			if v, ok := current[r.Mod.Path]; ok {
 				if r.Mod.Version != v {
-					fmt.Fprintf(cmd.OutOrStdout(), "%s: %s replace %s %s => %s\n", warnColor.Sprint("WARN"), gomodPath, r.Mod.Path, v, r.Mod.Version)
+					if replaced, ok := replaces[r.Mod.Path]; !ok || replaced.New.Path != r.Mod.Path || replaced.New.Version != r.Mod.Version {
+						fmt.Fprintf(cmd.OutOrStdout(), "%s: %s replace %s %s => %s\n", warnColor.Sprint("WARN"), gomodPath, r.Mod.Path, v, r.Mod.Version)
+					}
 					if err := gomod.AddReplace(r.Mod.Path, v, r.Mod.Path, r.Mod.Version); err != nil {
 						return fmt.Errorf("failed to edit %s: %w", gomodPath, err)
 					}
@@ -343,18 +354,18 @@ func editGoMod(cmd *cobra.Command, goCmd, gomodPath string, edit func(*modfile.F
 	return nil
 }
 
-func requiredModules() (*modfile.Go, []*modfile.Require, error) {
+func requiredModules() ([]*modfile.Require, error) {
 	gomod, err := modfile.Parse("go.mod", scenarigo.GoModBytes, nil)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to parse go.mod of scenarigo: %s", err)
+		return nil, fmt.Errorf("failed to parse go.mod of scenarigo: %s", err)
 	}
 	if v := version.String(); !strings.HasSuffix(v, "-dev") {
-		return gomod.Go, append([]*modfile.Require{{
+		return append([]*modfile.Require{{
 			Mod: module.Version{
 				Path:    "github.com/zoncoen/scenarigo",
 				Version: v,
 			},
 		}}, gomod.Require...), nil
 	}
-	return gomod.Go, gomod.Require, nil
+	return gomod.Require, nil
 }

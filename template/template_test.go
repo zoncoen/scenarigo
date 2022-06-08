@@ -43,7 +43,7 @@ func TestTemplate_Execute(t *testing.T) {
 		str         string
 		data        interface{}
 		expect      interface{}
-		expectError bool
+		expectError string
 	}{
 		"no parameter": {
 			str:    "1",
@@ -90,6 +90,7 @@ func TestTemplate_Execute(t *testing.T) {
 			},
 			expect: "ok",
 		},
+
 		"function call": {
 			str: `{{f("ok")}}`,
 			data: map[string]func(string) string{
@@ -119,7 +120,13 @@ func TestTemplate_Execute(t *testing.T) {
 			},
 			expect: 15,
 		},
-
+		"function call (with nil error)": {
+			str: `{{f("ok")}}`,
+			data: map[string]interface{}{
+				"f": func(s string) (string, error) { return s, nil },
+			},
+			expect: "ok",
+		},
 		"invalid function argument": {
 			str: `{{f(1, 2, 3)}}`,
 			data: map[string]func(int, int) int{
@@ -127,7 +134,7 @@ func TestTemplate_Execute(t *testing.T) {
 					return a0 + a1
 				},
 			},
-			expectError: true,
+			expectError: "expected function argument number is 2. but specified 3 arguments",
 		},
 		"invalid function argument ( variadic arguments )": {
 			str: `{{f()}}`,
@@ -140,8 +147,23 @@ func TestTemplate_Execute(t *testing.T) {
 					return sum
 				},
 			},
-			expectError: true,
+			expectError: "too few arguments to function: expected minimum argument number is 1. but specified 0 arguments",
 		},
+		"function call (second value is not an error)": {
+			str: `{{f()}}`,
+			data: map[string]interface{}{
+				"f": func() (interface{}, interface{}) { return nil, error(nil) },
+			},
+			expectError: "second returned value must be an error",
+		},
+		"function call (with error)": {
+			str: `{{f()}}`,
+			data: map[string]interface{}{
+				"f": func() (interface{}, error) { return nil, errors.New("f() error") },
+			},
+			expectError: "f() error",
+		},
+
 		"left arrow func": {
 			str: strings.Trim(`
 {{echo <-}}:
@@ -219,14 +241,14 @@ func TestTemplate_Execute(t *testing.T) {
 		},
 		"not found": {
 			str:         "{{a.b[1]}}",
-			expectError: true,
+			expectError: `".a.b[1]" not found`,
 		},
 		"panic": {
 			str: "{{panic()}}",
 			data: map[string]interface{}{
 				"panic": func() { panic("omg") },
 			},
-			expectError: true,
+			expectError: "omg",
 		},
 	}
 	for name, test := range tests {
@@ -237,11 +259,16 @@ func TestTemplate_Execute(t *testing.T) {
 				t.Fatalf("unexpected error: %s", err)
 			}
 			i, err := tmpl.Execute(test.data)
-			if !test.expectError && err != nil {
+			if test.expectError == "" && err != nil {
 				t.Fatalf("unexpected error: %s", err)
 			}
-			if test.expectError && err == nil {
-				t.Fatal("expected error but got no error")
+			if test.expectError != "" {
+				if err == nil {
+					t.Fatal("expected error but got no error")
+				}
+				if got, expected := err.Error(), test.expectError; !strings.Contains(got, expected) {
+					t.Errorf("expected error %q but got %q", expected, got)
+				}
 			}
 			if diff := cmp.Diff(test.expect, i); diff != "" {
 				t.Errorf("diff: (-want +got)\n%s", diff)

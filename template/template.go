@@ -275,10 +275,29 @@ func (t *Template) executeFuncCall(call *ast.CallExpr, data interface{}) (interf
 	}
 
 	vs := funv.Call(args)
-	if len(vs) != 1 || !vs[0].IsValid() {
-		return nil, errors.Errorf("function should return a value")
+	switch len(vs) {
+	case 1:
+		if !vs[0].IsValid() || !vs[0].CanInterface() {
+			return nil, errors.Errorf("function returns an invalid value")
+		}
+		return vs[0].Interface(), nil
+	case 2:
+		if !vs[0].IsValid() || !vs[0].CanInterface() {
+			return nil, errors.Errorf("first reruned value is invlid")
+		}
+		if !vs[1].IsValid() || !vs[1].CanInterface() {
+			return nil, errors.Errorf("second reruned value is invlid")
+		}
+		if vs[1].Type() != reflectutil.TypeError {
+			return nil, errors.Errorf("second returned value must be an error")
+		}
+		if !vs[1].IsNil() {
+			return nil, vs[1].Interface().(error)
+		}
+		return vs[0].Interface(), nil
+	default:
+		return nil, errors.Errorf("function should return a value or a value and an error")
 	}
-	return vs[0].Interface(), nil
 }
 
 func (t *Template) executeLeftArrowExpr(e *ast.LeftArrowExpr, data interface{}) (interface{}, error) {

@@ -13,6 +13,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/zoncoen/scenarigo/context"
+	"github.com/zoncoen/scenarigo/internal/reflectutil"
 	"github.com/zoncoen/scenarigo/testdata/gen/pb/test"
 )
 
@@ -28,7 +29,7 @@ func TestExpect_Build(t *testing.T) {
 				v: response{
 					rvalues: []reflect.Value{
 						reflect.ValueOf(&test.EchoResponse{}),
-						reflect.Zero(reflect.TypeOf((*error)(nil)).Elem()),
+						reflect.Zero(reflectutil.TypeError),
 					},
 				},
 			},
@@ -85,7 +86,7 @@ func TestExpect_Build(t *testing.T) {
 							MessageId:   "1",
 							MessageBody: "hello",
 						}),
-						reflect.Zero(reflect.TypeOf((*error)(nil)).Elem()),
+						reflect.Zero(reflectutil.TypeError),
 					},
 				},
 			},
@@ -107,7 +108,7 @@ func TestExpect_Build(t *testing.T) {
 					},
 					rvalues: []reflect.Value{
 						reflect.ValueOf(&test.EchoResponse{}),
-						reflect.Zero(reflect.TypeOf((*error)(nil)).Elem()),
+						reflect.Zero(reflectutil.TypeError),
 					},
 				},
 			},
@@ -129,7 +130,7 @@ func TestExpect_Build(t *testing.T) {
 					},
 					rvalues: []reflect.Value{
 						reflect.ValueOf(&test.EchoResponse{}),
-						reflect.Zero(reflect.TypeOf((*error)(nil)).Elem()),
+						reflect.Zero(reflectutil.TypeError),
 					},
 				},
 			},
@@ -211,7 +212,7 @@ func TestExpect_Build(t *testing.T) {
 							MessageId:   "1",
 							MessageBody: "hello",
 						}),
-						reflect.Zero(reflect.TypeOf((*error)(nil)).Elem()),
+						reflect.Zero(reflectutil.TypeError),
 					},
 				},
 			},
@@ -355,7 +356,7 @@ func TestExpect_Build(t *testing.T) {
 							MessageId:   "1",
 							MessageBody: "hell",
 						}),
-						reflect.Zero(reflect.TypeOf((*error)(nil)).Elem()),
+						reflect.Zero(reflectutil.TypeError),
 					},
 				},
 				expectAssertError: true,
@@ -378,7 +379,7 @@ func TestExpect_Build(t *testing.T) {
 					},
 					rvalues: []reflect.Value{
 						reflect.ValueOf(&test.EchoResponse{}),
-						reflect.Zero(reflect.TypeOf((*error)(nil)).Elem()),
+						reflect.Zero(reflectutil.TypeError),
 					},
 				},
 				expectAssertError: true,
@@ -401,7 +402,7 @@ func TestExpect_Build(t *testing.T) {
 					},
 					rvalues: []reflect.Value{
 						reflect.ValueOf(&test.EchoResponse{}),
-						reflect.Zero(reflect.TypeOf((*error)(nil)).Elem()),
+						reflect.Zero(reflectutil.TypeError),
 					},
 				},
 				expectAssertError: true,
@@ -424,7 +425,7 @@ func TestExpect_Build(t *testing.T) {
 					},
 					rvalues: []reflect.Value{
 						reflect.ValueOf(&test.EchoResponse{}),
-						reflect.Zero(reflect.TypeOf((*error)(nil)).Elem()),
+						reflect.Zero(reflectutil.TypeError),
 					},
 				},
 				expectAssertError: true,
@@ -447,7 +448,7 @@ func TestExpect_Build(t *testing.T) {
 					},
 					rvalues: []reflect.Value{
 						reflect.ValueOf(&test.EchoResponse{}),
-						reflect.Zero(reflect.TypeOf((*error)(nil)).Elem()),
+						reflect.Zero(reflectutil.TypeError),
 					},
 				},
 				expectAssertError: true,
@@ -470,7 +471,7 @@ func TestExpect_Build(t *testing.T) {
 					},
 					rvalues: []reflect.Value{
 						reflect.ValueOf(&test.EchoResponse{}),
-						reflect.Zero(reflect.TypeOf((*error)(nil)).Elem()),
+						reflect.Zero(reflectutil.TypeError),
 					},
 				},
 				expectAssertError: true,

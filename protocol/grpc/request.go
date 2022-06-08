@@ -189,7 +189,7 @@ func validateMethod(method reflect.Value) error {
 	if t := mt.Out(0); !t.Implements(typeMessage) {
 		return errors.Errorf("first return value must be proto.Message but got %s", t.String())
 	}
-	if t := mt.Out(1); !t.Implements(typeError) {
+	if t := mt.Out(1); !t.Implements(reflectutil.TypeError) {
 		return errors.Errorf("second return value must be error but got %s", t.String())
 	}
 

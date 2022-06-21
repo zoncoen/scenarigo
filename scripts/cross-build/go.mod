@@ -3,7 +3,7 @@ module github.com/zoncoen/scenarigo/scripts/cross-build
 go 1.17
 
 require (
-	github.com/Masterminds/semver v1.5.0
+	github.com/Masterminds/semver/v3 v3.1.1
 	github.com/Yamashou/gqlgenc v0.0.2
 )
 

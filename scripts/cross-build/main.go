@@ -10,9 +10,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	"github.com/Yamashou/gqlgenc/clientv2"
 
 	"github.com/zoncoen/scenarigo/scripts/cross-build/gen"
@@ -68,7 +69,7 @@ func getVers(token string) ([]string, error) {
 		return nil, fmt.Errorf("unhandled error: %s", err.Error())
 	}
 
-	vers := make([]string, 0, first)
+	vers := make([]*semver.Version, 0, first)
 	for _, node := range getTags.Repository.Refs.Nodes {
 		ver := strings.TrimPrefix(node.Name, "go")
 		v, err := semver.NewVersion(ver)
@@ -76,10 +77,25 @@ func getVers(token string) ([]string, error) {
 			continue
 		}
 		if !v.LessThan(go117) {
-			vers = append(vers, ver)
+			vers = append(vers, v)
 		}
 	}
-	return vers, nil
+
+	// pick up two latest patches for every major version
+	sort.Sort(sort.Reverse(semver.Collection(vers)))
+	count := map[string]int{}
+	vs := make([]string, 0, len(vers))
+	for _, v := range vers {
+		s := fmt.Sprintf("%d.%d", v.Major(), v.Minor())
+		c, ok := count[s]
+		if ok && c >= 3 {
+			continue
+		}
+		count[s] += 1
+		vs = append(vs, v.Original())
+	}
+
+	return vs, nil
 }
 
 func filterVers(candidates []string) []string {

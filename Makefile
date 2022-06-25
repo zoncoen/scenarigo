@@ -177,9 +177,10 @@ release: $(GOBUMP) $(GIT_CHGLOG) ## release new version
 changelog: $(GIT_CHGLOG) ## generate CHANGELOG.md
 	@git-chglog -o $(CURDIR)/CHANGELOG.md
 
+RELEASE_VERSION := $(RELEASE_VERSION)
 .PHONY: changelog/ci
 changelog/ci: $(GIT_CHGLOG) $(GOBUMP)
-	@git-chglog v$$(gobump show -r $(CURDIR)/version) > $(CURDIR)/.CHANGELOG.md
+	@git-chglog --tag-filter-pattern "^v[0-9]+.[0-9]+.[0-9]+$$|$(RELEASE_VERSION)" $(RELEASE_VERSION) > $(CURDIR)/.CHANGELOG.md
 
 .PHONY: credits
 credits: $(GO_LICENSES) $(GOCREDITS) ## generate CREDITS

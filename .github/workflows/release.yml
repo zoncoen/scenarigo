@@ -19,7 +19,7 @@ jobs:
         path: go/src/github.com/${{ github.repository }}
     - name: Generate CHANGELOG
       working-directory: ./go/src/github.com/${{ github.repository }}
-      run: make changelog/ci && cat .CHANGELOG.md
+      run: RELEASE_VERSION=${{ github.ref_name }} make changelog/ci && cat .CHANGELOG.md
     - name: Build
       working-directory: ./go/src/github.com/${{ github.repository }}
       env:

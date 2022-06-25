@@ -1,7 +1,12 @@
 # CHANGELOG
 
+<a name="v0.12.1"></a>
+## [v0.12.1] - 2022-06-21
+### Bug Fixes
+- **release:** reduce target Go versions
+
 <a name="v0.12.0"></a>
-## [v0.12.0] - 2022-06-08
+## [v0.12.0] - 2022-06-13
 ### Bug Fixes
 - **plugin:** suppress unnecessary plugin build logs
 - **plugin:** don't use "main" as module name
@@ -226,6 +231,7 @@ change protocl.Protocol interface
 - first release
 
 
+[v0.12.1]: https://github.com/zoncoen/scenarigo/compare/v0.12.0...v0.12.1
 [v0.12.0]: https://github.com/zoncoen/scenarigo/compare/v0.11.2...v0.12.0
 [v0.11.2]: https://github.com/zoncoen/scenarigo/compare/v0.11.1...v0.11.2
 [v0.11.1]: https://github.com/zoncoen/scenarigo/compare/v0.11.0...v0.11.1

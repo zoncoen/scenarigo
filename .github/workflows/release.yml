@@ -24,7 +24,8 @@ jobs:
       run: |
         set -eu
         versions=$(make matrix)
-        echo "::set-output name=versions::${versions}"
+        echo ${versions}
+        echo "::set-output name=versions::$versions"
   goreleaser:
     needs: build-matrix
     runs-on: ubuntu-latest

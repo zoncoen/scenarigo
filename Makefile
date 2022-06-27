@@ -185,10 +185,14 @@ changelog/ci: $(GIT_CHGLOG) $(GOBUMP)
 .PHONY: credits
 credits: $(GO_LICENSES) $(GOCREDITS) ## generate CREDITS
 	@$(GO) mod download
-	@go-licenses check ./...
+	@$(GO_LICENSES) check ./...
 	@go mod why github.com/davecgh/go-spew # HACK: download explicitly for credits
-	@gocredits . > CREDITS
+	@$(GOCREDITS) . > CREDITS
 	@$(GO) mod tidy
+
+.PHONY: matrix
+matrix:
+	@cd scripts/build-matrix && $(GO) run ./main.go
 
 .PHONY: build/ci
 build/ci:

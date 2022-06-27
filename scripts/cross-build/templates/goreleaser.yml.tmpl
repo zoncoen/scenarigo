@@ -57,7 +57,7 @@ archives:
   - LICENSE
   - CREDITS
 checksum:
-  name_template: 'checksums.txt'
+  name_template: "{{ .ProjectName  }}_v{{ .Version }}_go<< .GoVersion >>_checksums.txt"
 snapshot:
   name_template: "{{ .Version }}-snapshot"
 changelog:

@@ -186,6 +186,7 @@ changelog/ci: $(GIT_CHGLOG) $(GOBUMP)
 credits: $(GO_LICENSES) $(GOCREDITS) ## generate CREDITS
 	@$(GO) mod download
 	@go-licenses check ./...
+	@go mod why github.com/davecgh/go-spew # HACK: download explicitly for credits
 	@gocredits . > CREDITS
 	@$(GO) mod tidy
 

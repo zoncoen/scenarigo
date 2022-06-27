@@ -5,8 +5,10 @@ on:
     - "v[0-9]+.[0-9]+.[0-9]+"
     - "v[0-9]+.[0-9]+.[0-9]+-rc[0-9]+"
 jobs:
-  build-matrix:
+  matrix:
     runs-on: ubuntu-latest
+    outputs:
+      go-version: ${{ steps.matrix.outputs.versions }}
     steps:
     - name: Install Go
       uses: actions/setup-go@v3
@@ -18,21 +20,22 @@ jobs:
         fetch-depth: 0
         path: go/src/github.com/${{ github.repository }}
     - name: Generate matrix
+      id: matrix
       working-directory: ./go/src/github.com/${{ github.repository }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         set -eu
         versions=$(make matrix)
-        echo ${versions}
+        echo "::echo::on"
         echo "::set-output name=versions::$versions"
   goreleaser:
-    needs: build-matrix
+    needs: matrix
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        go-version: ${{ fromJson(needs.build-matrix.outputs.versions) }}
+        go-version: ${{ fromJson(needs.matrix.outputs.go-version) }}
     steps:
     - name: Install Go
       uses: actions/setup-go@v3

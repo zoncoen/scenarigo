@@ -1,7 +1,7 @@
 # CHANGELOG
 
 <a name="v0.12.1"></a>
-## [v0.12.1] - 2022-06-21
+## [v0.12.1] - 2022-06-26
 ### Bug Fixes
 - **release:** reduce target Go versions
 

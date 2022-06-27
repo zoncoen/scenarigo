@@ -1,36 +1,19 @@
 package main
 
 import (
-	"context"
 	_ "embed"
 	"fmt"
 	"html/template"
 	"io"
-	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"sort"
-	"strings"
-
-	"github.com/Masterminds/semver/v3"
-	"github.com/Yamashou/gqlgenc/clientv2"
-
-	"github.com/zoncoen/scenarigo/scripts/cross-build/gen"
 )
 
 var (
-	go117   *semver.Version
+	ver     = os.Getenv("GO_VERSION")
 	rootDir = os.Getenv("PJ_ROOT")
 )
-
-func init() {
-	var err error
-	go117, err = semver.NewVersion("1.17.0")
-	if err != nil {
-		panic(err)
-	}
-}
 
 func main() {
 	if err := release(); err != nil {
@@ -40,62 +23,14 @@ func main() {
 }
 
 func release() error {
-	vers, err := getVers(os.Getenv("GITHUB_TOKEN"))
-	if err != nil {
-		return fmt.Errorf("failed to get Go versions: %w", err)
+	if err := exec.Command("docker", "pull", fmt.Sprintf("ghcr.io/gythialy/golang-cross:v%s", ver)).Run(); err != nil {
+		fmt.Printf("failed to pull image: %s\n", err)
+		return nil
 	}
-	vers = filterVers(vers)
-	if err := build(vers); err != nil {
+	if err := build(ver); err != nil {
 		return fmt.Errorf("failed to build: %w", err)
 	}
 	return nil
-}
-
-func getVers(token string) ([]string, error) {
-	github := &gen.Client{
-		Client: clientv2.NewClient(http.DefaultClient, "https://api.github.com/graphql", func(ctx context.Context, req *http.Request, gqlInfo *clientv2.GQLRequestInfo, res interface{}, next clientv2.RequestInterceptorFunc) error {
-			req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
-			return next(ctx, req, gqlInfo, res)
-		}),
-	}
-
-	ctx := context.Background()
-	first := 50
-	getTags, err := github.GetTags(ctx, "golang", "go", &first)
-	if err != nil {
-		if handledError, ok := err.(*clientv2.ErrorResponse); ok {
-			return nil, fmt.Errorf("handled error: %sn", handledError.Error())
-		}
-		return nil, fmt.Errorf("unhandled error: %s", err.Error())
-	}
-
-	vers := make([]*semver.Version, 0, first)
-	for _, node := range getTags.Repository.Refs.Nodes {
-		ver := strings.TrimPrefix(node.Name, "go")
-		v, err := semver.NewVersion(ver)
-		if err != nil {
-			continue
-		}
-		if !v.LessThan(go117) {
-			vers = append(vers, v)
-		}
-	}
-
-	// pick up two latest patches for every major version
-	sort.Sort(sort.Reverse(semver.Collection(vers)))
-	count := map[string]int{}
-	vs := make([]string, 0, len(vers))
-	for _, v := range vers {
-		s := fmt.Sprintf("%d.%d", v.Major(), v.Minor())
-		c, ok := count[s]
-		if ok && c >= 3 {
-			continue
-		}
-		count[s] += 1
-		vs = append(vs, v.Original())
-	}
-
-	return vs, nil
 }
 
 func filterVers(candidates []string) []string {
@@ -111,7 +46,7 @@ func filterVers(candidates []string) []string {
 //go:embed templates/goreleaser.yml.tmpl
 var tmplBytes []byte
 
-func build(vers []string) error {
+func build(ver string) error {
 	if err := os.Mkdir(fmt.Sprintf("%s/assets", rootDir), 0o755); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -127,48 +62,46 @@ func build(vers []string) error {
 		return fmt.Errorf("failed to parse template: %w", err)
 	}
 
-	for _, ver := range vers {
-		f, err := os.OpenFile(fmt.Sprintf("%s/.goreleaser.yml", rootDir), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o666)
-		if err != nil {
-			return fmt.Errorf("failed to open .goreleaser.yml: %w", err)
-		}
-		defer f.Close()
-		if err := tmpl.Execute(f, map[string]string{
-			"GoVersion": ver,
-		}); err != nil {
-			return fmt.Errorf("failed to create .goreleaser.yml: %w", err)
-		}
-		if err := goreleaser(ver); err != nil {
-			return fmt.Errorf("goreleaser failed (go%s): %w", ver, err)
-		}
+	f, err := os.OpenFile(fmt.Sprintf("%s/.goreleaser.yml", rootDir), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o666)
+	if err != nil {
+		return fmt.Errorf("failed to open .goreleaser.yml: %w", err)
+	}
+	defer f.Close()
+	if err := tmpl.Execute(f, map[string]string{
+		"GoVersion": ver,
+	}); err != nil {
+		return fmt.Errorf("failed to create .goreleaser.yml: %w", err)
+	}
+	if err := goreleaser(ver); err != nil {
+		return fmt.Errorf("goreleaser failed (go%s): %w", ver, err)
+	}
 
-		// move results
-		sum, err := os.OpenFile(fmt.Sprintf("%s/dist/checksums.txt", rootDir), os.O_RDONLY, 0o666)
+	// move results
+	sum, err := os.OpenFile(fmt.Sprintf("%s/dist/checksums.txt", rootDir), os.O_RDONLY, 0o666)
+	if err != nil {
+		return fmt.Errorf("failed to open file: %w", err)
+	}
+	defer sum.Close()
+	if _, err := io.Copy(checksum, sum); err != nil {
+		return fmt.Errorf("failed to copy checksums.txt: %w", err)
+	}
+	archives, err := filepath.Glob(fmt.Sprintf("%s/dist/*.tar.gz", rootDir))
+	if err != nil {
+		return fmt.Errorf("failed to find archives: %w", err)
+	}
+	for _, archive := range archives {
+		dst, err := os.OpenFile(fmt.Sprintf("%s/assets/%s", rootDir, filepath.Base(archive)), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o666)
 		if err != nil {
 			return fmt.Errorf("failed to open file: %w", err)
 		}
-		defer sum.Close()
-		if _, err := io.Copy(checksum, sum); err != nil {
-			return fmt.Errorf("failed to copy checksums.txt: %w", err)
-		}
-		archives, err := filepath.Glob(fmt.Sprintf("%s/dist/*.tar.gz", rootDir))
+		defer dst.Close()
+		src, err := os.OpenFile(archive, os.O_RDONLY, 0o666)
 		if err != nil {
-			return fmt.Errorf("failed to find archives: %w", err)
+			return fmt.Errorf("failed to open file: %w", err)
 		}
-		for _, archive := range archives {
-			dst, err := os.OpenFile(fmt.Sprintf("%s/assets/%s", rootDir, filepath.Base(archive)), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o666)
-			if err != nil {
-				return fmt.Errorf("failed to open file: %w", err)
-			}
-			defer dst.Close()
-			src, err := os.OpenFile(archive, os.O_RDONLY, 0o666)
-			if err != nil {
-				return fmt.Errorf("failed to open file: %w", err)
-			}
-			defer src.Close()
-			if _, err := io.Copy(dst, src); err != nil {
-				return fmt.Errorf("failed to copy archive: %w", err)
-			}
+		defer src.Close()
+		if _, err := io.Copy(dst, src); err != nil {
+			return fmt.Errorf("failed to copy archive: %w", err)
 		}
 	}
 

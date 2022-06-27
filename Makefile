@@ -4,6 +4,7 @@ SHELL := /bin/bash
 GO ?= go
 
 BIN_DIR := $(CURDIR)/.bin
+export GOBIN := $(BIN_DIR)
 PATH := $(abspath $(BIN_DIR)):$(PATH)
 TOOLS_DIR := $(CURDIR)/tools
 
@@ -38,48 +39,39 @@ $(PROTOC): | $(BIN_DIR)
 
 PROTOC_GEN_GO := $(BIN_DIR)/protoc-gen-go
 $(PROTOC_GEN_GO): | $(BIN_DIR)
-	@cd $(TOOLS_DIR) && \
-		$(GO) build -o $(PROTOC_GEN_GO) google.golang.org/protobuf/cmd/protoc-gen-go
+	@$(GO) install google.golang.org/protobuf/cmd/protoc-gen-go@v1.28.0
 
 PROTOC_GEN_GO_GRPC := $(BIN_DIR)/protoc-gen-go-grpc
 $(PROTOC_GEN_GO_GRPC): | $(BIN_DIR)
-	@cd $(TOOLS_DIR) && \
-		$(GO) build -o $(PROTOC_GEN_GO_GRPC) google.golang.org/grpc/cmd/protoc-gen-go-grpc
+	@$(GO) install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2.0
 
 GOPROTOYAMLTAG := $(BIN_DIR)/goprotoyamltag
 $(GOPROTOYAMLTAG): | $(BIN_DIR)
-	@cd $(TOOLS_DIR) && \
-		$(GO) build -o $(GOPROTOYAMLTAG) github.com/zoncoen/goprotoyamltag
+	@$(GO) install github.com/zoncoen/goprotoyamltag@v1.0.0
 
 GOTYPENAMES := $(BIN_DIR)/gotypenames
 $(GOTYPENAMES): | $(BIN_DIR)
-	@cd $(TOOLS_DIR) && \
-		$(GO) build -o $(GOTYPENAMES) github.com/zoncoen/gotypenames
+	@$(GO) install github.com/zoncoen/gotypenames@v1.0.0
 
 MOCKGEN := $(BIN_DIR)/mockgen
 $(MOCKGEN): | $(BIN_DIR)
-	@cd $(TOOLS_DIR) && \
-		$(GO) build -o $(MOCKGEN) github.com/golang/mock/mockgen
+	@$(GO) install github.com/golang/mock/mockgen@v1.6.0
 
 GOBUMP := $(BIN_DIR)/gobump
 $(GOBUMP): | $(BIN_DIR)
-	@cd $(TOOLS_DIR) && \
-		$(GO) build -o $(GOBUMP) github.com/x-motemen/gobump/cmd/gobump
+	@$(GO) install github.com/x-motemen/gobump/cmd/gobump@afdfbf2804fecf41b963b1cf7fadfa8d81c7d820
 
 GIT_CHGLOG := $(BIN_DIR)/git-chglog
 $(GIT_CHGLOG): | $(BIN_DIR)
-	@cd $(TOOLS_DIR) && \
-		$(GO) build -o $(GIT_CHGLOG) github.com/git-chglog/git-chglog/cmd/git-chglog
+	@$(GO) install github.com/git-chglog/git-chglog/cmd/git-chglog@v0.15.1
 
 GO_LICENSES := $(BIN_DIR)/go-licenses
 $(GO_LICENSES): | $(BIN_DIR)
-	@cd $(TOOLS_DIR) && \
-		$(GO) build -o $(GO_LICENSES) github.com/google/go-licenses
+	@$(GO) install github.com/google/go-licenses@v1.2.1
 
 GOCREDITS := $(BIN_DIR)/gocredits
 $(GOCREDITS): | $(BIN_DIR)
-	@cd $(TOOLS_DIR) && \
-		$(GO) build -o $(GOCREDITS) github.com/Songmu/gocredits/cmd/gocredits
+	@$(GO) install github.com/Songmu/gocredits/cmd/gocredits@v0.2.0
 
 GOLANGCI_LINT := $(BIN_DIR)/golangci-lint
 GOLANGCI_LINT_VERSION := v1.30.0
@@ -133,7 +125,7 @@ gen: gen/proto gen/plugins ## generate necessary files for testing
 
 .PHONY: gen/proto
 PROTOC_OPTION := -I$(PROTO_DIR)
-PROTOC_GO_OPTION := --plugin=${BIN_DIR}/protoc-gen-go --go_out=$(GEN_PB_DIR) --go_opt=paths=source_relative
+PROTOC_GO_OPTION := --plugin=${PROTOC_GEN_GO} --go_out=$(GEN_PB_DIR) --go_opt=paths=source_relative
 PROTOC_GO_GRPC_OPTION := --go-grpc_out=require_unimplemented_servers=false:$(GEN_PB_DIR) --go-grpc_opt=paths=source_relative
 gen/proto: $(PROTOC) $(PROTOC_GEN_GO) $(PROTOC_GEN_GO_GRPC)
 	@rm -rf $(GEN_PB_DIR)
@@ -146,7 +138,7 @@ gen/proto: $(PROTOC) $(PROTOC_GEN_GO) $(PROTOC_GEN_GO_GRPC)
 add-yaml-tag: $(GOPROTOYAMLTAG)
 	@for file in $$(find $(GEN_PB_DIR) -name '*.pb.go'); do \
 		echo "add yaml tag $$file"; \
-		goprotoyamltag --filename $$file -w; \
+		$(GOPROTOYAMLTAG) --filename $$file -w; \
 	done
 
 .PHONY: gen/mock
@@ -156,7 +148,7 @@ gen/mock: $(GOTYPENAMES) $(MOCKGEN)
 		echo "generate mock for $$file"; \
 		dstfile=$$(dirname $$file)/$$(basename $${file%.pb.go})_mock.go; \
 		self=github.com/zoncoen/scenarigo`echo $(GEN_PB_DIR)/$$package | perl -pe 's!^$(CURDIR)!!g'`; \
-		gotypenames --filename $$file --only-exported --types interface | xargs -ISTRUCT -L1 -P8 mockgen -source $$file -package $$package -self_package $$self -destination $$dstfile; \
+		$(GOTYPENAMES) --filename $$file --only-exported --types interface | xargs -ISTRUCT -L1 -P8 $(MOCKGEN) -source $$file -package $$package -self_package $$self -destination $$dstfile; \
 		perl -pi -e 's!^// Source: .*\n!!g' $$dstfile ||  (echo "failed to delete generated marker about source path ( Source: /path/to/name.pb.go )"); \
 	done
 
@@ -175,18 +167,24 @@ release: $(GOBUMP) $(GIT_CHGLOG) ## release new version
 
 .PHONY: changelog
 changelog: $(GIT_CHGLOG) ## generate CHANGELOG.md
-	@git-chglog -o $(CURDIR)/CHANGELOG.md
+	@git-chglog --tag-filter-pattern "^v[0-9]+.[0-9]+.[0-9]+$$" -o $(CURDIR)/CHANGELOG.md
 
+RELEASE_VERSION := $(RELEASE_VERSION)
 .PHONY: changelog/ci
 changelog/ci: $(GIT_CHGLOG) $(GOBUMP)
-	@git-chglog v$$(gobump show -r $(CURDIR)/version) > $(CURDIR)/.CHANGELOG.md
+	@git-chglog --tag-filter-pattern "^v[0-9]+.[0-9]+.[0-9]+$$|$(RELEASE_VERSION)" $(RELEASE_VERSION) > $(CURDIR)/.CHANGELOG.md
 
 .PHONY: credits
 credits: $(GO_LICENSES) $(GOCREDITS) ## generate CREDITS
 	@$(GO) mod download
-	@go-licenses check ./...
-	@gocredits . > CREDITS
+	@$(GO_LICENSES) check ./...
+	@go mod why github.com/davecgh/go-spew # HACK: download explicitly for credits
+	@$(GOCREDITS) . > CREDITS
 	@$(GO) mod tidy
+
+.PHONY: matrix
+matrix:
+	@cd scripts/build-matrix && $(GO) run ./main.go
 
 .PHONY: build/ci
 build/ci:

@@ -5,13 +5,36 @@ on:
     - "v[0-9]+.[0-9]+.[0-9]+"
     - "v[0-9]+.[0-9]+.[0-9]+-rc[0-9]+"
 jobs:
-  goreleaser:
+  build-matrix:
     runs-on: ubuntu-latest
     steps:
     - name: Install Go
       uses: actions/setup-go@v3
       with:
-        go-version: 1.17.x
+        go-version: 1.18.x
+    - name: Checkout code
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+        path: go/src/github.com/${{ github.repository }}
+    - name: Generate matrix
+      working-directory: ./go/src/github.com/${{ github.repository }}
+      run: |
+        set -eu
+        versions=$(make matrix)
+        echo "::set-output name=versions::${versions}"
+  goreleaser:
+    needs: build-matrix
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        go-version: ${{ fromJson(needs.build-matrix.outputs.versions) }}
+    steps:
+    - name: Install Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: 1.18.x
     - name: Checkout code
       uses: actions/checkout@v3
       with:
@@ -19,12 +42,12 @@ jobs:
         path: go/src/github.com/${{ github.repository }}
     - name: Generate CHANGELOG
       working-directory: ./go/src/github.com/${{ github.repository }}
-      run: make changelog/ci && cat .CHANGELOG.md
+      run: RELEASE_VERSION=${{ github.ref_name }} make changelog/ci && cat .CHANGELOG.md
     - name: Build
       working-directory: ./go/src/github.com/${{ github.repository }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: make build/ci
+      run: GO_VERSION=${{ matrix.go-version }} make build/ci
     - name: Run GoReleaser
       uses: goreleaser/goreleaser-action@v3
       with:

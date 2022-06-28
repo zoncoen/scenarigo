@@ -2,7 +2,8 @@ builds:
   - binary: scenarigo
     skip: true
 release:
+  prerelease: auto
   extra_files:
-    - glob: 'assets/*_checksums.txt'
+    - glob: 'assets/checksums.txt'
     - glob: 'assets/*.tar.gz'
 dist: .tmp

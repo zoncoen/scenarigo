@@ -11,7 +11,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/Yamashou/gqlgenc/clientv2"
 
-	"github.com/zoncoen/scenarigo/scripts/build-matrix/gen"
+	"github.com/zoncoen/scenarigo/scripts/cross-build/gen"
 )
 
 var (

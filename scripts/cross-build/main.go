@@ -53,7 +53,7 @@ func build(ver string) error {
 	}
 
 	tmpl := template.New("config").Delims("<<", ">>")
-	tmpl, err = tmpl.Parse(string(tmplBytes))
+	tmpl, err := tmpl.Parse(string(tmplBytes))
 	if err != nil {
 		return fmt.Errorf("failed to parse template: %w", err)
 	}

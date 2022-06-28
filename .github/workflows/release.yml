@@ -51,7 +51,7 @@ jobs:
       run: RELEASE_VERSION=${{ github.ref_name }} make changelog/ci && cat .CHANGELOG.md
     - name: Build
       working-directory: ./go/src/github.com/${{ github.repository }}
-      run: GO_VERSION=${{ matrix.go-version }} make build/ci
+      run: RELEASE_VERSION=${{ github.ref_name }} GO_VERSION=${{ matrix.go-version }} make build/ci
     - name: Run GoReleaser
       uses: goreleaser/goreleaser-action@v3
       with:

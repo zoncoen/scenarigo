@@ -11,8 +11,9 @@ import (
 )
 
 var (
-	ver     = os.Getenv("GO_VERSION")
-	rootDir = os.Getenv("PJ_ROOT")
+	releaseVer = os.Getenv("RELEASE_VERSION")
+	ver        = os.Getenv("GO_VERSION")
+	rootDir    = os.Getenv("PJ_ROOT")
 )
 
 func main() {
@@ -50,11 +51,6 @@ func build(ver string) error {
 	if err := os.Mkdir(fmt.Sprintf("%s/assets", rootDir), 0o755); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
-	checksum, err := os.OpenFile(fmt.Sprintf("%s/assets/checksums.txt", rootDir), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o666)
-	if err != nil {
-		return fmt.Errorf("failed to open file: %w", err)
-	}
-	defer checksum.Close()
 
 	tmpl := template.New("config").Delims("<<", ">>")
 	tmpl, err = tmpl.Parse(string(tmplBytes))
@@ -77,7 +73,13 @@ func build(ver string) error {
 	}
 
 	// move results
-	sum, err := os.OpenFile(fmt.Sprintf("%s/dist/checksums.txt", rootDir), os.O_RDONLY, 0o666)
+	checksumFilename := fmt.Sprintf("%s/assets/scenarigo_%s_go%s_checksums.txt", rootDir, releaseVer, ver)
+	checksum, err := os.OpenFile(filepath.Join(rootDir, "assets", checksumFilename), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o666)
+	if err != nil {
+		return fmt.Errorf("failed to open file: %w", err)
+	}
+	defer checksum.Close()
+	sum, err := os.OpenFile(filepath.Join(rootDir, "dist", checksumFilename), os.O_RDONLY, 0o666)
 	if err != nil {
 		return fmt.Errorf("failed to open file: %w", err)
 	}

@@ -184,13 +184,12 @@ credits: $(GO_LICENSES) $(GOCREDITS) ## generate CREDITS
 
 .PHONY: matrix
 matrix:
-	@cd scripts/build-matrix && $(GO) run ./main.go
+	@cd scripts/cross-build && $(GO) run ./build-matrix/main.go
 
 .PHONY: build/ci
 build/ci:
 	@rm -rf assets
-	@cd scripts/cross-build && PJ_ROOT=$(CURDIR) $(GO) run ./main.go && cd -
-	@cp scripts/cross-build/.goreleaser.yml ./
+	@cd scripts/cross-build && PJ_ROOT=$(CURDIR) $(GO) run ./cross-build/main.go && cd -
 
 .PHONY: help
 help: ## print help

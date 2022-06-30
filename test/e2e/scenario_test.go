@@ -1,3 +1,4 @@
+//go:build !race
 // +build !race
 
 package scenarigo
@@ -494,16 +495,10 @@ func startHTTPServer(t *testing.T) func() {
 	})
 
 	s := httptest.NewServer(mux)
-	if err := os.Setenv("TEST_ADDR", s.URL); err != nil {
-		t.Fatalf("unexpected error: %s", err)
-	}
-	if err := os.Setenv("TEST_TOKEN", token); err != nil {
-		t.Fatalf("unexpected error: %s", err)
-	}
+	t.Setenv("TEST_ADDR", s.URL)
+	t.Setenv("TEST_TOKEN", token)
 
 	return func() {
 		s.Close()
-		os.Unsetenv("TEST_ADDR")
-		os.Unsetenv("TEST_TOKEN")
 	}
 }

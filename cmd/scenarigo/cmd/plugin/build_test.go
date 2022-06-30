@@ -962,21 +962,8 @@ func setupGitServer(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to parse URL: %s", err)
 	}
-	setEnv(t, "GIT_SSH_COMMAND", fmt.Sprintf("ssh -p %s -i %s -oStrictHostKeyChecking=no -F /dev/null", u.Port(), filepath.Join(tempDir, "ssh", "gitkit.rsa")))
-	setEnv(t, "GOPRIVATE", "127.0.0.1")
-}
-
-func setEnv(t *testing.T, key, value string) {
-	t.Helper()
-	v, ok := os.LookupEnv(key)
-	os.Setenv(key, value)
-	t.Cleanup(func() {
-		if ok {
-			os.Setenv(key, v)
-		} else {
-			os.Unsetenv(key)
-		}
-	})
+	t.Setenv("GIT_SSH_COMMAND", fmt.Sprintf("ssh -p %s -i %s -oStrictHostKeyChecking=no -F /dev/null", u.Port(), filepath.Join(tempDir, "ssh", "gitkit.rsa")))
+	t.Setenv("GOPRIVATE", "127.0.0.1")
 }
 
 func create(t *testing.T, path, content string) {

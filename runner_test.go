@@ -34,10 +34,7 @@ func TestRunnerWithScenarios(t *testing.T) {
 }
 
 func TestRunnerWithOptionsFromEnv(t *testing.T) {
-	if err := os.Setenv(envScenarigoColor, "true"); err != nil {
-		t.Fatalf("%+v", err)
-	}
-	defer os.Unsetenv(envScenarigoColor)
+	t.Setenv(envScenarigoColor, "true")
 	runner, err := NewRunner(
 		WithOptionsFromEnv(true),
 	)

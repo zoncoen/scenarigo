@@ -55,7 +55,7 @@ func ReplaceDateHeader(s string) string {
 	for _, subs := range found {
 		subs := subs
 		if len(subs) > 1 {
-			s = strings.Replace(s, subs[1], "Mon, 01 Jan 0001 00:00:00 GMT", -1)
+			s = strings.ReplaceAll(s, subs[1], "Mon, 01 Jan 0001 00:00:00 GMT")
 		}
 	}
 	return s

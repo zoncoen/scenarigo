@@ -191,7 +191,7 @@ func (e *PathError) Error() string {
 	yml := e.yml()
 	if yml != "" {
 		if !strings.HasSuffix(yml, "\n") {
-			yml = yml + "\n"
+			yml += "\n"
 		}
 		return fmt.Sprintf("\n%s%s", yml, e.Err.Error())
 	}

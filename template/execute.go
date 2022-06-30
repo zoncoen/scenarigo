@@ -82,7 +82,7 @@ func execute(in reflect.Value, data interface{}) (reflect.Value, error) {
 				if err != nil {
 					return reflect.Value{}, errors.WithPath(err, keyStr)
 				}
-				v.SetMapIndex(k, reflect.Value{}) //delete old value
+				v.SetMapIndex(k, reflect.Value{}) // delete old value
 				v.SetMapIndex(key, x)
 			}
 		}

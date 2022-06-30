@@ -74,7 +74,7 @@ $(GOCREDITS): | $(BIN_DIR)
 	@$(GO) install github.com/Songmu/gocredits/cmd/gocredits@v0.2.0
 
 GOLANGCI_LINT := $(BIN_DIR)/golangci-lint
-GOLANGCI_LINT_VERSION := v1.30.0
+GOLANGCI_LINT_VERSION := v1.46.2
 $(GOLANGCI_LINT): | $(BIN_DIR)
 	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(BIN_DIR) $(GOLANCI_LINT_VERSION)
 

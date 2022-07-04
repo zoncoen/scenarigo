@@ -78,6 +78,10 @@ GOLANGCI_LINT_VERSION := v1.46.2
 $(GOLANGCI_LINT): | $(BIN_DIR)
 	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(BIN_DIR) $(GOLANCI_LINT_VERSION)
 
+LOOPPOINTER := $(BIN_DIR)/looppointer
+$(LOOPPOINTER): | $(BIN_DIR)
+	@$(GO) install github.com/kyoh86/looppointer/cmd/looppointer@v0.1.7
+
 .PHONY: test
 CMD_DIR := cmd
 TEST_TARGETS := $(shell $(GO) list ./... | grep -v $(CMD_DIR))
@@ -106,8 +110,13 @@ test/race:
 	@$(GO) test -race ./...
 
 .PHONY: lint
-lint: $(GOLANGCI_LINT) ## run lint
-	@golangci-lint run
+lint: $(GOLANGCI_LINT) $(LOOPPOINTER) ## run lint
+	@$(GOLANGCI_LINT) run
+	@make lint/looppointer
+
+.PHONY: lint/looppointer
+lint/looppointer: $(LOOPPOINTER)
+	@go vet -vettool=$(LOOPPOINTER) ./...
 
 .PHONY: lint/ci
 lint/ci:

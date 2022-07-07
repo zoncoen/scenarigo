@@ -1,26 +1,31 @@
 linters:
   enable-all: true
   disable:
-    - gomnd
-    - gochecknoglobals
-    - godox
-    - lll
-    - funlen
-    - wsl
-    - gocognit
-    - scopelint
-    - gochecknoinits
-    - unparam
-    - interfacer
-    - prealloc
     - dupl
-    - testpackage
+    - funlen
+    - gci
+    - gochecknoglobals
+    - gochecknoinits
+    - gocognit
+    - godox
     - goerr113
-    - maligned
+    - gomnd
+    - lll
     - nestif
     - nlreturn
-    - gci
+    - prealloc
     - scopelint
+    - testpackage
+    - unparam
+    - wsl
+
+    # deplicated
+    - exhaustivestruct
+    - golint
+    - interfacer
+    - maligned
+    - scopelint
+
   skip-dirs:
     - gen
 

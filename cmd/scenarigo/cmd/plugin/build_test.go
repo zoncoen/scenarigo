@@ -953,9 +953,11 @@ func setupGitServer(t *testing.T) {
 	if err := git.Listen("127.0.0.1:0"); err != nil {
 		t.Fatalf("failed to listen: %s", err)
 	}
-	go git.Serve()
+	go func() {
+		_ = git.Serve()
+	}()
 	t.Cleanup(func() {
-		git.Stop()
+		_ = git.Stop()
 	})
 
 	u, err := url.Parse(fmt.Sprintf("http://%s", git.Address()))

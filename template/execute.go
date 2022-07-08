@@ -172,7 +172,9 @@ func execute(in reflect.Value, data interface{}) (reflect.Value, error) {
 		// keep the original address
 		if in.Type().Kind() == reflect.Ptr && v.Type().Kind() == reflect.Ptr {
 			if v.Elem().Type().AssignableTo(in.Elem().Type()) {
-				reflectutil.Set(in.Elem(), v.Elem())
+				if err := reflectutil.Set(in.Elem(), v.Elem()); err != nil {
+					return reflect.Value{}, err
+				}
 				v = in
 			}
 		}
@@ -279,7 +281,9 @@ func replaceFuncs(in reflect.Value, s *funcStash) (reflect.Value, error) {
 		// keep the original address
 		if in.Type().Kind() == reflect.Ptr && v.Type().Kind() == reflect.Ptr {
 			if v.Elem().Type().AssignableTo(in.Elem().Type()) {
-				reflectutil.Set(in.Elem(), v.Elem())
+				if err := reflectutil.Set(in.Elem(), v.Elem()); err != nil {
+					return reflect.Value{}, err
+				}
 				v = in
 			}
 		}

@@ -9,8 +9,8 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/hashicorp/go-multierror"
-	"github.com/zoncoen/scenarigo/logger"
 	"github.com/zoncoen/scenarigo/internal/yamlutil"
+	"github.com/zoncoen/scenarigo/logger"
 	"github.com/zoncoen/scenarigo/mock/protocol"
 
 	_ "github.com/zoncoen/scenarigo/mock/protocol/http"
@@ -68,7 +68,9 @@ func (s *Server) Start(ctx context.Context) error {
 		name := name
 		s := s
 		eg.Go(func() error {
-			defer s.Stop(context.Background())
+			defer func() {
+				_ = s.Stop(context.Background())
+			}()
 			if err := s.Start(ctx); err != nil {
 				return fmt.Errorf("failed to start %s server: %w", name, err)
 			}
@@ -118,8 +120,10 @@ func (s *Server) Stop(ctx context.Context) error {
 	if len(errs) > 0 {
 		return multierror.Append(nil, errs...)
 	}
-	if err := s.iter.Stop(); err != nil {
-		return err
+	if s.iter != nil {
+		if err := s.iter.Stop(); err != nil {
+			return err
+		}
 	}
 	return nil
 }

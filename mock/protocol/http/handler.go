@@ -104,7 +104,9 @@ func NewHandler(iter *protocol.MockIterator, l logger.Logger) http.Handler {
 func writeError(w http.ResponseWriter, err error, l logger.Logger) {
 	w.Header().Add("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusInternalServerError)
-	w.Write([]byte(err.Error()))
+	if _, err := w.Write([]byte(err.Error())); err != nil {
+		err = fmt.Errorf("failed to write error response: %w", err)
+	}
 	l.Error(err, "internal server error")
 }
 
@@ -166,7 +168,9 @@ func (resp *HTTPResponse) Write(w http.ResponseWriter) error {
 	status, header, body, err := resp.extract()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
+		if _, err := w.Write([]byte(err.Error())); err != nil {
+			err = fmt.Errorf("failed to write error response: %w", err)
+		}
 		return err
 	}
 	for k, vs := range header {

@@ -10,6 +10,7 @@ linters:
     - godox
     - goerr113
     - gomnd
+    - ifshort
     - lll
     - nestif
     - nlreturn

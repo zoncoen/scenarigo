@@ -71,11 +71,9 @@ func (s *testGRPCServer) Echo(ctx gocontext.Context, req *test.EchoRequest) (*te
 	if !ok {
 		return nil, status.Error(codes.Unauthenticated, "unauthenticated")
 	}
-	ts := md.Get("token")
-	if len(ts) == 0 {
+	if ts := md.Get("token"); len(ts) == 0 {
 		return nil, status.Error(codes.Unauthenticated, "unauthenticated")
-	}
-	if _, ok := s.users[ts[0]]; !ok {
+	} else if _, ok := s.users[ts[0]]; !ok {
 		sts, err := status.New(codes.Unauthenticated, "invalid token").
 			WithDetails(&errdetails.LocalizedMessage{
 				Locale:  "ja-JP",

@@ -13,9 +13,8 @@ import (
 )
 
 var (
-	yamlMapItemType  = reflect.TypeOf(yaml.MapItem{})
-	yamlMapSliceType = reflect.TypeOf(yaml.MapSlice{})
-	lazyFuncType     = reflect.TypeOf(lazyFunc{})
+	yamlMapItemType = reflect.TypeOf(yaml.MapItem{})
+	lazyFuncType    = reflect.TypeOf(lazyFunc{})
 )
 
 // Execute executes templates of i with data.

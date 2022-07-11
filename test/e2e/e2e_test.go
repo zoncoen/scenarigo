@@ -204,6 +204,7 @@ func runMockServer(t *testing.T, filename string, ignoreMocksRemainError bool) f
 		os.Setenv(fmt.Sprintf("TEST_%s_ADDR", strings.ToUpper(p)), addr)
 	}
 	return func(t *testing.T) {
+		t.Helper()
 		c, cancel := gocontext.WithTimeout(gocontext.Background(), time.Second)
 		defer cancel()
 		if err := srv.Stop(c); err != nil {

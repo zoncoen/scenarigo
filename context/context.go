@@ -35,6 +35,7 @@ func New(r reporter.Reporter) *Context {
 
 // FromT creates a new context from t.
 func FromT(t *testing.T) *Context {
+	t.Helper()
 	return newContext(context.Background(), context.Background(), reporter.FromT(t))
 }
 

@@ -169,8 +169,11 @@ func TestRunnerFail(t *testing.T) {
 			},
 		},
 		"run with yaml": {
-			yaml:  `invalid: value`,
-			setup: func(t *testing.T) func() { return func() {} },
+			yaml: `invalid: value`,
+			setup: func(t *testing.T) func() {
+				t.Helper()
+				return func() {}
+			},
 		},
 	}
 	for _, test := range tests {

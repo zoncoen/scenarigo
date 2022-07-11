@@ -22,6 +22,7 @@ func TestHTTP_Server(t *testing.T) {
 		"simple": {
 			filename: "testdata/http.yaml",
 			f: func(t *testing.T, addr string) {
+				t.Helper()
 				resp, err := http.Get(fmt.Sprintf("http://%s", addr))
 				if err != nil {
 					t.Fatal(err)
@@ -35,6 +36,7 @@ func TestHTTP_Server(t *testing.T) {
 			filename: "testdata/http.yaml",
 			config:   "port: 8888",
 			f: func(t *testing.T, addr string) {
+				t.Helper()
 				resp, err := http.Get("http://localhost:8888")
 				if err != nil {
 					t.Fatal(err)

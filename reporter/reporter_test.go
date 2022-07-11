@@ -281,6 +281,7 @@ func TestPrint(t *testing.T) {
 	}{
 		"ok": {
 			f: func(t *testing.T, r *reporter) {
+				t.Helper()
 				r.Run("a", func(r Reporter) {
 					rptr := pr(t, r)
 					rptr.durationMeasurer = &fixedDurationMeasurer{
@@ -294,6 +295,7 @@ ok  	a	1.234s
 		},
 		"FAIL": {
 			f: func(t *testing.T, r *reporter) {
+				t.Helper()
 				r.Run("a", func(r Reporter) {
 					rptr := pr(t, r)
 					rptr.Error("error!")
@@ -312,6 +314,7 @@ FAIL
 		},
 		"ok nest": {
 			f: func(t *testing.T, r *reporter) {
+				t.Helper()
 				r.Run("a", func(r Reporter) {
 					r.Run("b", func(r Reporter) {
 						r.Run("c", func(r Reporter) {
@@ -326,6 +329,7 @@ ok  	a	0.000s
 		},
 		"FAIL nest": {
 			f: func(t *testing.T, r *reporter) {
+				t.Helper()
 				r.Run("a", func(r Reporter) {
 					r.Run("b", func(r Reporter) {
 						r.Run("c", func(r Reporter) {
@@ -350,6 +354,7 @@ FAIL
 		},
 		"ok nest verbose": {
 			f: func(t *testing.T, r *reporter) {
+				t.Helper()
 				r.context.verbose = true
 				r.Run("a", func(r Reporter) {
 					r.Run("b", func(r Reporter) {
@@ -373,6 +378,7 @@ ok  	a	0.000s
 		},
 		"FAIL nest verbose": {
 			f: func(t *testing.T, r *reporter) {
+				t.Helper()
 				r.context.verbose = true
 				r.Run("a", func(r Reporter) {
 					r.Run("b", func(r Reporter) {
@@ -401,6 +407,7 @@ FAIL
 		},
 		"multi line log": {
 			f: func(t *testing.T, r *reporter) {
+				t.Helper()
 				r.Run("a", func(r Reporter) {
 					r.Run("b", func(r Reporter) {
 						r.Run("c", func(r Reporter) {
@@ -447,11 +454,13 @@ func TestReporter_PrivateMethods(t *testing.T) {
 	}{
 		"reporter": {
 			run: func(t *testing.T, f func(Reporter)) {
+				t.Helper()
 				Run(f)
 			},
 		},
 		"testReporter": {
 			run: func(t *testing.T, f func(Reporter)) {
+				t.Helper()
 				f(FromT(t))
 			},
 			rootName: "TestReporter_PrivateMethods/testReporter",

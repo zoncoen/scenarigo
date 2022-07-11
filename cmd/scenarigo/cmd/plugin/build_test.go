@@ -969,6 +969,7 @@ func setupGitServer(t *testing.T) {
 }
 
 func create(t *testing.T, path, content string) {
+	t.Helper()
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0o777); err != nil {
 		t.Fatalf("failed to create %s: %s", dir, err)
@@ -984,6 +985,7 @@ func create(t *testing.T, path, content string) {
 }
 
 func createExecutable(t *testing.T, path, stdout string) {
+	t.Helper()
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0o777); err != nil {
 		t.Fatalf("failed to create %s: %s", dir, err)

@@ -139,7 +139,8 @@ func invokeAndAssert(ctx *context.Context, s *schema.Step, stepIdx int) *context
 				ctx.Node(),
 				ctx.EnabledColor(),
 			)
-			if assertErr, ok := err.(*assert.Error); ok {
+			var assertErr *assert.Error
+			if errors.As(err, &assertErr) {
 				for _, err := range assertErr.Errors {
 					ctx.Reporter().Log(err)
 				}

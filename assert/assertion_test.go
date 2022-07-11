@@ -94,11 +94,14 @@ deps:
 		if err == nil {
 			t.Fatalf("expected error but no error")
 		}
-		errs := err.(*errors.MultiPathError).Errs
-		if got, expect := len(errs), len(qs); got != expect {
+		var mperr *errors.MultiPathError
+		if ok := errors.As(err, &mperr); !ok {
+			t.Fatalf("expected errors.MultiPathError: %s", err)
+		}
+		if got, expect := len(mperr.Errs), len(qs); got != expect {
 			t.Fatalf("expected %d but got %d", expect, got)
 		}
-		for i, e := range errs {
+		for i, e := range mperr.Errs {
 			q := qs[i]
 			if !strings.Contains(e.Error(), q) {
 				t.Errorf(`"%s" does not contain "%s"`, e.Error(), q)
@@ -110,11 +113,14 @@ deps:
 		if err == nil {
 			t.Fatalf("expected error but no error")
 		}
-		errs := err.(*errors.MultiPathError).Errs
-		if got, expect := len(errs), len(qs); got != expect {
+		var mperr *errors.MultiPathError
+		if ok := errors.As(err, &mperr); !ok {
+			t.Fatalf("expected errors.MultiPathError: %s", err)
+		}
+		if got, expect := len(mperr.Errs), len(qs); got != expect {
 			t.Fatalf("expected %d but got %d", expect, got)
 		}
-		for i, e := range errs {
+		for i, e := range mperr.Errs {
 			q := qs[i]
 			if !strings.Contains(e.Error(), q) {
 				t.Errorf(`"%s" does not contain "%s"`, e.Error(), q)

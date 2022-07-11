@@ -1,6 +1,7 @@
 package testutil
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -22,7 +23,7 @@ func RunParameterizedTests(r Reporter, e ParameterizedTestExecutor, files ...str
 			for {
 				var p TestParameter
 				if err := dec.Decode(&p); err != nil {
-					if err == io.EOF {
+					if errors.Is(err, io.EOF) {
 						break
 					} else {
 						r.Fatalf("failed to decode test parameter: %s", err)

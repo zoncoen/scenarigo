@@ -137,7 +137,8 @@ func validate(c *Config, node ast.Node) error {
 	}
 	for name, p := range c.Plugins {
 		if err := stat(c, p.Src, (&yaml.PathBuilder{}).Root().Child("plugins").Child(name).Child("src").Build(), node); err != nil {
-			if _, ok := err.(notExist); ok {
+			var neErr notExist
+			if errors.As(err, &neErr) {
 				m := p.Src
 				if i := strings.Index(m, "@"); i >= 0 { // trim version query
 					m = p.Src[:i]

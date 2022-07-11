@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
@@ -435,8 +436,8 @@ func TestParser_Parse(t *testing.T) {
 				if err == nil {
 					t.Fatal("expected error")
 				}
-				errs, ok := err.(Errors)
-				if !ok {
+				var errs Errors
+				if ok := errors.As(err, &errs); !ok {
 					t.Fatalf("expected parse errors: %s", err)
 				}
 				if got, expected := errs[0].pos, test.pos; got != expected {

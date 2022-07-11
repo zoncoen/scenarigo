@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -11,7 +12,7 @@ import (
 
 func main() {
 	if err := run(); err != nil {
-		if err == cmd.ErrTestFailed {
+		if errors.Is(err, cmd.ErrTestFailed) {
 			os.Exit(10)
 		}
 		fmt.Fprintln(os.Stderr, err)

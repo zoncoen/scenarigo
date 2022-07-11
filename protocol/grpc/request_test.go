@@ -281,7 +281,7 @@ func TestValidateMethod(t *testing.T) {
 			},
 			"first return value must be proto.Message": {
 				method: reflect.ValueOf(func(ctx gocontext.Context, in proto.Message, opts ...grpc.CallOption) (*struct{}, error) {
-					return nil, nil
+					return nil, nil // nolint:nilnil
 				}),
 			},
 			"second return value must be error": {

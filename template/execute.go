@@ -27,7 +27,7 @@ func Execute(i, data interface{}) (interface{}, error) {
 	if v.IsValid() {
 		return v.Interface(), nil
 	}
-	return nil, nil
+	return nil, nil // nolint:nilnil
 }
 
 func structFieldName(field reflect.StructField) string {

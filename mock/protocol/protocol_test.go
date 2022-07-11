@@ -30,7 +30,7 @@ type testProtocol struct{}
 func (_ *testProtocol) Name() string { return "test" }
 
 func (_ *testProtocol) UnmarshalConfig(b []byte) (interface{}, error) {
-	return nil, nil
+	return nil, nil // nolint:nilnil
 }
 
 func (_ *testProtocol) NewServer(iter *MockIterator, l logger.Logger, cfg interface{}) (Server, error) {

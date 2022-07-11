@@ -132,7 +132,7 @@ func (s *server) wait(ctx context.Context) error {
 		srv := s.srv
 		s.m.Unlock()
 		if srv != nil {
-			req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("http://%s%s", srv.Addr, healthPath), nil)
+			req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("http://%s%s", srv.Addr, healthPath), nil)
 			if err != nil {
 				return err
 			}

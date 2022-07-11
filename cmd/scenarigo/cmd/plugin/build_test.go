@@ -67,7 +67,7 @@ go 1.17
 
 	setupGitServer(t)
 
-	t.Run("sucess", func(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
 		tests := map[string]struct {
 			config           string
 			files            map[string]string
@@ -223,7 +223,7 @@ plugins:
 				expectGoMod:      map[string]string{},
 				skipOpen:         true,
 			},
-			`src is a sub direcotry of remote git repository`: {
+			`src is a sub directory of remote git repository`: {
 				config: `
 schemaVersion: config/v1
 plugins:

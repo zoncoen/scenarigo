@@ -283,10 +283,10 @@ func (t *Template) executeFuncCall(call *ast.CallExpr, data interface{}) (interf
 		return vs[0].Interface(), nil
 	case 2:
 		if !vs[0].IsValid() || !vs[0].CanInterface() {
-			return nil, errors.Errorf("first reruned value is invlid")
+			return nil, errors.Errorf("first reruned value is invalid")
 		}
 		if !vs[1].IsValid() || !vs[1].CanInterface() {
-			return nil, errors.Errorf("second reruned value is invlid")
+			return nil, errors.Errorf("second reruned value is invalid")
 		}
 		if vs[1].Type() != reflectutil.TypeError {
 			return nil, errors.Errorf("second returned value must be an error")

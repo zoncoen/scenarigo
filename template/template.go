@@ -43,7 +43,7 @@ func New(str string) (*Template, error) {
 }
 
 // Execute applies a parsed template to the specified data.
-func (t *Template) Execute(data interface{}) (ret interface{}, retErr error) {
+func (t *Template) Execute(data interface{}) (_ interface{}, retErr error) {
 	defer func() {
 		if err := recover(); err != nil {
 			retErr = fmt.Errorf("failed to execute: panic: %s", err)

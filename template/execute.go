@@ -302,7 +302,7 @@ func isNil(v reflect.Value) bool {
 
 // convert returns a function that converts a value to the given type t.
 func convert(t reflect.Type) func(reflect.Value, error) (reflect.Value, error) {
-	return func(v reflect.Value, err error) (result reflect.Value, resErr error) {
+	return func(v reflect.Value, err error) (reflect.Value, error) {
 		if err != nil {
 			return v, err
 		}

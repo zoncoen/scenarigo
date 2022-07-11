@@ -108,7 +108,7 @@ func (p *openedPlugin) getSetup(setups []SetupFunc) SetupFunc {
 	if len(setups) == 1 {
 		return setups[0]
 	}
-	return func(ctx *Context) (newCtx *Context, teardown func(*Context)) {
+	return func(ctx *Context) (*Context, func(*Context)) {
 		var teardowns []func(*Context)
 		for i, setup := range setups {
 			newCtx := ctx

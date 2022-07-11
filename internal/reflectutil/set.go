@@ -37,7 +37,7 @@ func Set(target, v reflect.Value) (retErr error) {
 }
 
 // Convert returns the value v converted to type t.
-func Convert(t reflect.Type, v reflect.Value) (ret reflect.Value, ok bool, retErr error) {
+func Convert(t reflect.Type, v reflect.Value) (_ reflect.Value, _ bool, retErr error) {
 	if !v.IsValid() {
 		return v, false, nil
 	}

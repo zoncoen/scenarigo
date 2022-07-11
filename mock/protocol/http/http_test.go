@@ -107,3 +107,31 @@ func TestHTTP_Server(t *testing.T) {
 		})
 	}
 }
+
+func TestHTTP_Server_Start_Failure(t *testing.T) {
+	tests := map[string]struct {
+		server *server
+		expect string
+	}{
+		"server already started": {
+			server: &server{
+				srv: &http.Server{},
+			},
+			expect: "server already started",
+		},
+	}
+	for name, test := range tests {
+		test := test
+		t.Run(name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+			defer cancel()
+			err := test.server.Start(ctx)
+			if err == nil {
+				t.Fatal("no error")
+			}
+			if got, expect := err.Error(), test.expect; got != expect {
+				t.Fatalf("expect %q but got %q", expect, got)
+			}
+		})
+	}
+}

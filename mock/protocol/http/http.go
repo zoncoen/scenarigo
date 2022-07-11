@@ -72,7 +72,7 @@ func (s *server) Start(ctx context.Context) error {
 	serve, err := s.setup()
 	if err != nil {
 		s.m.Unlock()
-		return nil
+		return err
 	}
 	s.m.Unlock()
 	return serve()

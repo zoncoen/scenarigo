@@ -3,7 +3,7 @@ package grpc
 import (
 	"reflect"
 
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 
 	"github.com/zoncoen/scenarigo/assert"

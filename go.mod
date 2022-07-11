@@ -17,7 +17,6 @@ require (
 	github.com/zoncoen/query-go v1.1.0
 	golang.org/x/mod v0.5.1
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	golang.org/x/xerrors v0.0.0-20220411194840-2f41105eb62f
 	google.golang.org/genproto v0.0.0-20220413183235-5e96e2839df9
 	google.golang.org/grpc v1.47.0
 	google.golang.org/protobuf v1.28.0
@@ -34,4 +33,5 @@ require (
 	golang.org/x/net v0.0.0-20210813160813-60bc85c4be6d // indirect
 	golang.org/x/sys v0.0.0-20211205182925-97ca703d548d // indirect
 	golang.org/x/text v0.3.7 // indirect
+	golang.org/x/xerrors v0.0.0-20220411194840-2f41105eb62f // indirect
 )

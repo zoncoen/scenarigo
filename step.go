@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/lestrrat-go/backoff"
-	"golang.org/x/xerrors"
 
 	"github.com/zoncoen/scenarigo/assert"
 	"github.com/zoncoen/scenarigo/context"
@@ -98,7 +97,7 @@ func runStep(ctx *context.Context, scenario *schema.Scenario, s *schema.Step, st
 func invokeAndAssert(ctx *context.Context, s *schema.Step, stepIdx int) *context.Context {
 	policy, err := s.Retry.Build()
 	if err != nil {
-		ctx.Reporter().Fatal(xerrors.Errorf("invalid retry policy: %w", err))
+		ctx.Reporter().Fatal(fmt.Errorf("invalid retry policy: %w", err))
 	}
 
 	b, cancel := policy.Start(ctx.RequestContext())

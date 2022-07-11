@@ -11,6 +11,7 @@ linters:
     - goerr113
     - gomnd
     - ifshort
+    - ireturn
     - lll
     - nestif
     - nlreturn

@@ -10,12 +10,12 @@ import (
 )
 
 func TestReporter(t *testing.T) {
-	var _ Reporter = new()
+	var _ Reporter = newReporter()
 }
 
 func TestReporter_Name(t *testing.T) {
 	name := "testname"
-	r := new()
+	r := newReporter()
 	r.goTestName = name
 	if expect, got := name, r.Name(); got != expect {
 		t.Errorf(`expected "%s" but got "%s"`, expect, got)
@@ -23,7 +23,7 @@ func TestReporter_Name(t *testing.T) {
 }
 
 func TestReporter_Fail(t *testing.T) {
-	r := new()
+	r := newReporter()
 	r.Fail()
 	if expect, got := true, r.Failed(); got != expect {
 		t.Errorf("expected %t but got %t", expect, got)
@@ -31,7 +31,7 @@ func TestReporter_Fail(t *testing.T) {
 }
 
 func TestReporter_Failed(t *testing.T) {
-	r := new()
+	r := newReporter()
 	if expect, got := false, r.Failed(); got != expect {
 		t.Errorf("expected %t but got %t", expect, got)
 	}
@@ -42,7 +42,7 @@ func TestReporter_Failed(t *testing.T) {
 }
 
 func TestReporter_FailNow(t *testing.T) {
-	r := new()
+	r := newReporter()
 	done := make(chan bool)
 	var reached bool
 	go func() {
@@ -63,7 +63,7 @@ func TestReporter_FailNow(t *testing.T) {
 
 func TestReporter_Log(t *testing.T) {
 	str := "log"
-	r := new()
+	r := newReporter()
 	r.Log(str)
 	if expect, got := 1, len(r.logs.all()); got != expect {
 		t.Fatalf("expected length %d but got %d", expect, got)
@@ -76,7 +76,7 @@ func TestReporter_Log(t *testing.T) {
 func TestReporter_Logf(t *testing.T) {
 	format := "%s failed"
 	name := "testname"
-	r := new()
+	r := newReporter()
 	r.Errorf(format, name)
 	if expect, got := 1, len(r.logs.all()); got != expect {
 		t.Fatalf("expected length %d but got %d", expect, got)
@@ -88,7 +88,7 @@ func TestReporter_Logf(t *testing.T) {
 
 func TestReporter_Error(t *testing.T) {
 	name := "testname"
-	r := new()
+	r := newReporter()
 	r.Error(name)
 	if expect, got := true, r.Failed(); got != expect {
 		t.Errorf("expected %t but got %t", expect, got)
@@ -104,7 +104,7 @@ func TestReporter_Error(t *testing.T) {
 func TestReporter_Errorf(t *testing.T) {
 	format := "%s failed"
 	name := "testname"
-	r := new()
+	r := newReporter()
 	r.Errorf(format, name)
 	if expect, got := true, r.Failed(); got != expect {
 		t.Errorf("expected %t but got %t", expect, got)
@@ -119,7 +119,7 @@ func TestReporter_Errorf(t *testing.T) {
 
 func TestReporter_Fatal(t *testing.T) {
 	name := "testname"
-	r := new()
+	r := newReporter()
 	done := make(chan bool)
 	var reached bool
 	go func() {
@@ -147,7 +147,7 @@ func TestReporter_Fatal(t *testing.T) {
 func TestReporter_Fatalf(t *testing.T) {
 	format := "%s failed"
 	name := "testname"
-	r := new()
+	r := newReporter()
 	done := make(chan bool)
 	var reached bool
 	go func() {
@@ -174,7 +174,7 @@ func TestReporter_Fatalf(t *testing.T) {
 
 func TestReporter_Skip(t *testing.T) {
 	name := "testname"
-	r := new()
+	r := newReporter()
 	done := make(chan bool)
 	var reached bool
 	go func() {
@@ -202,7 +202,7 @@ func TestReporter_Skip(t *testing.T) {
 func TestReporter_Skipf(t *testing.T) {
 	format := "%s skipped"
 	name := "testname"
-	r := new()
+	r := newReporter()
 	done := make(chan bool)
 	var reached bool
 	go func() {
@@ -228,7 +228,7 @@ func TestReporter_Skipf(t *testing.T) {
 }
 
 func TestReporter_SkipNow(t *testing.T) {
-	r := new()
+	r := newReporter()
 	done := make(chan bool)
 	var reached bool
 	go func() {
@@ -248,7 +248,7 @@ func TestReporter_SkipNow(t *testing.T) {
 }
 
 func TestReporter_Skipped(t *testing.T) {
-	r := new()
+	r := newReporter()
 	if expect, got := false, r.Skipped(); got != expect {
 		t.Errorf("expected %t but got %t", expect, got)
 	}

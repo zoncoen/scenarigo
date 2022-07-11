@@ -52,7 +52,7 @@ func Run(f func(r Reporter), opts ...Option) bool {
 }
 
 func run(f func(r Reporter), opts ...Option) *reporter {
-	r := new()
+	r := newReporter()
 	r.context = newTestContext(opts...)
 	go r.run(f)
 	<-r.done
@@ -79,7 +79,7 @@ type reporter struct {
 	done    chan bool // To signal a test is done.
 }
 
-func new() *reporter {
+func newReporter() *reporter {
 	return &reporter{
 		logs:             &logRecorder{},
 		durationMeasurer: &durationMeasurer{},
@@ -238,7 +238,7 @@ func (r *reporter) Run(name string, f func(t Reporter)) bool {
 	if r.goTestName != "" {
 		goTestName = fmt.Sprintf("%s/%s", r.goTestName, goTestName)
 	}
-	child := new()
+	child := newReporter()
 	child.context = r.context
 	child.parent = r
 	child.name = name
@@ -252,7 +252,7 @@ func (r *reporter) Run(name string, f func(t Reporter)) bool {
 	<-child.done
 	r.appendChild(child)
 	if r.isRoot() {
-		print(child)
+		printReport(child)
 	}
 	return !child.Failed()
 }
@@ -307,7 +307,7 @@ func (r *reporter) run(f func(r Reporter)) {
 	finished = true
 }
 
-func print(r *reporter) {
+func printReport(r *reporter) {
 	results := collectOutput(r)
 	r.context.printf("%s\n", strings.Join(results, "\n"))
 	if r.Failed() {

@@ -104,8 +104,8 @@ func NewHandler(iter *protocol.MockIterator, l logger.Logger) http.Handler {
 func writeError(w http.ResponseWriter, err error, l logger.Logger) {
 	w.Header().Add("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusInternalServerError)
-	if _, err := w.Write([]byte(err.Error())); err != nil {
-		err = fmt.Errorf("failed to write error response: %w", err)
+	if _, werr := w.Write([]byte(err.Error())); werr != nil {
+		err = fmt.Errorf("failed to write error response: %w", werr)
 	}
 	l.Error(err, "internal server error")
 }
@@ -135,6 +135,9 @@ func (e *expect) build(ctx *context.Context) (assert.Assertion, error) {
 	}
 
 	headerAssertion, err := assertutil.BuildHeaderAssertion(ctx, e.Header)
+	if err != nil {
+		return nil, errors.WrapPathf(err, "header", "invalid expect header")
+	}
 
 	expectBody, err := ctx.ExecuteTemplate(e.Body)
 	if err != nil {
@@ -168,8 +171,8 @@ func (resp *HTTPResponse) Write(w http.ResponseWriter) error {
 	status, header, body, err := resp.extract()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		if _, err := w.Write([]byte(err.Error())); err != nil {
-			err = fmt.Errorf("failed to write error response: %w", err)
+		if _, werr := w.Write([]byte(err.Error())); werr != nil {
+			err = fmt.Errorf("failed to write error response: %w", werr)
 		}
 		return err
 	}

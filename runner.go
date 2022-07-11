@@ -68,10 +68,8 @@ func WithConfig(config *schema.Config) func(*Runner) error {
 
 		var opts []func(r *Runner) error
 		opts = append(opts, WithScenarios(scenarios...))
-		pluginDir := r.rootDir
 		if config.PluginDirectory != "" {
-			pluginDir = filepath.Join(r.rootDir, config.PluginDirectory)
-			opts = append(opts, WithPluginDir(pluginDir))
+			opts = append(opts, WithPluginDir(filepath.Join(r.rootDir, config.PluginDirectory)))
 		}
 		for _, opt := range opts {
 			if err := opt(r); err != nil {

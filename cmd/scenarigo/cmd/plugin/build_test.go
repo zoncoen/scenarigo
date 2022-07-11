@@ -936,7 +936,7 @@ func setupGitServer(t *testing.T) {
 		}
 		if err := os.Rename(
 			filepath.Join(repoDir, e.Name(), ".git"),
-			filepath.Join(tempDir, fmt.Sprintf("%s", e.Name())),
+			filepath.Join(tempDir, e.Name()),
 		); err != nil {
 			t.Fatalf("failed to rename: %s", err)
 		}

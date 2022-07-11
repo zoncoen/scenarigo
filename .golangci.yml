@@ -19,6 +19,7 @@ linters:
     - scopelint
     - testpackage
     - unparam
+    - wrapcheck
     - wsl
 
     # deplicated

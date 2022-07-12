@@ -5,6 +5,6 @@ import (
 )
 
 // ExecuteTemplate executes template strings in context.
-func (ctx *Context) ExecuteTemplate(i interface{}) (interface{}, error) {
-	return template.Execute(i, ctx)
+func (c *Context) ExecuteTemplate(i interface{}) (interface{}, error) {
+	return template.Execute(i, c)
 }

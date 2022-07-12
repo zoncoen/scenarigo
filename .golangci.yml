@@ -44,10 +44,11 @@ issues:
         - exhaustruct
         - goconst
         - noctx
-    - linters:
-        - stylecheck
-      text: "ST1016:"
 
 linters-settings:
   exhaustive:
     default-signifies-exhaustive: true
+  stylecheck:
+    checks:
+    - all
+    - -ST1006

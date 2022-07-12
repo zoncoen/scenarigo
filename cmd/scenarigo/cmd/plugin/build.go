@@ -125,6 +125,7 @@ func checkGoVersion(ctx context.Context, goCmd, ver string) error {
 		return errors.New("invalid version output or scenarigo bug")
 	}
 	if v := items[2]; v != ver {
+		// nolint:stylecheck
 		return fmt.Errorf(`required %s but installed %s
 
 You can install the required version of Go by the following commands:

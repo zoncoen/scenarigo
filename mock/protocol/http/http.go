@@ -137,8 +137,11 @@ func (s *server) wait(ctx context.Context) error {
 				return err
 			}
 			resp, err := client.Do(req)
-			if err == nil && resp.StatusCode == http.StatusOK {
-				return nil
+			if err == nil {
+				resp.Body.Close()
+				if resp.StatusCode == http.StatusOK {
+					return nil
+				}
 			}
 		}
 		time.Sleep(100 * time.Millisecond)

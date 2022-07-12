@@ -58,6 +58,7 @@ func TestNewServer(t *testing.T) {
 					t.Errorf("expect %d but got %d", expect, got)
 				}
 			}
+			defer resp.Body.Close()
 			if err := srv.Stop(ctx); err != nil {
 				t.Errorf("failed to stop: %s", err)
 			}
@@ -104,6 +105,7 @@ func TestNewServer(t *testing.T) {
 					t.Errorf("expect %d but got %d", expect, got)
 				}
 			}
+			defer resp.Body.Close()
 			if err := srv.Stop(ctx); err != nil {
 				t.Errorf("failed to stop: %s", err)
 			}

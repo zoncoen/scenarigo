@@ -27,6 +27,7 @@ func TestHTTP_Server(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
+				defer resp.Body.Close()
 				if got, expect := resp.StatusCode, http.StatusOK; got != expect {
 					t.Errorf("expect %d but got %d", expect, got)
 				}
@@ -41,6 +42,7 @@ func TestHTTP_Server(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
+				defer resp.Body.Close()
 				if got, expect := resp.StatusCode, http.StatusOK; got != expect {
 					t.Errorf("expect %d but got %d", expect, got)
 				}

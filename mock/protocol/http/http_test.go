@@ -13,6 +13,10 @@ import (
 	"github.com/zoncoen/scenarigo/mock/protocol"
 )
 
+func init() {
+	Register()
+}
+
 func TestHTTP_Server(t *testing.T) {
 	tests := map[string]struct {
 		filename string

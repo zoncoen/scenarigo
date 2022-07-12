@@ -240,15 +240,15 @@ func TestHandler(t *testing.T) {
 func TestExtract(t *testing.T) {
 	t.Run("failure", func(t *testing.T) {
 		tests := map[string]struct {
-			resp *HTTPResponse
+			resp *Response
 		}{
 			"invalid status code": {
-				resp: &HTTPResponse{
+				resp: &Response{
 					Code: "OK",
 				},
 			},
 			"invalid header key": {
-				resp: &HTTPResponse{
+				resp: &Response{
 					Header: yaml.MapSlice{
 						yaml.MapItem{
 							Key: nil,
@@ -257,7 +257,7 @@ func TestExtract(t *testing.T) {
 				},
 			},
 			"failed to marshal response body": {
-				resp: &HTTPResponse{
+				resp: &Response{
 					Header: yaml.MapSlice{
 						yaml.MapItem{
 							Key:   "Content-Type",

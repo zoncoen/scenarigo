@@ -15,13 +15,16 @@ import (
 
 	"github.com/zoncoen/scenarigo/context"
 	"github.com/zoncoen/scenarigo/plugin"
+	"github.com/zoncoen/scenarigo/protocol/grpc"
+	"github.com/zoncoen/scenarigo/protocol/http"
 	"github.com/zoncoen/scenarigo/reporter"
 	"github.com/zoncoen/scenarigo/schema"
-
-	// Register default protocols.
-	_ "github.com/zoncoen/scenarigo/protocol/grpc"
-	_ "github.com/zoncoen/scenarigo/protocol/http"
 )
+
+func init() {
+	http.Register()
+	grpc.Register()
+}
 
 // Runner represents a test runner.
 type Runner struct {

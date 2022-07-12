@@ -15,7 +15,8 @@ import (
 	"github.com/zoncoen/scenarigo/mock/protocol"
 )
 
-func init() {
+// Register registers http protocol.
+func Register() {
 	protocol.Register(&HTTP{})
 }
 
@@ -25,10 +26,10 @@ const healthPath = "/_health"
 type HTTP struct{}
 
 // Name implements protocol.Protocol interface.
-func (_ HTTP) Name() string { return "http" }
+func (_ HTTP) Name() string { return "http" } // nolint:revive
 
 // UnmarshalConfig implements protocol.Protocol interface.
-func (_ HTTP) UnmarshalConfig(b []byte) (interface{}, error) {
+func (_ HTTP) UnmarshalConfig(b []byte) (interface{}, error) { // nolint:revive
 	var config ServerConfig
 	if err := yaml.Unmarshal(b, &config); err != nil {
 		return nil, err
@@ -37,7 +38,7 @@ func (_ HTTP) UnmarshalConfig(b []byte) (interface{}, error) {
 }
 
 // NewServer implements protocol.Protocol interface.
-func (_ *HTTP) NewServer(iter *protocol.MockIterator, l logger.Logger, config interface{}) (protocol.Server, error) {
+func (_ *HTTP) NewServer(iter *protocol.MockIterator, l logger.Logger, config interface{}) (protocol.Server, error) { // nolint:revive
 	if iter == nil {
 		return nil, errors.New("mock iterator is nil")
 	}

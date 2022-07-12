@@ -52,7 +52,7 @@ func (t *Template) Execute(data interface{}) (_ interface{}, retErr error) {
 	v, err := t.executeExpr(t.expr, data)
 	if err != nil {
 		if strings.Contains(t.str, "\n") {
-			return nil, errors.Wrapf(err, "failed to execute: \n%s\n", t.str)
+			return nil, errors.Wrapf(err, "failed to execute: \n%s\n", t.str) // nolint:revive
 		}
 		return nil, errors.Wrapf(err, "failed to execute: %s", t.str)
 	}

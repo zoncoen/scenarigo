@@ -49,17 +49,16 @@ func Convert(t reflect.Type, v reflect.Value) (_ reflect.Value, _ bool, retErr e
 
 	if v.Type().ConvertibleTo(t) {
 		return v.Convert(t), true, nil
+	}
+	if v.Type().Kind() == reflect.Ptr {
+		if v.Elem().Type().ConvertibleTo(t) {
+			return v.Elem().Convert(t), true, nil
+		}
 	} else {
-		if v.Type().Kind() == reflect.Ptr {
-			if v.Elem().Type().ConvertibleTo(t) {
-				return v.Elem().Convert(t), true, nil
-			}
-		} else {
-			ptr := reflect.New(v.Type())
-			ptr.Elem().Set(v)
-			if ptr.Type().ConvertibleTo(t) {
-				return ptr.Convert(t), true, nil
-			}
+		ptr := reflect.New(v.Type())
+		ptr.Elem().Set(v)
+		if ptr.Type().ConvertibleTo(t) {
+			return ptr.Convert(t), true, nil
 		}
 	}
 

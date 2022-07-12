@@ -12,9 +12,12 @@ import (
 	"github.com/zoncoen/scenarigo/internal/yamlutil"
 	"github.com/zoncoen/scenarigo/logger"
 	"github.com/zoncoen/scenarigo/mock/protocol"
-
-	_ "github.com/zoncoen/scenarigo/mock/protocol/http"
+	"github.com/zoncoen/scenarigo/mock/protocol/http"
 )
+
+func init() {
+	http.Register()
+}
 
 // NewServer returns a new mock server.
 func NewServer(config *ServerConfig, l logger.Logger) (*Server, error) {

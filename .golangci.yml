@@ -52,4 +52,6 @@ linters-settings:
   stylecheck:
     checks:
     - all
+    # revive has same rules
+    - -ST1005
     - -ST1006

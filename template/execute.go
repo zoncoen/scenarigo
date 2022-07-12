@@ -69,7 +69,7 @@ func execute(in reflect.Value, data interface{}) (reflect.Value, error) {
 						}
 						e = x
 					}
-					f := ke.Interface().(lazyFunc)
+					f := ke.Interface().(lazyFunc) // nolint:forcetypeassert
 					res, err := executeLeftArrowFunction(f.f, e)
 					if err != nil {
 						return reflect.Value{}, fmt.Errorf("failed to execute left arrow function: %w", err)
@@ -115,7 +115,7 @@ func execute(in reflect.Value, data interface{}) (reflect.Value, error) {
 							}
 							value = x
 						}
-						f := ke.Interface().(lazyFunc)
+						f := ke.Interface().(lazyFunc) // nolint:forcetypeassert
 						res, err := executeLeftArrowFunction(f.f, value)
 						if err != nil {
 							return reflect.Value{}, fmt.Errorf("failed to execute left arrow function: %w", err)

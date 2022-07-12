@@ -42,6 +42,7 @@ issues:
     - path: _test.go
       linters:
         - exhaustruct
+        - forcetypeassert
         - goconst
         - noctx
 

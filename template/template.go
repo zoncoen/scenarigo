@@ -292,7 +292,7 @@ func (t *Template) executeFuncCall(call *ast.CallExpr, data interface{}) (interf
 			return nil, errors.Errorf("second returned value must be an error")
 		}
 		if !vs[1].IsNil() {
-			return nil, vs[1].Interface().(error)
+			return nil, vs[1].Interface().(error) // nolint:forcetypeassert
 		}
 		return vs[0].Interface(), nil
 	default:

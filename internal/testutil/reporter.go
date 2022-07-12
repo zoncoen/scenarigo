@@ -55,7 +55,7 @@ func run(r Reporter, name string, f func(r Reporter)) {
 		defer func() {
 			err := recover()
 			if err != nil {
-				fmt.Println(err)
+				fmt.Println(err) // nolint:forbidigo
 			}
 			if child.Failed() {
 				r.Fail()

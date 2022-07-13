@@ -121,6 +121,7 @@ func (r *Request) Invoke(ctx *context.Context) (*context.Context, interface{}, e
 
 			ctx = ctx.WithRequest(req)
 			reqMD, _ := metadata.FromOutgoingContext(reqCtx)
+			// nolint:exhaustruct
 			if b, err := yaml.Marshal(Request{
 				Method:   r.Method,
 				Metadata: reqMD,

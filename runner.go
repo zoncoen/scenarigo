@@ -39,7 +39,7 @@ type Runner struct {
 
 // NewRunner returns a new test runner.
 func NewRunner(opts ...func(*Runner) error) (*Runner, error) {
-	r := &Runner{}
+	r := &Runner{} // nolint:exhaustruct
 	r.enabledColor = !color.NoColor
 	for _, opt := range opts {
 		if err := opt(r); err != nil {

@@ -221,6 +221,7 @@ type MultiPathError struct {
 func (e *MultiPathError) Error() string {
 	var mulerr error
 	mulerr = &multierror.Error{
+		Errors: nil,
 		ErrorFormat: func(es []error) string {
 			if len(es) == 1 {
 				return fmt.Sprintf("1 error occurred:%s\n\n", strings.TrimLeft(es[0].Error(), "\t"))

@@ -12,6 +12,7 @@ import (
 	"github.com/zoncoen/scenarigo/internal/reflectutil"
 )
 
+// nolint:exhaustruct
 var (
 	yamlMapItemType = reflect.TypeOf(yaml.MapItem{})
 	lazyFuncType    = reflect.TypeOf(lazyFunc{})

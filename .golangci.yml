@@ -49,6 +49,21 @@ issues:
 linters-settings:
   exhaustive:
     default-signifies-exhaustive: true
+  exhaustruct:
+    exclude:
+    - 'cobra\.Command$'
+    - 'http\.Client$'
+    - 'http\.Server$'
+    - 'xml\.Name$'
+    - 'github\.com/zoncoen/scenarigo/errors\.MultiPathError$'
+    - 'github\.com/zoncoen/scenarigo/errors\.PathError$'
+    - 'github\.com/zoncoen/scenarigo/internal/testutil\.reporter$'
+    - 'github\.com/zoncoen/scenarigo/mock/protocol/http\.server$'
+    - 'github\.com/zoncoen/scenarigo/reporter\..+Report$'
+    - 'github\.com/zoncoen/scenarigo/reporter\.[a-z].+$'
+    - 'github\.com/zoncoen/scenarigo/template/ast\..+$'
+    - 'github\.com/zoncoen/scenarigo/template/parser\..+$'
+    - 'github\.com/zoncoen/scenarigo/template\.Template$'
   stylecheck:
     checks:
     - all

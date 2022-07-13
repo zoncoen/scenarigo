@@ -66,6 +66,7 @@ func (r *Request) Invoke(ctx *context.Context) (*context.Context, interface{}, e
 	}
 
 	ctx = ctx.WithRequest(reqBody)
+	// nolint:exhaustruct
 	if b, err := yaml.Marshal(Request{
 		Method: req.Method,
 		URL:    req.URL.String(),
@@ -103,6 +104,7 @@ func (r *Request) Invoke(ctx *context.Context) (*context.Context, interface{}, e
 
 	rvalue := response{
 		Header: resp.Header,
+		Body:   nil,
 		status: resp.Status,
 	}
 	if len(b) > 0 {

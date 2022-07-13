@@ -16,9 +16,11 @@ linters:
     - lll
     - nestif
     - nlreturn
+    - paralleltest
     - prealloc
     - scopelint
     - testpackage
+    - tparallel
     - unparam
     - varnamelen
     - wrapcheck

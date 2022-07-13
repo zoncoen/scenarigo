@@ -13,6 +13,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"text/template"
 	"time"
 
 	"github.com/sergi/go-diff/diffmatchpatch"
@@ -21,6 +22,7 @@ import (
 	"golang.org/x/mod/modfile"
 	"golang.org/x/mod/module"
 
+	"github.com/zoncoen/scenarigo"
 	"github.com/zoncoen/scenarigo/cmd/scenarigo/cmd/config"
 )
 
@@ -59,11 +61,17 @@ go 1.17
 `, m)
 	}
 
-	b, err := os.ReadFile("testdata/go1.17.mod.golden")
+	tmpl, err := template.ParseFiles("testdata/go1.17.mod.tmpl")
 	if err != nil {
 		t.Fatal(err)
 	}
-	gomodWithRequire := string(b)
+	var b bytes.Buffer
+	if err := tmpl.Execute(&b, map[string]string{
+		"grpcGoVersion": grpcGoVersion(t),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	gomodWithRequire := b.String()
 
 	setupGitServer(t)
 
@@ -351,6 +359,21 @@ plugins:
 			})
 		}
 	})
+}
+
+func grpcGoVersion(t *testing.T) string {
+	t.Helper()
+	gomod, err := modfile.Parse("go.mod", scenarigo.GoModBytes, nil)
+	if err != nil {
+		t.Fatalf("failed to parse go.mod of scenarigo: %s", err)
+	}
+	for _, r := range gomod.Require {
+		if r.Mod.Path == "google.golang.org/grpc" {
+			return r.Mod.Version
+		}
+	}
+	t.Fatal("oogle.golang.org/grpc not found")
+	return ""
 }
 
 func TestFindGoCmd(t *testing.T) {

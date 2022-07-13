@@ -47,6 +47,7 @@ issues:
         - forcetypeassert
         - goconst
         - noctx
+        - maintidx
 
 linters-settings:
   cyclop:
@@ -68,6 +69,8 @@ linters-settings:
     - 'github\.com/zoncoen/scenarigo/template/ast\..+$'
     - 'github\.com/zoncoen/scenarigo/template/parser\..+$'
     - 'github\.com/zoncoen/scenarigo/template\.Template$'
+  maintidx:
+    under: 30
   stylecheck:
     checks:
     - all

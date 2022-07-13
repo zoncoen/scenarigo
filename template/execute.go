@@ -44,6 +44,7 @@ func structFieldName(field reflect.StructField) string {
 	return fieldName
 }
 
+// nolint:gocyclo,cyclop
 func execute(in reflect.Value, data interface{}) (reflect.Value, error) {
 	v := reflectutil.Elem(in)
 	switch v.Kind() {

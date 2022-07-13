@@ -49,6 +49,8 @@ issues:
         - noctx
 
 linters-settings:
+  cyclop:
+    max-complexity: 25
   exhaustive:
     default-signifies-exhaustive: true
   exhaustruct:

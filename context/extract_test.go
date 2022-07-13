@@ -1,7 +1,6 @@
 package context
 
 import (
-	"os"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -10,10 +9,7 @@ import (
 )
 
 func TestContext_ExtractKey(t *testing.T) {
-	if err := os.Setenv("TEST_PORT", "5000"); err != nil {
-		t.Fatalf("unexpected error: %s", err)
-	}
-	defer os.Unsetenv("TEST_PORT")
+	t.Setenv("TEST_PORT", "5000")
 
 	vars := map[string]string{
 		"foo": "bar",

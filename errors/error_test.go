@@ -20,22 +20,24 @@ func validatePath(t *testing.T, e *PathError, path string) {
 
 func TestNew(t *testing.T) {
 	err := New("message")
-	if _, ok := err.(Error); ok {
+	var e Error
+	if errors.As(err, &e) {
 		t.Fatalf("expect github.com/pkg/errors instance. but %T", err)
 	}
 }
 
 func TestErrorf(t *testing.T) {
 	err := Errorf("%s", "message")
-	if _, ok := err.(Error); ok {
+	var e Error
+	if errors.As(err, &e) {
 		t.Fatalf("expect github.com/pkg/errors instance. but %T", err)
 	}
 }
 
 func TestErrorPath(t *testing.T) {
 	err := ErrorPath("path", "message")
-	e, ok := err.(*PathError)
-	if !ok {
+	var e *PathError
+	if !errors.As(err, &e) {
 		t.Fatalf("expect PathError instance. but %T", err)
 	}
 	validatePath(t, e, "path")
@@ -46,8 +48,8 @@ func TestErrorPath(t *testing.T) {
 
 func TestErrorPathf(t *testing.T) {
 	err := ErrorPathf("path", "%s", "message")
-	e, ok := err.(*PathError)
-	if !ok {
+	var e *PathError
+	if !errors.As(err, &e) {
 		t.Fatalf("expect PathError instance. but %T", err)
 	}
 	validatePath(t, e, "path")
@@ -62,9 +64,9 @@ func TestErrorQueryf(t *testing.T) {
 		t.Fatalf("%+v", err)
 	}
 	errQuery := ErrorQueryf(q, "%s", "message")
-	e, ok := errQuery.(*PathError)
-	if !ok {
-		t.Fatalf("expect PathError instance. but %T", errQuery)
+	var e *PathError
+	if !errors.As(errQuery, &e) {
+		t.Fatalf("expect %T instance. but %T", e, errQuery)
 	}
 	validatePath(t, e, "path")
 	if e.Err == nil {
@@ -83,8 +85,8 @@ func TestErrors(t *testing.T) {
 		if err == nil {
 			t.Error("no error")
 		}
-		errs, ok := err.(*MultiPathError)
-		if !ok {
+		var errs *MultiPathError
+		if !errors.As(err, &errs) {
 			t.Errorf("expect *MultiPathError but %T", err)
 		}
 		if l := len(errs.Errs); l != 2 {
@@ -105,9 +107,9 @@ func TestWrap(t *testing.T) {
 		if err.Error() != ".path: message2: message" {
 			t.Fatalf("unexpected error message: %s", err.Error())
 		}
-		e, ok := err.(*PathError)
-		if !ok {
-			t.Fatalf("expect PathError instance. but %T", err)
+		var e *PathError
+		if !errors.As(err, &e) {
+			t.Fatalf("expect %T instance. but %T", e, err)
 		}
 		validatePath(t, e, "path")
 	})
@@ -125,9 +127,9 @@ func TestWrapPath(t *testing.T) {
 		if err.Error() != ".b.a: message2: message" {
 			t.Fatalf("unexpected error message: %s", err.Error())
 		}
-		e, ok := err.(*PathError)
-		if !ok {
-			t.Fatalf("expect PathError instance. but %T", err)
+		var e *PathError
+		if !errors.As(err, &e) {
+			t.Fatalf("expect %T instance. but %T", e, err)
 		}
 		validatePath(t, e, "b.a")
 	})
@@ -145,9 +147,9 @@ func TestWrapf(t *testing.T) {
 		if err.Error() != ".path: message2: message" {
 			t.Fatalf("unexpected error message: %s", err.Error())
 		}
-		e, ok := err.(*PathError)
-		if !ok {
-			t.Fatalf("expect PathError instance. but %T", err)
+		var e *PathError
+		if !errors.As(err, &e) {
+			t.Fatalf("expect %T instance. but %T", e, err)
 		}
 		validatePath(t, e, "path")
 	})
@@ -165,9 +167,9 @@ func TestWrapPathf(t *testing.T) {
 		if err.Error() != ".b.a: message2: message" {
 			t.Fatalf("unexpected error message: %s", err.Error())
 		}
-		e, ok := err.(*PathError)
-		if !ok {
-			t.Fatalf("expect PathError instance. but %T", err)
+		var e *PathError
+		if !errors.As(err, &e) {
+			t.Fatalf("expect %T instance. but %T", e, err)
 		}
 		validatePath(t, e, "b.a")
 	})
@@ -185,9 +187,9 @@ func TestWithPath(t *testing.T) {
 		if err.Error() != ".b.a: message" {
 			t.Fatalf("unexpected error message: %s", err.Error())
 		}
-		e, ok := err.(*PathError)
-		if !ok {
-			t.Fatalf("expect PathError instance. but %T", err)
+		var e *PathError
+		if !errors.As(err, &e) {
+			t.Fatalf("expect %T instance. but %T", e, err)
 		}
 		validatePath(t, e, "b.a")
 	})
@@ -203,9 +205,9 @@ func TestWithQuery(t *testing.T) {
 		if errQuery.Error() != ".path: message" {
 			t.Fatalf("unexpected error message: %s", errQuery.Error())
 		}
-		e, ok := errQuery.(*PathError)
-		if !ok {
-			t.Fatalf("expect PathError instance. but %T", errQuery)
+		var e *PathError
+		if !errors.As(errQuery, &e) {
+			t.Fatalf("expect %T instance. but %T", e, errQuery)
 		}
 		validatePath(t, e, "path")
 	})
@@ -218,9 +220,9 @@ func TestWithQuery(t *testing.T) {
 		if errQuery.Error() != ".b.a: message" {
 			t.Fatalf("unexpected error message: %s", errQuery.Error())
 		}
-		e, ok := errQuery.(*PathError)
-		if !ok {
-			t.Fatalf("expect PathError instance. but %T", errQuery)
+		var e *PathError
+		if !errors.As(errQuery, &e) {
+			t.Fatalf("expect %T instance. but %T", e, errQuery)
 		}
 		validatePath(t, e, "b.a")
 	})
@@ -229,9 +231,9 @@ func TestWithQuery(t *testing.T) {
 func TestWithNodeAndColored(t *testing.T) {
 	node := ast.String(token.String("a", "a", nil))
 	err := WithNodeAndColored(ErrorPath("a", "message"), node, true)
-	e, ok := err.(*PathError)
-	if !ok {
-		t.Fatalf("expect PathError instance. but %T", err)
+	var e *PathError
+	if !errors.As(err, &e) {
+		t.Fatalf("expect %T instance. but %T", e, err)
 	}
 	if e.Node != node {
 		t.Fatal("failed to set node")
@@ -272,8 +274,9 @@ invalid a
 			Errors(ErrorPath("a", "invalid a")),
 			body, false,
 		)
-		if _, ok := multiErr.(*MultiPathError); !ok {
-			t.Fatalf("expect MultiPathError instance. but %T", err)
+		var e *MultiPathError
+		if !errors.As(multiErr, &e) {
+			t.Fatalf("expect %T instance. but %T", e, multiErr)
 		}
 		err := WithPath(multiErr, "path")
 		if "\n"+err.Error() != expected {
@@ -309,8 +312,9 @@ invalid c
 			),
 			body, false,
 		)
-		if _, ok := multiErr.(*MultiPathError); !ok {
-			t.Fatalf("expect MultiPathError instance. but %T", err)
+		var e *MultiPathError
+		if !errors.As(multiErr, &e) {
+			t.Fatalf("expect %T instance. but %T", e, multiErr)
 		}
 		err := WithPath(multiErr, "path")
 		if "\n"+err.Error() != expected {
@@ -335,7 +339,7 @@ unexpected error: invalid a
             ^
    5 |   c: 3
 unexpected error: invalid b
-unexpected error: invalid c
+.path: unexpected error: invalid c
 
 `
 		multiErr := WithNodeAndColored(
@@ -346,8 +350,9 @@ unexpected error: invalid c
 			),
 			body, false,
 		)
-		if _, ok := multiErr.(*MultiPathError); !ok {
-			t.Fatalf("expect MultiPathError instance. but %T", err)
+		var e *MultiPathError
+		if !errors.As(multiErr, &e) {
+			t.Fatalf("expect %T instance. but %T", e, multiErr)
 		}
 		err := WrapPath(multiErr, "path", "unexpected error")
 		if "\n"+err.Error() != expected {

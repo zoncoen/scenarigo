@@ -1,3 +1,4 @@
+//go:build !race
 // +build !race
 
 package scenarigo
@@ -156,12 +157,8 @@ func startGRPCServer(t *testing.T) func() {
 		t.Fatalf("unexpected error: %s", err)
 	}
 
-	if err := os.Setenv("TEST_GRPC_SERVER_ADDR", ln.Addr().String()); err != nil {
-		t.Fatalf("unexpected error: %s", err)
-	}
-	if err := os.Setenv("TEST_TOKEN", token); err != nil {
-		t.Fatalf("unexpected error: %s", err)
-	}
+	t.Setenv("TEST_GRPC_SERVER_ADDR", ln.Addr().String())
+	t.Setenv("TEST_TOKEN", token)
 
 	go func() {
 		_ = s.Serve(ln)
@@ -169,8 +166,6 @@ func startGRPCServer(t *testing.T) func() {
 
 	return func() {
 		s.Stop()
-		os.Unsetenv("TEST_GRPC_SERVER_ADDR")
-		os.Unsetenv("TEST_TOKEN")
 	}
 }
 
@@ -209,6 +204,7 @@ func runMockServer(t *testing.T, filename string, ignoreMocksRemainError bool) f
 		os.Setenv(fmt.Sprintf("TEST_%s_ADDR", strings.ToUpper(p)), addr)
 	}
 	return func(t *testing.T) {
+		t.Helper()
 		c, cancel := gocontext.WithTimeout(gocontext.Background(), time.Second)
 		defer cancel()
 		if err := srv.Stop(c); err != nil {

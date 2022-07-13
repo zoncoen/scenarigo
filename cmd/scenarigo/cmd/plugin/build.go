@@ -27,7 +27,7 @@ var gomodVer string
 func init() {
 	gomod, err := modfile.Parse("go.mod", scenarigo.GoModBytes, nil)
 	if err != nil {
-		panic(fmt.Errorf("failed to parse go.mod of scenarigo: %s", err))
+		panic(fmt.Errorf("failed to parse go.mod of scenarigo: %w", err))
 	}
 	gomodVer = gomod.Go.Version
 }
@@ -125,6 +125,7 @@ func checkGoVersion(ctx context.Context, goCmd, ver string) error {
 		return errors.New("invalid version output or scenarigo bug")
 	}
 	if v := items[2]; v != ver {
+		// nolint:revive
 		return fmt.Errorf(`required %s but installed %s
 
 You can install the required version of Go by the following commands:
@@ -292,7 +293,7 @@ func updateGoMod(cmd *cobra.Command, goCmd, gomodPath string, requires []*modfil
 		}
 		return nil
 	}); err != nil {
-		return fmt.Errorf("failed to edit require directives: %s", err)
+		return fmt.Errorf("failed to edit require directives: %w", err)
 	}
 
 	if err := editGoMod(cmd, goCmd, gomodPath, func(gomod *modfile.File) error {
@@ -314,7 +315,7 @@ func updateGoMod(cmd *cobra.Command, goCmd, gomodPath string, requires []*modfil
 		}
 		return nil
 	}); err != nil {
-		return fmt.Errorf("failed to edit replace directives: %s", err)
+		return fmt.Errorf("failed to edit replace directives: %w", err)
 	}
 
 	return nil
@@ -357,7 +358,7 @@ func editGoMod(cmd *cobra.Command, goCmd, gomodPath string, edit func(*modfile.F
 func requiredModules() ([]*modfile.Require, error) {
 	gomod, err := modfile.Parse("go.mod", scenarigo.GoModBytes, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse go.mod of scenarigo: %s", err)
+		return nil, fmt.Errorf("failed to parse go.mod of scenarigo: %w", err)
 	}
 	if v := version.String(); !strings.HasSuffix(v, "-dev") {
 		return append([]*modfile.Require{{

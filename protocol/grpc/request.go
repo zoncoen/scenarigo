@@ -87,76 +87,7 @@ func (r *Request) Invoke(ctx *context.Context) (*context.Context, interface{}, e
 		return ctx, nil, errors.ErrorPathf("method", `"%s.%s" must be "func(context.Context, proto.Message, ...grpc.CallOption) (proto.Message, error): %s"`, r.Client, r.Method, err)
 	}
 
-	reqCtx := ctx.RequestContext()
-	if r.Metadata != nil {
-		x, err := ctx.ExecuteTemplate(r.Metadata)
-		if err != nil {
-			return ctx, nil, errors.WrapPathf(err, "metadata", "failed to set metadata")
-		}
-		md, err := reflectutil.ConvertStringsMap(reflect.ValueOf(x))
-		if err != nil {
-			return nil, nil, errors.WrapPathf(err, "metadata", "failed to set metadata")
-		}
-
-		pairs := []string{}
-		for k, vs := range md {
-			vs := vs
-			for _, v := range vs {
-				pairs = append(pairs, k, v)
-			}
-		}
-		reqCtx = metadata.AppendToOutgoingContext(reqCtx, pairs...)
-	}
-
-	var in []reflect.Value
-	for i := 0; i < method.Type().NumIn(); i++ {
-		switch i {
-		case 0:
-			in = append(in, reflect.ValueOf(reqCtx))
-		case 1:
-			req := reflect.New(method.Type().In(i).Elem()).Interface()
-			if err := buildRequestMsg(ctx, req, r.Message); err != nil {
-				return ctx, nil, errors.WrapPathf(err, "message", "failed to build request message")
-			}
-
-			ctx = ctx.WithRequest(req)
-			reqMD, _ := metadata.FromOutgoingContext(reqCtx)
-			if b, err := yaml.Marshal(Request{
-				Method:   r.Method,
-				Metadata: reqMD,
-				Message:  req,
-			}); err == nil {
-				ctx.Reporter().Logf("request:\n%s", r.addIndent(string(b), indentNum))
-			} else {
-				ctx.Reporter().Logf("failed to dump request:\n%s", err)
-			}
-
-			in = append(in, reflect.ValueOf(req))
-		}
-	}
-
-	var header, trailer metadata.MD
-	in = append(in,
-		reflect.ValueOf(grpc.Header(&header)),
-		reflect.ValueOf(grpc.Trailer(&trailer)),
-	)
-
-	rvalues := method.Call(in)
-	message := rvalues[0].Interface()
-	resp := response{
-		Header:  header,
-		Trailer: trailer,
-		Message: message,
-		rvalues: rvalues,
-	}
-	ctx = ctx.WithResponse(message)
-	if b, err := yaml.Marshal(resp); err == nil {
-		ctx.Reporter().Logf("response:\n%s", r.addIndent(string(b), indentNum))
-	} else {
-		ctx.Reporter().Logf("failed to dump response:\n%s", err)
-	}
-
-	return ctx, resp, nil
+	return invoke(ctx, method, r)
 }
 
 func validateMethod(method reflect.Value) error {
@@ -194,6 +125,80 @@ func validateMethod(method reflect.Value) error {
 	}
 
 	return nil
+}
+
+func invoke(ctx *context.Context, method reflect.Value, r *Request) (*context.Context, interface{}, error) {
+	reqCtx := ctx.RequestContext()
+	if r.Metadata != nil {
+		x, err := ctx.ExecuteTemplate(r.Metadata)
+		if err != nil {
+			return ctx, nil, errors.WrapPathf(err, "metadata", "failed to set metadata")
+		}
+		md, err := reflectutil.ConvertStringsMap(reflect.ValueOf(x))
+		if err != nil {
+			return nil, nil, errors.WrapPathf(err, "metadata", "failed to set metadata")
+		}
+
+		pairs := []string{}
+		for k, vs := range md {
+			vs := vs
+			for _, v := range vs {
+				pairs = append(pairs, k, v)
+			}
+		}
+		reqCtx = metadata.AppendToOutgoingContext(reqCtx, pairs...)
+	}
+
+	var in []reflect.Value
+	for i := 0; i < method.Type().NumIn(); i++ {
+		switch i {
+		case 0:
+			in = append(in, reflect.ValueOf(reqCtx))
+		case 1:
+			req := reflect.New(method.Type().In(i).Elem()).Interface()
+			if err := buildRequestMsg(ctx, req, r.Message); err != nil {
+				return ctx, nil, errors.WrapPathf(err, "message", "failed to build request message")
+			}
+
+			ctx = ctx.WithRequest(req)
+			reqMD, _ := metadata.FromOutgoingContext(reqCtx)
+			// nolint:exhaustruct
+			if b, err := yaml.Marshal(Request{
+				Method:   r.Method,
+				Metadata: reqMD,
+				Message:  req,
+			}); err == nil {
+				ctx.Reporter().Logf("request:\n%s", r.addIndent(string(b), indentNum))
+			} else {
+				ctx.Reporter().Logf("failed to dump request:\n%s", err)
+			}
+
+			in = append(in, reflect.ValueOf(req))
+		}
+	}
+
+	var header, trailer metadata.MD
+	in = append(in,
+		reflect.ValueOf(grpc.Header(&header)),
+		reflect.ValueOf(grpc.Trailer(&trailer)),
+	)
+
+	rvalues := method.Call(in)
+	message := rvalues[0].Interface()
+	resp := response{
+		Header:  header,
+		Trailer: trailer,
+		Message: message,
+		rvalues: rvalues,
+	}
+	ctx = ctx.WithResponse(message)
+	if b, err := yaml.Marshal(resp); err == nil {
+		ctx.Reporter().Logf("response:\n%s", r.addIndent(string(b), indentNum))
+	} else {
+		ctx.Reporter().Logf("failed to dump response:\n%s", err)
+	}
+
+	return ctx, resp, nil
 }
 
 func buildRequestMsg(ctx *context.Context, req interface{}, src interface{}) error {

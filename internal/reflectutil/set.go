@@ -37,7 +37,7 @@ func Set(target, v reflect.Value) (retErr error) {
 }
 
 // Convert returns the value v converted to type t.
-func Convert(t reflect.Type, v reflect.Value) (ret reflect.Value, ok bool, retErr error) {
+func Convert(t reflect.Type, v reflect.Value) (_ reflect.Value, _ bool, retErr error) {
 	if !v.IsValid() {
 		return v, false, nil
 	}
@@ -49,17 +49,16 @@ func Convert(t reflect.Type, v reflect.Value) (ret reflect.Value, ok bool, retEr
 
 	if v.Type().ConvertibleTo(t) {
 		return v.Convert(t), true, nil
+	}
+	if v.Type().Kind() == reflect.Ptr {
+		if v.Elem().Type().ConvertibleTo(t) {
+			return v.Elem().Convert(t), true, nil
+		}
 	} else {
-		if v.Type().Kind() == reflect.Ptr {
-			if v.Elem().Type().ConvertibleTo(t) {
-				return v.Elem().Convert(t), true, nil
-			}
-		} else {
-			ptr := reflect.New(v.Type())
-			ptr.Elem().Set(v)
-			if ptr.Type().ConvertibleTo(t) {
-				return ptr.Convert(t), true, nil
-			}
+		ptr := reflect.New(v.Type())
+		ptr.Elem().Set(v)
+		if ptr.Type().ConvertibleTo(t) {
+			return ptr.Convert(t), true, nil
 		}
 	}
 

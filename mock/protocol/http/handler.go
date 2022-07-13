@@ -78,7 +78,7 @@ func NewHandler(iter *protocol.MockIterator, l logger.Logger) http.Handler {
 			return
 		}
 
-		var resp HTTPResponse
+		var resp Response
 		if err := mock.Response.Unmarshal(&resp); err != nil {
 			writeError(w, fmt.Errorf("failed to unmarshal response: %w", err), l)
 			return
@@ -89,11 +89,10 @@ func NewHandler(iter *protocol.MockIterator, l logger.Logger) http.Handler {
 			writeError(w, fmt.Errorf("failed to execute template of response body: %w", err), l)
 			return
 		}
-		if r, ok := v.(HTTPResponse); !ok {
+		resp, ok := v.(Response)
+		if !ok {
 			writeError(w, fmt.Errorf("failed to execute template of response body: %w", err), l)
 			return
-		} else {
-			resp = r
 		}
 		if err := resp.Write(w); err != nil {
 			l.Error(err, "failed to write response")
@@ -104,7 +103,9 @@ func NewHandler(iter *protocol.MockIterator, l logger.Logger) http.Handler {
 func writeError(w http.ResponseWriter, err error, l logger.Logger) {
 	w.Header().Add("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusInternalServerError)
-	w.Write([]byte(err.Error()))
+	if _, werr := w.Write([]byte(err.Error())); werr != nil {
+		err = fmt.Errorf("failed to write error response: %w", werr)
+	}
 	l.Error(err, "internal server error")
 }
 
@@ -133,6 +134,9 @@ func (e *expect) build(ctx *context.Context) (assert.Assertion, error) {
 	}
 
 	headerAssertion, err := assertutil.BuildHeaderAssertion(ctx, e.Header)
+	if err != nil {
+		return nil, errors.WrapPathf(err, "header", "invalid expect header")
+	}
 
 	expectBody, err := ctx.ExecuteTemplate(e.Body)
 	if err != nil {
@@ -158,15 +162,17 @@ func (e *expect) build(ctx *context.Context) (assert.Assertion, error) {
 	}), nil
 }
 
-// HTTPResponse represents an HTTP response.
-type HTTPResponse httpprotocol.Expect
+// Response represents an HTTP response.
+type Response httpprotocol.Expect
 
 // Write writes header and body.
-func (resp *HTTPResponse) Write(w http.ResponseWriter) error {
+func (resp *Response) Write(w http.ResponseWriter) error {
 	status, header, body, err := resp.extract()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
+		if _, werr := w.Write([]byte(err.Error())); werr != nil {
+			err = fmt.Errorf("failed to write error response: %w", werr)
+		}
 		return err
 	}
 	for k, vs := range header {
@@ -179,7 +185,7 @@ func (resp *HTTPResponse) Write(w http.ResponseWriter) error {
 	return err
 }
 
-func (resp *HTTPResponse) extract() (int, http.Header, []byte, error) {
+func (resp *Response) extract() (int, http.Header, []byte, error) {
 	status := http.StatusOK
 	if resp.Code != "" {
 		var err error

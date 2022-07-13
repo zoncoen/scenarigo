@@ -7,10 +7,15 @@ jobs:
     name: runner / golangci-lint
     runs-on: ubuntu-latest
     steps:
-      - name: Check out code into the Go module directory
-        uses: actions/checkout@v3
-      - name: golangci-lint
-        uses: docker://reviewdog/action-golangci-lint:v1 # pre-build docker image
-        with:
-          github_token: ${{ secrets.github_token }}
-          reporter: github-check
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v3
+    - name: golangci-lint
+      uses: reviewdog/action-golangci-lint@v2
+      with:
+        fail_on_error: true
+    - name: Install Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: 1.18.x
+    - name: looppointer
+      run: make lint/looppointer

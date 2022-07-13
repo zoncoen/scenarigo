@@ -43,7 +43,7 @@ func New(str string) (*Template, error) {
 }
 
 // Execute applies a parsed template to the specified data.
-func (t *Template) Execute(data interface{}) (ret interface{}, retErr error) {
+func (t *Template) Execute(data interface{}) (_ interface{}, retErr error) {
 	defer func() {
 		if err := recover(); err != nil {
 			retErr = fmt.Errorf("failed to execute: panic: %s", err)
@@ -52,7 +52,7 @@ func (t *Template) Execute(data interface{}) (ret interface{}, retErr error) {
 	v, err := t.executeExpr(t.expr, data)
 	if err != nil {
 		if strings.Contains(t.str, "\n") {
-			return nil, errors.Wrapf(err, "failed to execute: \n%s\n", t.str)
+			return nil, errors.Wrapf(err, "failed to execute: \n%s\n", t.str) // nolint:revive
 		}
 		return nil, errors.Wrapf(err, "failed to execute: %s", t.str)
 	}
@@ -283,16 +283,16 @@ func (t *Template) executeFuncCall(call *ast.CallExpr, data interface{}) (interf
 		return vs[0].Interface(), nil
 	case 2:
 		if !vs[0].IsValid() || !vs[0].CanInterface() {
-			return nil, errors.Errorf("first reruned value is invlid")
+			return nil, errors.Errorf("first reruned value is invalid")
 		}
 		if !vs[1].IsValid() || !vs[1].CanInterface() {
-			return nil, errors.Errorf("second reruned value is invlid")
+			return nil, errors.Errorf("second reruned value is invalid")
 		}
 		if vs[1].Type() != reflectutil.TypeError {
 			return nil, errors.Errorf("second returned value must be an error")
 		}
 		if !vs[1].IsNil() {
-			return nil, vs[1].Interface().(error)
+			return nil, vs[1].Interface().(error) // nolint:forcetypeassert
 		}
 		return vs[0].Interface(), nil
 	default:

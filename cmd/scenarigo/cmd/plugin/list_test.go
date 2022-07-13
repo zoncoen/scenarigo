@@ -51,7 +51,7 @@ config/gen/remote.so
 			if err != nil {
 				t.Fatalf("failed to get current directory: %s", err)
 			}
-			t.Cleanup(func() { os.Chdir(wd) })
+			t.Cleanup(func() { _ = os.Chdir(wd) })
 			if err := os.Chdir(filepath.Join(wd, test.wd)); err != nil {
 				t.Fatalf("failed to change working directory: %s", err)
 			}

@@ -30,9 +30,7 @@ func TestJSON_Unmarshal_BigInt(t *testing.T) {
 		t.Fatalf("unexpected error: %s", err)
 	}
 
-	expect := jsonString(t, in)
-	got := jsonString(t, out)
-	if got != expect {
+	if got, expect := jsonString(t, out), jsonString(t, in); got != expect {
 		t.Errorf("expect %s but got %s", expect, got)
 	}
 }

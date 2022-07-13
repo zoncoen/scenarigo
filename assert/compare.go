@@ -140,7 +140,7 @@ func convertToInt64(v interface{}) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	return vv.(int64), nil
+	return vv.(int64), nil // nolint:forcetypeassert
 }
 
 func convertToUint64(v interface{}) (uint64, error) {
@@ -148,7 +148,7 @@ func convertToUint64(v interface{}) (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	return vv.(uint64), nil
+	return vv.(uint64), nil // nolint:forcetypeassert
 }
 
 func convertToFloat64(v interface{}) (float64, error) {
@@ -156,7 +156,7 @@ func convertToFloat64(v interface{}) (float64, error) {
 	if err != nil {
 		return 0, err
 	}
-	return vv.(float64), nil
+	return vv.(float64), nil // nolint:forcetypeassert
 }
 
 func convertToBigInt(v interface{}) (*big.Int, error) {

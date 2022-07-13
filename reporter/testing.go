@@ -11,12 +11,14 @@ import (
 
 // FromT creates Reporter from t.
 func FromT(t *testing.T) Reporter {
+	t.Helper()
 	r := fromT(t, t.Name())
 	r.root = true
 	return r
 }
 
 func fromT(t *testing.T, name string) *testReporter {
+	t.Helper()
 	return &testReporter{
 		T:                t,
 		name:             name,

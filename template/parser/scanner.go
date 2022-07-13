@@ -204,6 +204,10 @@ func (s *scanner) scan() (int, token.Token, string) {
 		return pos, tok, lit
 	}
 
+	return s.scanToken()
+}
+
+func (s *scanner) scanToken() (int, token.Token, string) {
 	s.skipSpaces()
 	ch := s.read()
 	switch ch {

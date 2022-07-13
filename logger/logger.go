@@ -35,7 +35,8 @@ func NewLogger(l *log.Logger, level LogLevel) Logger {
 // NewNopLogger returns a no operation logger.
 func NewNopLogger() Logger {
 	return &logger{
-		level: LogLevelNone,
+		logger: nil,
+		level:  LogLevelNone,
 	}
 }
 

@@ -12,10 +12,10 @@ import (
 	"github.com/zoncoen/scenarigo/internal/reflectutil"
 )
 
+// nolint:exhaustruct
 var (
-	yamlMapItemType  = reflect.TypeOf(yaml.MapItem{})
-	yamlMapSliceType = reflect.TypeOf(yaml.MapSlice{})
-	lazyFuncType     = reflect.TypeOf(lazyFunc{})
+	yamlMapItemType = reflect.TypeOf(yaml.MapItem{})
+	lazyFuncType    = reflect.TypeOf(lazyFunc{})
 )
 
 // Execute executes templates of i with data.
@@ -27,7 +27,7 @@ func Execute(i, data interface{}) (interface{}, error) {
 	if v.IsValid() {
 		return v.Interface(), nil
 	}
-	return nil, nil
+	return nil, nil // nolint:nilnil
 }
 
 func structFieldName(field reflect.StructField) string {
@@ -44,6 +44,7 @@ func structFieldName(field reflect.StructField) string {
 	return fieldName
 }
 
+// nolint:gocyclo,cyclop,maintidx
 func execute(in reflect.Value, data interface{}) (reflect.Value, error) {
 	v := reflectutil.Elem(in)
 	switch v.Kind() {
@@ -70,7 +71,7 @@ func execute(in reflect.Value, data interface{}) (reflect.Value, error) {
 						}
 						e = x
 					}
-					f := ke.Interface().(lazyFunc)
+					f := ke.Interface().(lazyFunc) // nolint:forcetypeassert
 					res, err := executeLeftArrowFunction(f.f, e)
 					if err != nil {
 						return reflect.Value{}, fmt.Errorf("failed to execute left arrow function: %w", err)
@@ -82,7 +83,7 @@ func execute(in reflect.Value, data interface{}) (reflect.Value, error) {
 				if err != nil {
 					return reflect.Value{}, errors.WithPath(err, keyStr)
 				}
-				v.SetMapIndex(k, reflect.Value{}) //delete old value
+				v.SetMapIndex(k, reflect.Value{}) // delete old value
 				v.SetMapIndex(key, x)
 			}
 		}
@@ -116,7 +117,7 @@ func execute(in reflect.Value, data interface{}) (reflect.Value, error) {
 							}
 							value = x
 						}
-						f := ke.Interface().(lazyFunc)
+						f := ke.Interface().(lazyFunc) // nolint:forcetypeassert
 						res, err := executeLeftArrowFunction(f.f, value)
 						if err != nil {
 							return reflect.Value{}, fmt.Errorf("failed to execute left arrow function: %w", err)
@@ -172,7 +173,9 @@ func execute(in reflect.Value, data interface{}) (reflect.Value, error) {
 		// keep the original address
 		if in.Type().Kind() == reflect.Ptr && v.Type().Kind() == reflect.Ptr {
 			if v.Elem().Type().AssignableTo(in.Elem().Type()) {
-				reflectutil.Set(in.Elem(), v.Elem())
+				if err := reflectutil.Set(in.Elem(), v.Elem()); err != nil {
+					return reflect.Value{}, err
+				}
 				v = in
 			}
 		}
@@ -279,7 +282,9 @@ func replaceFuncs(in reflect.Value, s *funcStash) (reflect.Value, error) {
 		// keep the original address
 		if in.Type().Kind() == reflect.Ptr && v.Type().Kind() == reflect.Ptr {
 			if v.Elem().Type().AssignableTo(in.Elem().Type()) {
-				reflectutil.Set(in.Elem(), v.Elem())
+				if err := reflectutil.Set(in.Elem(), v.Elem()); err != nil {
+					return reflect.Value{}, err
+				}
 				v = in
 			}
 		}
@@ -298,7 +303,7 @@ func isNil(v reflect.Value) bool {
 
 // convert returns a function that converts a value to the given type t.
 func convert(t reflect.Type) func(reflect.Value, error) (reflect.Value, error) {
-	return func(v reflect.Value, err error) (result reflect.Value, resErr error) {
+	return func(v reflect.Value, err error) (reflect.Value, error) {
 		if err != nil {
 			return v, err
 		}

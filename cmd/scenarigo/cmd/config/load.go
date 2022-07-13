@@ -18,7 +18,7 @@ func Load(cfgpath string) (*schema.Config, error) {
 	cfg, err := schema.LoadConfig(DefaultConfigFileName, !color.NoColor)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil, nil
+			return nil, nil // nolint:nilnil
 		}
 		return nil, err
 	}

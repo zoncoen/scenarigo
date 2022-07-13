@@ -8,7 +8,8 @@ import (
 	"github.com/zoncoen/scenarigo/protocol"
 )
 
-func init() {
+// Register registers grpc protocol.
+func Register() {
 	protocol.Register(&GRPC{})
 }
 

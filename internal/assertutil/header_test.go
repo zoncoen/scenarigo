@@ -15,7 +15,6 @@ func Test_BuildHeaderAssertion(t *testing.T) {
 		ok map[string][]string
 		ng map[string][]string
 	}{
-
 		"simple": {
 			in: `
 foo:

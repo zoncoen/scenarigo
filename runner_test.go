@@ -34,10 +34,7 @@ func TestRunnerWithScenarios(t *testing.T) {
 }
 
 func TestRunnerWithOptionsFromEnv(t *testing.T) {
-	if err := os.Setenv(envScenarigoColor, "true"); err != nil {
-		t.Fatalf("%+v", err)
-	}
-	defer os.Unsetenv(envScenarigoColor)
+	t.Setenv(envScenarigoColor, "true")
 	runner, err := NewRunner(
 		WithOptionsFromEnv(true),
 	)
@@ -172,8 +169,11 @@ func TestRunnerFail(t *testing.T) {
 			},
 		},
 		"run with yaml": {
-			yaml:  `invalid: value`,
-			setup: func(t *testing.T) func() { return func() {} },
+			yaml: `invalid: value`,
+			setup: func(t *testing.T) func() {
+				t.Helper()
+				return func() {}
+			},
 		},
 	}
 	for _, test := range tests {

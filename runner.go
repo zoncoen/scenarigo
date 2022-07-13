@@ -15,13 +15,16 @@ import (
 
 	"github.com/zoncoen/scenarigo/context"
 	"github.com/zoncoen/scenarigo/plugin"
+	"github.com/zoncoen/scenarigo/protocol/grpc"
+	"github.com/zoncoen/scenarigo/protocol/http"
 	"github.com/zoncoen/scenarigo/reporter"
 	"github.com/zoncoen/scenarigo/schema"
-
-	// Register default protocols.
-	_ "github.com/zoncoen/scenarigo/protocol/grpc"
-	_ "github.com/zoncoen/scenarigo/protocol/http"
 )
+
+func init() {
+	http.Register()
+	grpc.Register()
+}
 
 // Runner represents a test runner.
 type Runner struct {
@@ -36,7 +39,7 @@ type Runner struct {
 
 // NewRunner returns a new test runner.
 func NewRunner(opts ...func(*Runner) error) (*Runner, error) {
-	r := &Runner{}
+	r := &Runner{} // nolint:exhaustruct
 	r.enabledColor = !color.NoColor
 	for _, opt := range opts {
 		if err := opt(r); err != nil {
@@ -68,10 +71,8 @@ func WithConfig(config *schema.Config) func(*Runner) error {
 
 		var opts []func(r *Runner) error
 		opts = append(opts, WithScenarios(scenarios...))
-		pluginDir := r.rootDir
 		if config.PluginDirectory != "" {
-			pluginDir = filepath.Join(r.rootDir, config.PluginDirectory)
-			opts = append(opts, WithPluginDir(pluginDir))
+			opts = append(opts, WithPluginDir(filepath.Join(r.rootDir, config.PluginDirectory)))
 		}
 		for _, opt := range opts {
 			if err := opt(r); err != nil {
@@ -128,8 +129,7 @@ func WithScenariosFromReader(readers ...io.Reader) func(*Runner) error {
 
 // WithOptionsFromEnv returns a option which sets flag whether accepts configuration from ENV.
 // Currently Available ENV variables are the following.
-// - SCENARIGO_COLOR=(1|true|TRUE)
-// nolint:stylecheck
+//     - SCENARIGO_COLOR=(1|true|TRUE)
 func WithOptionsFromEnv(isEnv bool) func(*Runner) error {
 	return func(r *Runner) error {
 		if isEnv {

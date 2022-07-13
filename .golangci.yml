@@ -1,25 +1,41 @@
 linters:
   enable-all: true
   disable:
-    - gomnd
-    - gochecknoglobals
-    - godox
-    - lll
-    - funlen
-    - wsl
-    - gocognit
-    - scopelint
-    - gochecknoinits
-    - unparam
-    - interfacer
-    - prealloc
+    - containedctx
     - dupl
-    - testpackage
+    - funlen
+    - gci
+    - gochecknoglobals
+    - gochecknoinits
+    - gocognit
+    - godox
     - goerr113
-    - maligned
+    - gomnd
+    - ifshort
+    - ireturn
+    - lll
     - nestif
     - nlreturn
-    - gci
+    - paralleltest
+    - prealloc
+    - scopelint
+    - testpackage
+    - tparallel
+    - unparam
+    - varnamelen
+    - wrapcheck
+    - wsl
+
+    # deplicated
+    - exhaustivestruct
+    - golint
+    - interfacer
+    - maligned
+    - scopelint
+
+    # TODO: v1.0.4 works correctly, but golangci-lint bundles v1.0.1.
+    - nonamedreturns
+
   skip-dirs:
     - gen
 
@@ -27,12 +43,37 @@ issues:
   exclude-rules:
     - path: _test.go
       linters:
+        - exhaustruct
+        - forcetypeassert
         - goconst
         - noctx
-    - linters:
-        - stylecheck
-      text: "ST1016:"
+        - maintidx
 
 linters-settings:
+  cyclop:
+    max-complexity: 25
   exhaustive:
     default-signifies-exhaustive: true
+  exhaustruct:
+    exclude:
+    - 'cobra\.Command$'
+    - 'http\.Client$'
+    - 'http\.Server$'
+    - 'xml\.Name$'
+    - 'github\.com/zoncoen/scenarigo/errors\.MultiPathError$'
+    - 'github\.com/zoncoen/scenarigo/errors\.PathError$'
+    - 'github\.com/zoncoen/scenarigo/internal/testutil\.reporter$'
+    - 'github\.com/zoncoen/scenarigo/mock/protocol/http\.server$'
+    - 'github\.com/zoncoen/scenarigo/reporter\..+Report$'
+    - 'github\.com/zoncoen/scenarigo/reporter\.[a-z].+$'
+    - 'github\.com/zoncoen/scenarigo/template/ast\..+$'
+    - 'github\.com/zoncoen/scenarigo/template/parser\..+$'
+    - 'github\.com/zoncoen/scenarigo/template\.Template$'
+  maintidx:
+    under: 30
+  stylecheck:
+    checks:
+    - all
+    # revive has same rules
+    - -ST1005
+    - -ST1006

@@ -36,9 +36,7 @@ func (r *logRecorder) all() []string {
 	r.m.Lock()
 	defer r.m.Unlock()
 	strs := make([]string, len(r.strs))
-	for i, str := range r.strs {
-		strs[i] = str
-	}
+	copy(strs, r.strs)
 	return strs
 }
 

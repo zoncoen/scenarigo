@@ -30,8 +30,7 @@ func TestRun(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	os.Setenv("TEST_ADDR", srv.URL)
-	defer os.Unsetenv("TEST_ADDR")
+	t.Setenv("TEST_ADDR", srv.URL)
 
 	wd, err := os.Getwd()
 	if err != nil {

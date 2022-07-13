@@ -35,10 +35,10 @@ func New(r reporter.Reporter) *Context {
 
 // FromT creates a new context from t.
 func FromT(t *testing.T) *Context {
+	t.Helper()
 	return newContext(context.Background(), context.Background(), reporter.FromT(t))
 }
 
-// nolint:golint
 func newContext(ctx context.Context, reqCtx context.Context, r reporter.Reporter) *Context {
 	return &Context{
 		ctx:      ctx,

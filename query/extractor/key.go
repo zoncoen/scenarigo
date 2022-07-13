@@ -10,6 +10,7 @@ import (
 	"github.com/zoncoen/scenarigo/internal/reflectutil"
 )
 
+// nolint:exhaustruct
 var (
 	yamlMapItemType  = reflect.TypeOf(yaml.MapItem{})
 	yamlMapSliceType = reflect.TypeOf(yaml.MapSlice{})
@@ -52,40 +53,7 @@ func (e *keyExtractor) extract(v reflect.Value) (reflect.Value, bool) {
 				return v.FieldByName("Value"), true
 			}
 		default:
-			inlines := []int{}
-		FIELD_LOOP:
-			for i := 0; i < v.Type().NumField(); i++ {
-				field := v.Type().FieldByIndex([]int{i})
-				if !v.Field(i).CanInterface() {
-					continue
-				}
-				name := strings.ToLower(field.Name)
-				if tag, ok := field.Tag.Lookup("yaml"); ok {
-					strs := strings.Split(tag, ",")
-					for _, opt := range strs[1:] {
-						if opt == "inline" {
-							inlines = append(inlines, i)
-							continue FIELD_LOOP // Do not extract by the inline field name.
-						}
-					}
-					if strs[0] != "" {
-						name = strs[0]
-					}
-				}
-				if field.Anonymous {
-					if len(inlines) == 0 || inlines[len(inlines)-1] != i {
-						inlines = append(inlines, i)
-					}
-				}
-				if name == e.key {
-					return v.FieldByIndex([]int{i}), true
-				}
-			}
-			for _, i := range inlines {
-				if val, ok := e.Extract(v.Field(i)); ok {
-					return val, true
-				}
-			}
+			return e.extractStruct(v)
 		}
 	case reflect.Slice:
 		if v.Type() == yamlMapSliceType {
@@ -100,6 +68,44 @@ func (e *keyExtractor) extract(v reflect.Value) (reflect.Value, bool) {
 			}
 		}
 	default:
+	}
+	return reflect.Value{}, false
+}
+
+func (e *keyExtractor) extractStruct(v reflect.Value) (reflect.Value, bool) {
+	inlines := []int{}
+FIELD_LOOP:
+	for i := 0; i < v.Type().NumField(); i++ {
+		field := v.Type().FieldByIndex([]int{i})
+		if !v.Field(i).CanInterface() {
+			continue
+		}
+		name := strings.ToLower(field.Name)
+		if tag, ok := field.Tag.Lookup("yaml"); ok {
+			strs := strings.Split(tag, ",")
+			for _, opt := range strs[1:] {
+				if opt == "inline" {
+					inlines = append(inlines, i)
+					continue FIELD_LOOP // Do not extract by the inline field name.
+				}
+			}
+			if strs[0] != "" {
+				name = strs[0]
+			}
+		}
+		if field.Anonymous {
+			if len(inlines) == 0 || inlines[len(inlines)-1] != i {
+				inlines = append(inlines, i)
+			}
+		}
+		if name == e.key {
+			return v.FieldByIndex([]int{i}), true
+		}
+	}
+	for _, i := range inlines {
+		if val, ok := e.Extract(v.Field(i)); ok {
+			return val, true
+		}
 	}
 	return reflect.Value{}, false
 }

@@ -7,7 +7,8 @@ import (
 	"github.com/zoncoen/scenarigo/protocol"
 )
 
-func init() {
+// Register registers http protocol.
+func Register() {
 	protocol.Register(&HTTP{})
 }
 

@@ -1,3 +1,4 @@
+//go:build !race
 // +build !race
 
 package scenarigo
@@ -70,11 +71,9 @@ func (s *testGRPCServer) Echo(ctx gocontext.Context, req *test.EchoRequest) (*te
 	if !ok {
 		return nil, status.Error(codes.Unauthenticated, "unauthenticated")
 	}
-	ts := md.Get("token")
-	if len(ts) == 0 {
+	if ts := md.Get("token"); len(ts) == 0 {
 		return nil, status.Error(codes.Unauthenticated, "unauthenticated")
-	}
-	if _, ok := s.users[ts[0]]; !ok {
+	} else if _, ok := s.users[ts[0]]; !ok {
 		sts, err := status.New(codes.Unauthenticated, "invalid token").
 			WithDetails(&errdetails.LocalizedMessage{
 				Locale:  "ja-JP",
@@ -494,16 +493,10 @@ func startHTTPServer(t *testing.T) func() {
 	})
 
 	s := httptest.NewServer(mux)
-	if err := os.Setenv("TEST_ADDR", s.URL); err != nil {
-		t.Fatalf("unexpected error: %s", err)
-	}
-	if err := os.Setenv("TEST_TOKEN", token); err != nil {
-		t.Fatalf("unexpected error: %s", err)
-	}
+	t.Setenv("TEST_ADDR", s.URL)
+	t.Setenv("TEST_TOKEN", token)
 
 	return func() {
 		s.Close()
-		os.Unsetenv("TEST_ADDR")
-		os.Unsetenv("TEST_TOKEN")
 	}
 }

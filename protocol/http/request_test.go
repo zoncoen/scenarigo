@@ -341,6 +341,7 @@ func TestRequest_buildRequest(t *testing.T) {
 		"empty request": {
 			req: &Request{},
 			expectReq: func(t *testing.T) *http.Request {
+				t.Helper()
 				req, err := http.NewRequest(http.MethodGet, "", nil)
 				if err != nil {
 					t.Fatalf("unexpected error: %s", err)
@@ -354,6 +355,7 @@ func TestRequest_buildRequest(t *testing.T) {
 				Header: map[string]string{"User-Agent": "custom/0.0.1"},
 			},
 			expectReq: func(t *testing.T) *http.Request {
+				t.Helper()
 				req, err := http.NewRequest(http.MethodGet, "", nil)
 				if err != nil {
 					t.Fatalf("unexpected error: %s", err)

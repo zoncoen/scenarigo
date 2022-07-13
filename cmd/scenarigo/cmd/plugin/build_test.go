@@ -67,7 +67,7 @@ go 1.17
 
 	setupGitServer(t)
 
-	t.Run("sucess", func(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
 		tests := map[string]struct {
 			config           string
 			files            map[string]string
@@ -223,7 +223,7 @@ plugins:
 				expectGoMod:      map[string]string{},
 				skipOpen:         true,
 			},
-			`src is a sub direcotry of remote git repository`: {
+			`src is a sub directory of remote git repository`: {
 				config: `
 schemaVersion: config/v1
 plugins:
@@ -936,7 +936,7 @@ func setupGitServer(t *testing.T) {
 		}
 		if err := os.Rename(
 			filepath.Join(repoDir, e.Name(), ".git"),
-			filepath.Join(tempDir, fmt.Sprintf("%s", e.Name())),
+			filepath.Join(tempDir, e.Name()),
 		); err != nil {
 			t.Fatalf("failed to rename: %s", err)
 		}
@@ -953,33 +953,23 @@ func setupGitServer(t *testing.T) {
 	if err := git.Listen("127.0.0.1:0"); err != nil {
 		t.Fatalf("failed to listen: %s", err)
 	}
-	go git.Serve()
+	go func() {
+		_ = git.Serve()
+	}()
 	t.Cleanup(func() {
-		git.Stop()
+		_ = git.Stop()
 	})
 
 	u, err := url.Parse(fmt.Sprintf("http://%s", git.Address()))
 	if err != nil {
 		t.Fatalf("failed to parse URL: %s", err)
 	}
-	setEnv(t, "GIT_SSH_COMMAND", fmt.Sprintf("ssh -p %s -i %s -oStrictHostKeyChecking=no -F /dev/null", u.Port(), filepath.Join(tempDir, "ssh", "gitkit.rsa")))
-	setEnv(t, "GOPRIVATE", "127.0.0.1")
-}
-
-func setEnv(t *testing.T, key, value string) {
-	t.Helper()
-	v, ok := os.LookupEnv(key)
-	os.Setenv(key, value)
-	t.Cleanup(func() {
-		if ok {
-			os.Setenv(key, v)
-		} else {
-			os.Unsetenv(key)
-		}
-	})
+	t.Setenv("GIT_SSH_COMMAND", fmt.Sprintf("ssh -p %s -i %s -oStrictHostKeyChecking=no -F /dev/null", u.Port(), filepath.Join(tempDir, "ssh", "gitkit.rsa")))
+	t.Setenv("GOPRIVATE", "127.0.0.1")
 }
 
 func create(t *testing.T, path, content string) {
+	t.Helper()
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0o777); err != nil {
 		t.Fatalf("failed to create %s: %s", dir, err)
@@ -995,6 +985,7 @@ func create(t *testing.T, path, content string) {
 }
 
 func createExecutable(t *testing.T, path, stdout string) {
+	t.Helper()
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0o777); err != nil {
 		t.Fatalf("failed to create %s: %s", dir, err)

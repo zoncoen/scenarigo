@@ -3,10 +3,10 @@ package schema
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/lestrrat-go/backoff"
-	"golang.org/x/xerrors"
 )
 
 // RetryPolicy represents a retry policy.
@@ -20,7 +20,7 @@ type RetryPolicy struct {
 func (p *RetryPolicy) Build() (backoff.Policy, error) {
 	if p != nil {
 		if p.Constant != nil && p.Exponential != nil {
-			return nil, xerrors.New("ambiguous retry policy")
+			return nil, errors.New("ambiguous retry policy")
 		}
 		if p.Constant != nil {
 			return p.Constant.Build()
@@ -46,13 +46,13 @@ func (p *RetryPolicyConstant) Build() (backoff.Policy, error) {
 	}
 	interval, err := time.ParseDuration(p.Interval)
 	if err != nil {
-		return nil, xerrors.Errorf("failed to parse interval: %w", err)
+		return nil, fmt.Errorf("failed to parse interval: %w", err)
 	}
 	opts := []backoff.Option{}
 	if p.MaxElapsedTime != nil {
 		t, err := time.ParseDuration(*p.MaxElapsedTime)
 		if err != nil {
-			return nil, xerrors.Errorf("failed to parse max elapsed time: %w", err)
+			return nil, fmt.Errorf("failed to parse max elapsed time: %w", err)
 		}
 		opts = append(opts, backoff.WithMaxElapsedTime(t))
 	}
@@ -78,7 +78,7 @@ func (p *RetryPolicyExponential) Build() (backoff.Policy, error) {
 	if p.InitialInterval != nil {
 		t, err := time.ParseDuration(*p.InitialInterval)
 		if err != nil {
-			return nil, xerrors.Errorf("failed to parse max elapsed time: %w", err)
+			return nil, fmt.Errorf("failed to parse max elapsed time: %w", err)
 		}
 		opts = append(opts, backoff.WithInterval(t))
 	}
@@ -91,14 +91,14 @@ func (p *RetryPolicyExponential) Build() (backoff.Policy, error) {
 	if p.MaxInterval != nil {
 		t, err := time.ParseDuration(*p.MaxInterval)
 		if err != nil {
-			return nil, xerrors.Errorf("failed to parse max interval: %w", err)
+			return nil, fmt.Errorf("failed to parse max interval: %w", err)
 		}
 		opts = append(opts, backoff.WithMaxInterval(t))
 	}
 	if p.MaxElapsedTime != nil {
 		t, err := time.ParseDuration(*p.MaxElapsedTime)
 		if err != nil {
-			return nil, xerrors.Errorf("failed to parse max elapsed time: %w", err)
+			return nil, fmt.Errorf("failed to parse max elapsed time: %w", err)
 		}
 		opts = append(opts, backoff.WithMaxElapsedTime(t))
 	}

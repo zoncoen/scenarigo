@@ -12,7 +12,7 @@ A scenario-based API testing tool for HTTP/gRPC server.
 ## Overview
 
 Scenarigo is a scenario-based API testing tool for HTTP/gRPC server.
-It is written in Go, enable to customize by [the plugin package of Go](https://golang.org/pkg/plugin/).
+It is written in Go and provides [a plugin feature](#plugin) that enables you to extend by writing Go code.
 You can write test scenarios as YAML files and executes them.
 
 ```yaml github.yaml
@@ -34,7 +34,7 @@ steps:
 
 ## Installation
 
-### go install command
+### go install command (recommend)
 
 ```shell
 $ go install github.com/zoncoen/scenarigo/cmd/scenarigo@v0.12.1
@@ -66,21 +66,21 @@ $ scenarigo config init
 ```yaml scenarigo.yaml
 schemaVersion: config/v1
 
-scenarios: []               # Specify test scenario files and directories.
+scenarios: [] # Specify test scenario files and directories.
 
-pluginDirectory: ./         # Specify the root directory of plugins.
-# plugins:                  # Specify configurations to build plugins.
-#   plugin.so:              # Map keys specify plugin output file path from the root directory of plugins.
-#     src: ./path/to/plugin # Specify the source file, directory, or "go gettable" module path of the plugin.
+pluginDirectory: ./gen    # Specify the root directory of plugins.
+plugins:                  # Specify configurations to build plugins.
+  plugin.so:              # Map keys specify plugin output file path from the root directory of plugins.
+    src: ./path/to/plugin # Specify the source file, directory, or "go gettable" module path of the plugin.
 
 output:
-  verbose: false          # Enable verbose output.
-  # colored: false        # Enable colored output with ANSI color escape codes. It is enabled by default but disabled when a NO_COLOR environment variable is set (regardless of its value).
-  # report:
-  #   json:
-  #     filename: ./report.json # Specify a filename for test report output in JSON.
-  #   junit:
-  #     filename: ./junit.xml # Specify a filename for test report output in JUnit XML format.
+  verbose: false # Enable verbose output.
+  colored: false # Enable colored output with ANSI color escape codes. It is enabled by default but disabled when a NO_COLOR environment variable is set (regardless of its value).
+  report:
+    json:
+      filename: ./report.json # Specify a filename for test report output in JSON.
+    junit:
+      filename: ./junit.xml   # Specify a filename for test report output in JUnit XML format.
 ```
 
 ## Usage
@@ -125,6 +125,7 @@ Usage:
   scenarigo [command]
 
 Available Commands:
+  completion  Generate the autocompletion script for the specified shell
   config      manage the scenarigo configuration file
   help        Help about any command
   list        list the test scenario files
@@ -264,4 +265,323 @@ steps:
     url: http://example.com/message
     query:
       id: '{{vars[0]}}'
+```
+
+## Plugin
+
+Scenarigo has a plugin mechanism that enables you to add new functionalities you need by writing Go code.
+This feature is based on [Go's standard library `plugin`](https://pkg.go.dev/plugin), which has the following limitations.
+
+- Supported on Linux, FreeBSD, and macOS only.
+- All plugins (and installed `scenarigo` command) must be built with the same version of the Go compiler and dependent packages.
+
+Scenarigo loads built plugins at runtime and accesses any exported variable or function via [template string](#template-string).
+
+See [the official document](https://pkg.go.dev/plugin) for details of the `plugin` package.
+
+### How to write plugins
+
+A Go plugin is a `main` package with **exported** variables and functions.
+
+```go main.go
+package main
+
+import "time"
+
+var Layout = "2006-01-02"
+
+func Today() string {
+	return time.Now().Format(Layout)
+}
+
+```
+
+You can use the variables and functions via template strings like below in your test scenarios.
+
+- `{{plugins.date.Layout}}` => `"2006-01-02"`
+- `{{plugins.date.Today()}}` => `"2022-02-22"`
+
+Scenarigo allows functions to return a value or a value and an error. The template string execution will fail if the function returns a non-nil error.
+
+
+```go main.go
+package main
+
+import "time"
+
+var Layout = "2006-01-02"
+
+func TodayIn(s string) (string, error) {
+	loc, err := time.LoadLocation(s)
+	if err != nil {
+		return "", err
+	}
+	return time.Now().In(loc).Format(Layout), nil
+}
+```
+
+- `{{plugins.date.TodayIn("UTC")}}` => `"2022-02-22"`
+- `{{plugins.date.TodayIn("INVALID")}}` => `failed to execute: {{plugins.date.TodayIn("INVALID")}}: unknown time zone INVALID`
+
+### How to build plugins
+
+Go plugin can be built with `go build -buildmode=plugin`, but we recommend you use `scenarigo plugin build` instead. The wrapper command requires `go` command installed in your machine.
+
+Scenarigo builds plugins according to the configuration.
+
+```yaml scenarigo.yaml
+schemaVersion: config/v1
+
+scenarios:
+- scenarios
+
+pluginDirectory: ./gen  # Specify the root directory of plugins.
+plugins:                # Specify configurations to build plugins.
+  date.so:              # Map keys specify plugin output file path from the root directory of plugins.
+    src: ./plugins/date # Specify the source file, directory, or "go gettable" module path of the plugin.
+```
+
+```shell
+.
+├── plugins
+│   └── date
+│       └── main.go
+├── scenarigo.yaml
+└── scenarios
+    └── echo.yaml
+```
+
+In this case, the plugin will be built and written to `date.so`.
+
+```shell
+$ scenarigo plugin build
+```
+
+```shell
+.
+├── gen
+│   └── date.so     # built plugin
+├── plugins
+│   └── date
+│       ├── go.mod  # generated automatically if not exists
+│       └── main.go
+├── scenarigo.yaml
+└── scenarios
+    └── echo.yaml
+```
+
+Scenarigo checks the dependent packages of each plugin before building. If the plugins depend on a different version of the same package, Scenarigo overrides `go.mod` files by the maximum version to avoid the build error.
+
+Now you can use the plugin in test scenarios.
+
+```yaml echo.yaml
+title: echo
+plugins:
+  date: date.so # relative path from "pluginDirectory"
+steps:
+- title: POST /echo
+  protocol: http
+  request:
+    method: POST
+    url: 'http://{{env.ECHO_ADDR}}/echo'
+    body:
+      message: '{{plugins.date.Today()}}'
+  expect:
+    code: 200
+```
+
+Scenarigo can download source codes from remote repositories and build it with [`go get`-able](https://go.dev/ref/mod#go-get) module query.
+
+```yaml scenarigo.yaml
+plugins:
+  uuid.so:
+    src: github.com/zoncoen-sample/scenarigo-plugins/uuid@latest
+```
+
+### Advanced features
+
+#### Setup Funciton
+
+[`plugin.RegisterSetup`](https://pkg.go.dev/github.com/zoncoen/scenarigo/plugin#RegisterSetup) registers a setup function that will be called before running scenario tests once only. If the registered function returns a non-nil function as a second returned value, it will be executed after finished all tests.
+
+```go main.go
+package main
+
+import (
+	"context"
+	"fmt"
+	"time"
+
+	"github.com/zoncoen/scenarigo/plugin"
+
+	secretmanager "cloud.google.com/go/secretmanager/apiv1"
+	secretmanagerpb "google.golang.org/genproto/googleapis/cloud/secretmanager/v1"
+)
+
+const (
+	projectName = "foo"
+)
+
+func init() {
+	plugin.RegisterSetup(setupClient)
+}
+
+var client *secretmanager.Client
+
+func setupClient(ctx *plugin.Context) (*plugin.Context, func(*plugin.Context)) {
+	var err error
+	client, err = secretmanager.NewClient(context.Background())
+	if err != nil {
+		ctx.Reporter().Fatalf("failed to create secretmanager client: %v", err)
+	}
+	return ctx, func(ctx *plugin.Context) {
+		client.Close()
+	}
+}
+
+func GetSecretString(name string) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	resp, err := client.AccessSecretVersion(ctx, &secretmanagerpb.AccessSecretVersionRequest{
+		Name: fmt.Sprintf("projects/%s/secrets/%s/versions/latest", projectName, name),
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed to get secret: %v", err)
+	}
+	return string(resp.Payload.Data), nil
+}
+```
+
+```yaml scenarigo.yaml
+plugins:
+  setup.so:
+    src: ./plugins/date # call "setupClient" before running test scenarios
+```
+
+Similarly, [`plugin.RegisterSetupEachScenario`](https://pkg.go.dev/github.com/zoncoen/scenarigo/plugin#RegisterSetupEachScenario) can register a setup function. The registered function will be called before each test scenario that uses the plugin.
+
+```go main.go
+package main
+
+import (
+	"github.com/zoncoen/scenarigo/plugin"
+
+	"github.com/google/uuid"
+)
+
+func init() {
+	plugin.RegisterSetupEachScenario(setRunID)
+}
+
+func setRunID(ctx *plugin.Context) (*plugin.Context, func(*plugin.Context)) {
+	return ctx.WithVars(map[string]string{
+		"runId": uuid.NewString(),
+	}), nil
+}
+```
+
+```yaml echo.yaml
+title: echo
+plugins:
+  setup: setup.so # call "setRunID" before running this test scenario
+steps:
+- title: POST /echo
+  protocol: http
+  request:
+    method: POST
+    url: 'http://{{env.ECHO_ADDR}}/echo'
+    header:
+      Run-Id: '{{vars.runId}}'
+    body:
+      message: hello
+  expect:
+    code: 200
+```
+
+#### Custom Step Function
+
+Generally, a `step` represents sending a request in Scenarigo. However, you can use a Go's function as a step with the plugin.
+
+```go main.go
+package main
+
+import (
+	"github.com/zoncoen/scenarigo/plugin"
+	"github.com/zoncoen/scenarigo/schema"
+)
+
+var Nop = plugin.StepFunc(func(ctx *plugin.Context, step *schema.Step) *plugin.Context {
+	ctx.Reporter().Log("nop step")
+	return ctx
+})
+```
+
+```yaml nop.yaml
+title: nop
+plugins:
+  step: step.so
+steps:
+- title: nop step
+  ref: '{{plugins.step.Nop}}'
+```
+
+#### Left Arrow Function (a function takes arguments in YAML)
+
+Scenarigo enables you to define a function that takes arguments in YAML for readability. It is called the "Left Arrow Function" since its syntax `{{funcName <-}}`.
+
+```go main.go
+package main
+
+import (
+	"errors"
+	"fmt"
+
+	"github.com/zoncoen/scenarigo/plugin"
+)
+
+var CoolFunc plugin.LeftArrowFunc = &fn{}
+
+type fn struct{}
+
+type arg struct {
+	Foo string `yaml:"foo"`
+	Bar string `yaml:"bar"`
+	Baz string `yaml:"baz"`
+}
+
+func (_ *fn) UnmarshalArg(unmarshal func(interface{}) error) (interface{}, error) {
+	var a arg
+	if err := unmarshal(&a); err != nil {
+		return nil, err
+	}
+	return &a, nil
+}
+
+func (_ *fn) Exec(in interface{}) (interface{}, error) {
+	a, ok := in.(*arg)
+	if !ok {
+		return nil, errors.New("arg must be a arg")
+	}
+	return fmt.Sprintf("foo: %s, bar: %s, baz: %s", a.Foo, a.Bar, a.Baz), nil
+}
+```
+
+```yaml echo.yaml
+title: echo
+plugins:
+  cool: cool.so
+steps:
+- title: POST /echo
+  protocol: http
+  request:
+    method: POST
+    url: 'http://{{env.ECHO_ADDR}}/echo'
+    body:
+      message:
+        '{{plugins.cool.CoolFunc <-}}':
+          foo: 1
+          bar: 2
+          baz: 3
+  expect:
+    code: 200
 ```

@@ -9,12 +9,14 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 	"golang.org/x/mod/modfile"
 	"golang.org/x/mod/module"
+	"golang.org/x/mod/semver"
 
 	"github.com/zoncoen/scenarigo"
 	"github.com/zoncoen/scenarigo/cmd/scenarigo/cmd/config"
@@ -62,6 +64,7 @@ func build(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	pbs := make([]*pluginBuilder, 0, len(cfg.Plugins))
 	pluginDir := filepathutil.From(cfg.Root, cfg.PluginDirectory)
 	for out, p := range cfg.Plugins {
 		mod := filepathutil.From(cfg.Root, p.Src)
@@ -77,8 +80,39 @@ func build(cmd *cobra.Command, args []string) error {
 		}
 		// NOTE: All module names must be unique and different from the standard modules.
 		defaultModName := filepath.Join("plugins", strings.TrimSuffix(out, ".so"))
-		if err := buildPlugin(cmd, goCmd, mod, src, filepathutil.From(pluginDir, out), defaultModName); err != nil {
+		pb, err := newPluginBuilder(cmd, goCmd, mod, src, filepathutil.From(pluginDir, out), defaultModName)
+		if err != nil {
 			return fmt.Errorf("failed to build plugin %s: %w", out, err)
+		}
+		pbs = append(pbs, pb)
+	}
+
+	// maximum version selection
+	overrides := map[string]*modfile.Require{}
+	for _, pb := range pbs {
+		for _, r := range pb.gomod.Require {
+			o, ok := overrides[r.Mod.Path]
+			if !ok {
+				overrides[r.Mod.Path] = r
+				continue
+			}
+			if semver.Compare(o.Mod.Version, r.Mod.Version) < 0 {
+				overrides[r.Mod.Path] = r
+			}
+		}
+	}
+
+	requires, err := requiredModulesByScenarigo()
+	if err != nil {
+		return err
+	}
+	for _, r := range requires {
+		overrides[r.Mod.Path] = r
+	}
+
+	for _, pb := range pbs {
+		if err := pb.build(cmd, goCmd, overrides); err != nil {
+			return fmt.Errorf("failed to build plugin %s: %w", pb.out, err)
 		}
 	}
 
@@ -213,12 +247,20 @@ func modSrcPath(tempDir, mod string) (string, string, error) {
 	return "", "", errors.New("module not found on go.mod")
 }
 
-func buildPlugin(cmd *cobra.Command, goCmd, mod, src, out, defaultModName string) error {
+type pluginBuilder struct {
+	dir       string
+	src       string
+	gomodPath string
+	gomod     *modfile.File
+	out       string
+}
+
+func newPluginBuilder(cmd *cobra.Command, goCmd, mod, src, out, defaultModName string) (*pluginBuilder, error) {
 	ctx := ctx(cmd)
 	dir := mod
 	info, err := os.Stat(mod)
 	if err != nil {
-		return fmt.Errorf("failed to find plugin src %s: %w", mod, err)
+		return nil, fmt.Errorf("failed to find plugin src %s: %w", mod, err)
 	}
 	if !info.IsDir() {
 		dir, src = filepath.Split(mod)
@@ -231,25 +273,44 @@ func buildPlugin(cmd *cobra.Command, goCmd, mod, src, out, defaultModName string
 			// ref. https://github.com/golang/go/wiki/Modules#why-does-go-mod-init-give-the-error-cannot-determine-module-path-for-source-directory
 			if strings.Contains(err.Error(), "cannot determine module path") {
 				if err := execute(ctx, dir, goCmd, "mod", "init", defaultModName); err != nil {
-					return fmt.Errorf("failed to initialize go.mod: %w", err)
+					return nil, fmt.Errorf("failed to initialize go.mod: %w", err)
 				}
 			} else {
-				return fmt.Errorf("failed to initialize go.mod: %w", err)
+				return nil, fmt.Errorf("failed to initialize go.mod: %w", err)
 			}
 		}
 	}
-	requires, err := requiredModules()
+
+	if err := execute(ctx, dir, goCmd, "mod", "tidy"); err != nil {
+		return nil, fmt.Errorf(`"go mod tidy" failed: %w`, err)
+	}
+
+	b, err := os.ReadFile(gomodPath)
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("failed to read %s: %w", gomodPath, err)
 	}
-	if err := updateGoMod(cmd, goCmd, gomodPath, requires); err != nil {
-		return err
-	}
-
-	if err := execute(ctx, dir, goCmd, "build", "-buildmode=plugin", "-o", out, src); err != nil {
-		return fmt.Errorf(`"go build -buildmode=plugin -o %s %s" failed: %w`, out, src, err)
+	gomod, err := modfile.Parse(gomodPath, b, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse %s: %w", gomodPath, err)
 	}
 
+	return &pluginBuilder{
+		dir:       dir,
+		src:       src,
+		gomodPath: gomodPath,
+		gomod:     gomod,
+		out:       out,
+	}, nil
+}
+
+func (pb *pluginBuilder) build(cmd *cobra.Command, goCmd string, overrides map[string]*modfile.Require) error {
+	ctx := ctx(cmd)
+	if err := updateGoMod(cmd, goCmd, pb.gomodPath, overrides); err != nil {
+		return err
+	}
+	if err := execute(ctx, pb.dir, goCmd, "build", "-buildmode=plugin", "-o", pb.out, pb.src); err != nil {
+		return fmt.Errorf(`"go build -buildmode=plugin -o %s %s" failed: %w`, pb.out, pb.src, err)
+	}
 	return nil
 }
 
@@ -271,16 +332,24 @@ func executeWithEnvs(ctx context.Context, envs []string, wd, name string, args .
 	return nil
 }
 
-func updateGoMod(cmd *cobra.Command, goCmd, gomodPath string, requires []*modfile.Require) error {
+func updateGoMod(cmd *cobra.Command, goCmd, gomodPath string, overrides map[string]*modfile.Require) error {
+	requireKeys := []string{}
+	requires := map[string]modfile.Require{}
 	replaces := map[string]modfile.Replace{}
+	overrideKeys := []string{}
 	if err := editGoMod(cmd, goCmd, gomodPath, func(gomod *modfile.File) error {
+		for _, r := range gomod.Require {
+			requireKeys = append(requireKeys, r.Mod.Path)
+			requires[r.Mod.Path] = *r
+		}
 		for _, r := range gomod.Replace {
 			replaces[r.Old.Path] = *r
 		}
 		if err := gomod.AddGoStmt(gomodVer); err != nil {
 			return fmt.Errorf("failed to edit %s: %w", gomodPath, err)
 		}
-		for _, r := range requires {
+		for _, r := range overrides {
+			overrideKeys = append(overrideKeys, r.Mod.Path)
 			if err := gomod.AddRequire(r.Mod.Path, r.Mod.Version); err != nil {
 				return fmt.Errorf("failed to edit %s: %w", gomodPath, err)
 			}
@@ -295,13 +364,24 @@ func updateGoMod(cmd *cobra.Command, goCmd, gomodPath string, requires []*modfil
 	}); err != nil {
 		return fmt.Errorf("failed to edit require directives: %w", err)
 	}
+	sort.Strings(requireKeys)
+	sort.Strings(overrideKeys)
 
 	if err := editGoMod(cmd, goCmd, gomodPath, func(gomod *modfile.File) error {
 		current := map[string]string{}
 		for _, r := range gomod.Require {
 			current[r.Mod.Path] = r.Mod.Version
 		}
-		for _, r := range requires {
+		for _, k := range requireKeys {
+			r := requires[k]
+			if v, ok := current[r.Mod.Path]; ok {
+				if r.Mod.Version != v {
+					fmt.Fprintf(cmd.OutOrStdout(), "%s: %s require %s %s => %s\n", warnColor.Sprint("WARN"), gomodPath, r.Mod.Path, r.Mod.Version, v)
+				}
+			}
+		}
+		for _, k := range overrideKeys {
+			r := overrides[k]
 			if v, ok := current[r.Mod.Path]; ok {
 				if r.Mod.Version != v {
 					if replaced, ok := replaces[r.Mod.Path]; !ok || replaced.New.Path != r.Mod.Path || replaced.New.Version != r.Mod.Version {
@@ -355,7 +435,7 @@ func editGoMod(cmd *cobra.Command, goCmd, gomodPath string, edit func(*modfile.F
 	return nil
 }
 
-func requiredModules() ([]*modfile.Require, error) {
+func requiredModulesByScenarigo() ([]*modfile.Require, error) {
 	gomod, err := modfile.Parse("go.mod", scenarigo.GoModBytes, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse go.mod of scenarigo: %w", err)

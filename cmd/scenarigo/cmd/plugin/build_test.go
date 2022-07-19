@@ -73,15 +73,19 @@ go 1.17
 	}
 	gomodWithRequire := b.String()
 
-	setupGitServer(t)
+	goCmd, err := findGoCmd(context.Background())
+	if err != nil {
+		t.Fatalf("failed to find go command: %s", err)
+	}
+	setupGitServer(t, goCmd)
 
 	t.Run("success", func(t *testing.T) {
 		tests := map[string]struct {
-			config           string
-			files            map[string]string
-			expectPluginPath string
-			expectGoMod      map[string]string
-			skipOpen         bool
+			config            string
+			files             map[string]string
+			expectPluginPaths []string
+			expectGoMod       map[string]string
+			skipOpen          bool
 		}{
 			"no plugins": {
 				config: `
@@ -98,7 +102,7 @@ plugins:
 				files: map[string]string{
 					"src/main.go": pluginCode,
 				},
-				expectPluginPath: "plugin.so",
+				expectPluginPaths: []string{"plugin.so"},
 				expectGoMod: map[string]string{
 					"src/go.mod": gomod("plugins/plugin"),
 				},
@@ -113,7 +117,7 @@ plugins:
 				files: map[string]string{
 					"src/main.go": pluginCode,
 				},
-				expectPluginPath: "gen/plugin.so",
+				expectPluginPaths: []string{"gen/plugin.so"},
 				expectGoMod: map[string]string{
 					"src/go.mod": gomod("plugins/gen/plugin"),
 				},
@@ -129,7 +133,7 @@ plugins:
 				files: map[string]string{
 					"src/main.go": pluginCode,
 				},
-				expectPluginPath: "gen/plugin.so",
+				expectPluginPaths: []string{"gen/plugin.so"},
 				expectGoMod: map[string]string{
 					"src/go.mod": gomod("plugins/plugin"),
 				},
@@ -159,7 +163,7 @@ go %s
 require google.golang.org/grpc v1.37.1
 `, goVersion),
 				},
-				expectPluginPath: "plugin.so",
+				expectPluginPaths: []string{"plugin.so"},
 				expectGoMod: map[string]string{
 					"src/go.mod": gomodWithRequire,
 				},
@@ -191,7 +195,7 @@ require google.golang.org/grpc v1.37.1
 replace google.golang.org/grpc v1.37.1 => google.golang.org/grpc v1.40.0
 `, goVersion),
 				},
-				expectPluginPath: "plugin.so",
+				expectPluginPaths: []string{"plugin.so"},
 				expectGoMod: map[string]string{
 					"src/go.mod": gomodWithRequire,
 				},
@@ -203,9 +207,9 @@ plugins:
   gen/plugin.so:
     src: 127.0.0.1/plugin.git
 `,
-				files:            map[string]string{},
-				expectPluginPath: "gen/plugin.so",
-				expectGoMod:      map[string]string{},
+				files:             map[string]string{},
+				expectPluginPaths: []string{"gen/plugin.so"},
+				expectGoMod:       map[string]string{},
 			},
 			`src is a remote git repository with version`: {
 				config: `
@@ -214,10 +218,10 @@ plugins:
   gen/plugin.so:
     src: 127.0.0.1/plugin.git@v1.0.0
 `,
-				files:            map[string]string{},
-				expectPluginPath: "gen/plugin.so",
-				expectGoMod:      map[string]string{},
-				skipOpen:         true,
+				files:             map[string]string{},
+				expectPluginPaths: []string{"gen/plugin.so"},
+				expectGoMod:       map[string]string{},
+				skipOpen:          true,
 			},
 			`src is a remote git repository with latest version`: {
 				config: `
@@ -226,10 +230,10 @@ plugins:
   gen/plugin.so:
     src: 127.0.0.1/plugin.git@latest
 `,
-				files:            map[string]string{},
-				expectPluginPath: "gen/plugin.so",
-				expectGoMod:      map[string]string{},
-				skipOpen:         true,
+				files:             map[string]string{},
+				expectPluginPaths: []string{"gen/plugin.so"},
+				expectGoMod:       map[string]string{},
+				skipOpen:          true,
 			},
 			`src is a sub directory of remote git repository`: {
 				config: `
@@ -238,9 +242,9 @@ plugins:
   gen/plugin.so:
     src: 127.0.0.1/sub.git/plugin@v1.0.0
 `,
-				files:            map[string]string{},
-				expectPluginPath: "gen/plugin.so",
-				expectGoMod:      map[string]string{},
+				files:             map[string]string{},
+				expectPluginPaths: []string{"gen/plugin.so"},
+				expectGoMod:       map[string]string{},
 			},
 			`should escape file path of remote repository`: {
 				config: `
@@ -249,9 +253,171 @@ plugins:
   gen/NeedEscape.so:
     src: 127.0.0.1/NeedEscape.git
 `,
-				files:            map[string]string{},
-				expectPluginPath: "gen/NeedEscape.so",
-				expectGoMod:      map[string]string{},
+				files:             map[string]string{},
+				expectPluginPaths: []string{"gen/NeedEscape.so"},
+				expectGoMod:       map[string]string{},
+			},
+			"multi plugins that require different module versions": {
+				config: `
+schemaVersion: config/v1
+pluginDirectory: gen
+plugins:
+  plugin1.so:
+    src: src/plugin1
+  plugin2.so:
+    src: src/plugin2
+  plugin3.so:
+    src: src/plugin3
+`,
+				files: map[string]string{
+					"src/plugin1/main.go": `package main
+
+import (
+	"fmt"
+
+	"127.0.0.1/gomodule.git"
+)
+
+var Dependency = fmt.Sprintf("plugin => %s", gomodule.Dependency)
+`,
+					"src/plugin1/go.mod": `module plugin1
+
+go 1.17
+
+require 127.0.0.1/gomodule.git v1.0.0
+`,
+					"src/plugin2/main.go": `package main
+
+import (
+	"fmt"
+
+	"127.0.0.1/gomodule.git"
+)
+
+var Dependency = fmt.Sprintf("plugin => %s", gomodule.Dependency)
+`,
+					"src/plugin2/go.mod": `module plugin2
+
+go 1.17
+
+require 127.0.0.1/gomodule.git v1.1.0
+`,
+					"src/plugin3/main.go": `package main
+
+import (
+	"fmt"
+
+	"127.0.0.1/gomodule.git/v2"
+)
+
+var Dependency = fmt.Sprintf("plugin => %s", gomodule.Dependency)
+`,
+					"src/plugin3/go.mod": `module plugin3
+
+go 1.17
+
+require 127.0.0.1/gomodule.git/v2 v2.0.0
+`,
+				},
+				expectPluginPaths: []string{
+					"gen/plugin1.so",
+					"gen/plugin2.so",
+					"gen/plugin3.so",
+				},
+				expectGoMod: map[string]string{
+					"src/plugin1/go.mod": `module plugin1
+
+go 1.17
+
+require 127.0.0.1/gomodule.git v1.1.0
+
+require 127.0.0.1/dependent-gomodule.git v1.1.0 // indirect
+`,
+					"src/plugin2/go.mod": `module plugin2
+
+go 1.17
+
+require 127.0.0.1/gomodule.git v1.1.0
+
+require 127.0.0.1/dependent-gomodule.git v1.1.0 // indirect
+`,
+					"src/plugin3/go.mod": `module plugin3
+
+go 1.17
+
+require 127.0.0.1/gomodule.git/v2 v2.0.0
+
+require 127.0.0.1/dependent-gomodule.git v1.1.0 // indirect
+`,
+				},
+			},
+			"multi plugins with incompatible module": {
+				config: `
+schemaVersion: config/v1
+pluginDirectory: gen
+plugins:
+  plugin1.so:
+    src: src/plugin1
+  plugin2.so:
+    src: src/plugin2
+`,
+				files: map[string]string{
+					"src/plugin1/main.go": `package main
+
+import (
+	"fmt"
+
+	"127.0.0.1/gomodule.git"
+)
+
+var Dependency = fmt.Sprintf("plugin => %s", gomodule.Dependency)
+`,
+					"src/plugin1/go.mod": `module plugin1
+
+go 1.17
+
+require 127.0.0.1/gomodule.git v1.0.0
+`,
+					"src/plugin2/main.go": `package main
+
+import (
+	"fmt"
+
+	"127.0.0.1/gomodule.git"
+)
+
+var Dependency = fmt.Sprintf("plugin => %s", gomodule.Dependency)
+`,
+					"src/plugin2/go.mod": `module plugin2
+
+go 1.17
+
+require 127.0.0.1/gomodule.git v2.0.0+incompatible
+`,
+				},
+				expectPluginPaths: []string{
+					"gen/plugin1.so",
+					"gen/plugin2.so",
+				},
+				expectGoMod: map[string]string{
+					"src/plugin1/go.mod": `module plugin1
+
+go 1.17
+
+require 127.0.0.1/gomodule.git v2.0.0+incompatible
+
+require 127.0.0.1/dependent-gomodule.git v1.0.0 // indirect
+`,
+					"src/plugin2/go.mod": `module plugin2
+
+go 1.17
+
+require 127.0.0.1/gomodule.git v2.0.0+incompatible
+
+require 127.0.0.1/dependent-gomodule.git v1.0.0 // indirect
+`,
+				},
+				skipOpen: true,
 			},
 		}
 		for name, test := range tests {
@@ -268,12 +434,12 @@ plugins:
 				if err := build(cmd, []string{}); err != nil {
 					t.Fatal(err)
 				}
-				if test.expectPluginPath != "" {
-					if _, err := os.Stat(filepath.Join(tmpDir, test.expectPluginPath)); err != nil {
+				for _, p := range test.expectPluginPaths {
+					if _, err := os.Stat(filepath.Join(tmpDir, p)); err != nil {
 						t.Fatalf("plugin not found: %s", err)
 					}
 					if !test.skipOpen {
-						openPlugin(t, filepath.Join(tmpDir, test.expectPluginPath))
+						openPlugin(t, filepath.Join(tmpDir, p))
 					}
 				}
 				for path, expect := range test.expectGoMod {
@@ -321,9 +487,37 @@ plugins:
 schemaVersion: config/v1
 plugins:
   plugin.so:
-    src: 127.0.0.1/plugin.git@v2.0.0
+    src: 127.0.0.1/plugin.git@v1.5.0
 `,
-				expect: "unknown revision v2.0.0",
+				expect: "unknown revision v1.5.0",
+			},
+			"incompatible module": {
+				config: `
+schemaVersion: config/v1
+pluginDirectory: gen
+plugins:
+  plugin.so:
+    src: src/plugin
+`,
+				files: map[string]string{
+					"src/plugin/main.go": `package main
+
+import (
+	"fmt"
+
+	"127.0.0.1/gomodule.git"
+)
+
+var Dependency = fmt.Sprintf("plugin => %s", gomodule.Dependency)
+`,
+					"src/plugin/go.mod": `module plugin1
+
+go 1.17
+
+require 127.0.0.1/gomodule.git v2.0.0
+`,
+				},
+				expect: `require 127.0.0.1/gomodule.git: version "v2.0.0" invalid: should be v0 or v1, not v2`,
 			},
 			"can't build remote module": {
 				config: `
@@ -618,6 +812,11 @@ require (
 	google.golang.org/protobuf v1.25.0 // indirect
 )
 `,
+			expectStdout: `WARN: /path/to/go.mod require github.com/golang/protobuf v1.4.2 => v1.4.3
+WARN: /path/to/go.mod require golang.org/x/net v0.0.0-20190311183353-d8887717615a => v0.0.0-20200822124328-c89045814202
+WARN: /path/to/go.mod require golang.org/x/sys v0.0.0-20190215142949-d0b11bdaac8a => v0.0.0-20200323222414-85ca7c5b95cd
+WARN: /path/to/go.mod require google.golang.org/grpc v1.37.1 => v1.40.0
+`,
 		},
 		"do nothing (same version)": {
 			gomod: `module plugin_module
@@ -897,7 +1096,11 @@ replace google.golang.org/grpc v1.46.0 => google.golang.org/grpc v1.40.0
 			cmd := &cobra.Command{}
 			var stdout bytes.Buffer
 			cmd.SetOutput(&stdout)
-			if err := updateGoMod(cmd, goCmd, gomod, test.requires); err != nil {
+			overrides := make(map[string]*modfile.Require, len(test.requires))
+			for _, r := range test.requires {
+				overrides[r.Mod.Path] = r
+			}
+			if err := updateGoMod(cmd, goCmd, gomod, overrides); err != nil {
 				t.Fatalf("failed to update go.mod: %s", err)
 			}
 
@@ -920,51 +1123,10 @@ replace google.golang.org/grpc v1.46.0 => google.golang.org/grpc v1.40.0
 	}
 }
 
-func setupGitServer(t *testing.T) {
+func setupGitServer(t *testing.T, goCmd string) {
 	t.Helper()
 
-	// create git objects for test repositories
 	tempDir := t.TempDir()
-	envs := []string{
-		fmt.Sprintf("GIT_CONFIG_GLOBAL=%s", filepath.Join(tempDir, ".gitconfig")),
-	}
-	ctx := context.Background()
-	if err := executeWithEnvs(ctx, envs, tempDir, "git", "config", "--global", "user.name", "scenarigo-test"); err != nil {
-		t.Fatalf("git config failed: %s", err)
-	}
-	if err := executeWithEnvs(ctx, envs, tempDir, "git", "config", "--global", "user.email", "scenarigo-test@example.com"); err != nil {
-		t.Fatalf("git config failed: %s", err)
-	}
-	repoDir := filepath.Join("testdata", "repos")
-	entries, err := os.ReadDir(repoDir)
-	if err != nil {
-		t.Fatalf("failed to read directory: %s", err)
-	}
-	for _, e := range entries {
-		if !e.IsDir() {
-			continue
-		}
-		wd := filepath.Join(repoDir, e.Name())
-		if err := executeWithEnvs(ctx, envs, wd, "git", "init"); err != nil {
-			t.Fatalf("git init failed: %s", err)
-		}
-		if err := executeWithEnvs(ctx, envs, wd, "git", "add", "-A"); err != nil {
-			t.Fatalf("git add failed: %s", err)
-		}
-		if err := executeWithEnvs(ctx, envs, wd, "git", "commit", "-m", "commit"); err != nil {
-			t.Fatalf("git commit failed: %s", err)
-		}
-		if err := executeWithEnvs(ctx, envs, wd, "git", "tag", "v1.0.0"); err != nil {
-			t.Fatalf("git commit failed: %s", err)
-		}
-		if err := os.Rename(
-			filepath.Join(repoDir, e.Name(), ".git"),
-			filepath.Join(tempDir, e.Name()),
-		); err != nil {
-			t.Fatalf("failed to rename: %s", err)
-		}
-	}
-
 	log.Default().SetOutput(io.Discard)
 	git := gitkit.NewSSH(gitkit.Config{
 		Dir:    tempDir,
@@ -989,6 +1151,81 @@ func setupGitServer(t *testing.T) {
 	}
 	t.Setenv("GIT_SSH_COMMAND", fmt.Sprintf("ssh -p %s -i %s -oStrictHostKeyChecking=no -F /dev/null", u.Port(), filepath.Join(tempDir, "ssh", "gitkit.rsa")))
 	t.Setenv("GOPRIVATE", "127.0.0.1")
+
+	ctx := context.Background()
+	envs := []string{
+		fmt.Sprintf("GIT_CONFIG_GLOBAL=%s", filepath.Join(tempDir, ".gitconfig")),
+		fmt.Sprintf("GOMODCACHE=%s", filepath.Join(tempDir, ".cache")),
+	}
+	t.Cleanup(func() {
+		if err := executeWithEnvs(ctx, envs, tempDir, goCmd, "clean", "-modcache"); err != nil {
+			t.Errorf("go clean -modcache failed: %s", err)
+		}
+	})
+
+	// create git objects for test repositories
+	if err := executeWithEnvs(ctx, envs, tempDir, "git", "config", "--global", "user.name", "scenarigo-test"); err != nil {
+		t.Fatalf("git config failed: %s", err)
+	}
+	if err := executeWithEnvs(ctx, envs, tempDir, "git", "config", "--global", "user.email", "scenarigo-test@example.com"); err != nil {
+		t.Fatalf("git config failed: %s", err)
+	}
+	repoDir := filepath.Join("testdata", "git")
+	entries, err := os.ReadDir(repoDir)
+	if err != nil {
+		t.Fatalf("failed to read directory: %s", err)
+	}
+	for _, e := range entries {
+		if !e.IsDir() {
+			continue
+		}
+		wd := filepath.Join(repoDir, e.Name())
+		if _, err := os.Stat(filepath.Join(wd, "go.mod")); err == nil {
+			if err := executeWithEnvs(ctx, envs, wd, goCmd, "mod", "tidy"); err != nil {
+				t.Fatalf("go mod tidy failed: %s", err)
+			}
+			t.Cleanup(func() {
+				os.RemoveAll(filepath.Join(wd, "go.sum"))
+			})
+		}
+		if _, err := os.Stat(filepath.Join(wd, "v2", "go.mod")); err == nil {
+			if err := executeWithEnvs(ctx, envs, filepath.Join(wd, "v2"), goCmd, "mod", "tidy"); err != nil {
+				t.Fatalf("go mod tidy failed: %s", err)
+			}
+			t.Cleanup(func() {
+				os.RemoveAll(filepath.Join(wd, "v2", "go.sum"))
+			})
+		}
+		if err := executeWithEnvs(ctx, envs, wd, "git", "init"); err != nil {
+			t.Fatalf("git init failed: %s", err)
+		}
+		t.Cleanup(func() {
+			os.RemoveAll(filepath.Join(wd, ".git"))
+		})
+		if err := executeWithEnvs(ctx, envs, wd, "git", "add", "-A"); err != nil {
+			t.Fatalf("git add failed: %s", err)
+		}
+		if err := executeWithEnvs(ctx, envs, wd, "git", "commit", "-m", "commit"); err != nil {
+			t.Fatalf("git commit failed: %s", err)
+		}
+		if err := executeWithEnvs(ctx, envs, wd, "git", "tag", "v1.0.0"); err != nil {
+			t.Fatalf("git tag failed: %s", err)
+		}
+		if err := executeWithEnvs(ctx, envs, wd, "git", "tag", "v1.1.0"); err != nil {
+			t.Fatalf("git tag failed: %s", err)
+		}
+		if _, err := os.Stat(filepath.Join(wd, "v2")); err == nil {
+			if err := executeWithEnvs(ctx, envs, wd, "git", "tag", "v2.0.0"); err != nil {
+				t.Fatalf("git tag failed: %s", err)
+			}
+		}
+		if err := os.Rename(
+			filepath.Join(repoDir, e.Name(), ".git"),
+			filepath.Join(tempDir, e.Name()),
+		); err != nil {
+			t.Fatalf("failed to rename: %s", err)
+		}
+	}
 }
 
 func create(t *testing.T, path, content string) {

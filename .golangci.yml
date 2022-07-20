@@ -16,6 +16,7 @@ linters:
     - lll
     - nestif
     - nlreturn
+    - nosnakecase
     - paralleltest
     - prealloc
     - scopelint
@@ -46,8 +47,8 @@ issues:
         - exhaustruct
         - forcetypeassert
         - goconst
-        - noctx
         - maintidx
+        - noctx
 
 linters-settings:
   cyclop:

@@ -1,5 +1,15 @@
 # CHANGELOG
 
+<a name="v0.12.2"></a>
+## [v0.12.2] - 2022-07-20
+### Bug Fixes
+- **mock:** fix nil error bug
+- **plugin:** force all plugins to use the same version of package
+
+### Code Refactoring
+- fix maintidx error
+- fix cyclop error
+
 <a name="v0.12.1"></a>
 ## [v0.12.1] - 2022-06-26
 ### Bug Fixes
@@ -231,6 +241,7 @@ change protocl.Protocol interface
 - first release
 
 
+[v0.12.2]: https://github.com/zoncoen/scenarigo/compare/v0.12.1...v0.12.2
 [v0.12.1]: https://github.com/zoncoen/scenarigo/compare/v0.12.0...v0.12.1
 [v0.12.0]: https://github.com/zoncoen/scenarigo/compare/v0.11.2...v0.12.0
 [v0.11.2]: https://github.com/zoncoen/scenarigo/compare/v0.11.1...v0.11.2

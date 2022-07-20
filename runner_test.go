@@ -158,9 +158,7 @@ func TestRunnerFail(t *testing.T) {
 				})
 
 				s := httptest.NewServer(mux)
-				if err := os.Setenv("TEST_ADDR", s.URL); err != nil {
-					t.Fatalf("unexpected error: %s", err)
-				}
+				t.Setenv("TEST_ADDR", s.URL)
 
 				return func() {
 					s.Close()

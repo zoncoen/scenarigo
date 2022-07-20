@@ -13,7 +13,6 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -246,12 +245,8 @@ func TestRunner_Run_Scenarios(t *testing.T) {
 					t.Fatalf("unexpected error: %s", err)
 				}
 
-				if err := os.Setenv("TEST_ADDR", ln.Addr().String()); err != nil {
-					t.Fatalf("unexpected error: %s", err)
-				}
-				if err := os.Setenv("TEST_TOKEN", token); err != nil {
-					t.Fatalf("unexpected error: %s", err)
-				}
+				t.Setenv("TEST_ADDR", ln.Addr().String())
+				t.Setenv("TEST_TOKEN", token)
 
 				go func() {
 					_ = s.Serve(ln)
@@ -259,8 +254,6 @@ func TestRunner_Run_Scenarios(t *testing.T) {
 
 				return func() {
 					s.Stop()
-					os.Unsetenv("TEST_ADDR")
-					os.Unsetenv("TEST_TOKEN")
 				}
 			},
 		},
@@ -299,13 +292,10 @@ func TestRunner_Run_Scenarios(t *testing.T) {
 				})
 
 				s := httptest.NewServer(mux)
-				if err := os.Setenv("TEST_ADDR", s.URL); err != nil {
-					t.Fatalf("unexpected error: %s", err)
-				}
+				t.Setenv("TEST_ADDR", s.URL)
 
 				return func() {
 					s.Close()
-					os.Unsetenv("TEST_ADDR")
 				}
 			},
 		},
@@ -322,13 +312,10 @@ func TestRunner_Run_Scenarios(t *testing.T) {
 				})
 
 				s := httptest.NewServer(mux)
-				if err := os.Setenv("TEST_ADDR", s.URL); err != nil {
-					t.Fatalf("unexpected error: %s", err)
-				}
+				t.Setenv("TEST_ADDR", s.URL)
 
 				return func() {
 					s.Close()
-					os.Unsetenv("TEST_ADDR")
 				}
 			},
 		},

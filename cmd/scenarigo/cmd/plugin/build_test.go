@@ -604,11 +604,7 @@ func TestFindGoCmd(t *testing.T) {
 				for cmd, stdout := range test.cmds {
 					createExecutable(t, filepath.Join(tmpDir, cmd), stdout)
 				}
-				path := os.Getenv("PATH")
-				t.Cleanup(func() {
-					os.Setenv("PATH", path)
-				})
-				os.Setenv("PATH", tmpDir)
+				t.Setenv("PATH", tmpDir)
 				goCmd, err := findGoCmd(context.Background())
 				if err != nil {
 					t.Fatal(err)
@@ -641,11 +637,7 @@ func TestFindGoCmd(t *testing.T) {
 				for cmd, stdout := range test.cmds {
 					createExecutable(t, filepath.Join(tmpDir, cmd), stdout)
 				}
-				path := os.Getenv("PATH")
-				t.Cleanup(func() {
-					os.Setenv("PATH", path)
-				})
-				os.Setenv("PATH", tmpDir)
+				t.Setenv("PATH", tmpDir)
 				_, err := findGoCmd(context.Background())
 				if err == nil {
 					t.Fatal("no error")

@@ -1,3 +1,6 @@
+run:
+  timeout: 10m
+
 linters:
   enable-all: true
   disable:
@@ -16,6 +19,7 @@ linters:
     - lll
     - nestif
     - nlreturn
+    - nosnakecase
     - paralleltest
     - prealloc
     - scopelint
@@ -33,9 +37,6 @@ linters:
     - maligned
     - scopelint
 
-    # TODO: v1.0.4 works correctly, but golangci-lint bundles v1.0.1.
-    - nonamedreturns
-
   skip-dirs:
     - gen
 
@@ -46,8 +47,8 @@ issues:
         - exhaustruct
         - forcetypeassert
         - goconst
-        - noctx
         - maintidx
+        - noctx
 
 linters-settings:
   cyclop:

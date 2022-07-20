@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"go/build"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -198,6 +199,20 @@ func downloadModule(ctx context.Context, goCmd, p string) (string, string, *modf
 	if err != nil {
 		return "", "", nil, clean, fmt.Errorf("failed to get module path: %w", err)
 	}
+
+	clean = func() {
+		os.RemoveAll(tempDir)
+		// The downloaded plugin module should be removed because its go.mod may have been modified.
+		if err := filepath.Walk(mod, func(path string, info fs.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			return os.Chmod(path, 0o777)
+		}); err == nil {
+			os.RemoveAll(mod)
+		}
+	}
+
 	if err := os.Chmod(mod, 0o755); err != nil {
 		return "", "", nil, clean, err
 	}

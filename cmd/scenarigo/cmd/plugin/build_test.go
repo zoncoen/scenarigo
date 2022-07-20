@@ -3,6 +3,7 @@ package plugin
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"go/build"
 	"io"
@@ -512,6 +513,14 @@ require 127.0.0.1/sub.git v1.0.0
 				}
 			})
 		}
+		t.Run("check cache", func(t *testing.T) {
+			m := filepath.Join(build.Default.GOPATH, "pkg", "mod", "127.0.0.1", "plugin.git@v1.0.0")
+			if _, err := os.Stat(m); err == nil {
+				t.Fatal("plugin module should be removed from the cache")
+			} else if !errors.Is(err, os.ErrNotExist) {
+				t.Fatalf("failed to get file info: %s", err)
+			}
+		})
 	})
 	t.Run("failure", func(t *testing.T) {
 		tests := map[string]struct {

@@ -96,6 +96,7 @@ func (s *server) setup() (func() error, error) {
 			}
 			s.handler.ServeHTTP(w, r)
 		}),
+		ReadHeaderTimeout: 5 * time.Second,
 	}
 	return func() error {
 		if err := s.srv.Serve(ln); err != nil {

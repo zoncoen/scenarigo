@@ -121,7 +121,9 @@ func TestHTTP_Server_Start_Failure(t *testing.T) {
 	}{
 		"server already started": {
 			server: &server{
-				srv: &http.Server{},
+				srv: &http.Server{
+					ReadHeaderTimeout: time.Second,
+				},
 			},
 			expect: "server already started",
 		},

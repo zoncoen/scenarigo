@@ -1,3 +1,7 @@
 package main
 
-import _ "127.0.0.1/sub.git/src"
+import (
+	"127.0.0.1/sub.git/src"
+)
+
+var Src = src.Src

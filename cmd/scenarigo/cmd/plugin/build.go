@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"go/build"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -43,14 +44,14 @@ Builds plugins based on the configuration file.
 This command requires go command in $PATH.
 `, "\n"),
 	Args:          cobra.ExactArgs(0),
-	RunE:          build,
+	RunE:          buildRun,
 	SilenceErrors: true,
 	SilenceUsage:  true,
 }
 
 var warnColor = color.New(color.Bold, color.FgYellow)
 
-func build(cmd *cobra.Command, args []string) error {
+func buildRun(cmd *cobra.Command, args []string) error {
 	cfg, err := config.Load(config.ConfigPath)
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
@@ -65,18 +66,20 @@ func build(cmd *cobra.Command, args []string) error {
 	}
 
 	pbs := make([]*pluginBuilder, 0, len(cfg.Plugins))
+	pluginModules := map[string]*modfile.Require{}
 	pluginDir := filepathutil.From(cfg.Root, cfg.PluginDirectory)
 	for out, p := range cfg.Plugins {
 		mod := filepathutil.From(cfg.Root, p.Src)
 		var src string
 		if _, err := os.Stat(mod); err != nil {
-			m, s, clean, err := downloadModule(ctx(cmd), goCmd, p.Src)
+			m, s, r, clean, err := downloadModule(ctx(cmd), goCmd, p.Src)
 			defer clean()
 			if err != nil {
 				return fmt.Errorf("failed to build plugin %s: %w", out, err)
 			}
 			mod = m
 			src = s
+			pluginModules[r.Mod.Path] = r
 		}
 		// NOTE: All module names must be unique and different from the standard modules.
 		defaultModName := filepath.Join("plugins", strings.TrimSuffix(out, ".so"))
@@ -100,6 +103,10 @@ func build(cmd *cobra.Command, args []string) error {
 				overrides[r.Mod.Path] = r
 			}
 		}
+	}
+
+	for m, r := range pluginModules {
+		overrides[m] = r
 	}
 
 	requires, err := requiredModulesByScenarigo()
@@ -171,62 +178,54 @@ You can install the required version of Go by the following commands:
 	return nil
 }
 
-func downloadModule(ctx context.Context, goCmd, p string) (string, string, func(), error) {
+func downloadModule(ctx context.Context, goCmd, p string) (string, string, *modfile.Require, func(), error) {
 	tempDir, err := os.MkdirTemp("", "scenarigo-plugin-")
 	if err != nil {
-		return "", "", func() {}, fmt.Errorf("failed to create a temporary directory: %w", err)
+		return "", "", nil, func() {}, fmt.Errorf("failed to create a temporary directory: %w", err)
 	}
-	goDir := filepath.Join(tempDir, "go")
 
-	envs := []string{
-		fmt.Sprintf("GOPATH=%s", goDir),
-		fmt.Sprintf("GOMODCACHE=%s", filepath.Join(goDir, "pkg", "mod")),
-	}
 	clean := func() {
-		if err := executeWithEnvs(ctx, envs, tempDir, goCmd, "clean", "-modcache"); err != nil {
-			return
-		}
 		os.RemoveAll(tempDir)
 	}
 
 	if err := execute(ctx, tempDir, goCmd, "mod", "init", "download_module"); err != nil {
-		return "", "", clean, fmt.Errorf("failed to initialize go.mod: %w", err)
+		return "", "", nil, clean, fmt.Errorf("failed to initialize go.mod: %w", err)
 	}
-	if err := executeWithEnvs(ctx, envs, tempDir, goCmd, downloadCmd(p)...); err != nil {
-		return "", "", clean, fmt.Errorf("failed to download %s: %w", p, err)
+	if err := execute(ctx, tempDir, goCmd, downloadCmd(p)...); err != nil {
+		return "", "", nil, clean, fmt.Errorf("failed to download %s: %w", p, err)
 	}
-	mod, src, err := modSrcPath(tempDir, p)
+	mod, src, req, err := modSrcPath(tempDir, p)
 	if err != nil {
-		return "", "", clean, fmt.Errorf("failed to get module path: %w", err)
+		return "", "", nil, clean, fmt.Errorf("failed to get module path: %w", err)
 	}
 	if err := os.Chmod(mod, 0o755); err != nil {
-		return "", "", clean, err
+		return "", "", nil, clean, err
 	}
 	if err := os.Chmod(filepath.Join(mod, "go.mod"), 0o644); err != nil {
 		if !os.IsNotExist(err) {
-			return "", "", clean, err
+			return "", "", nil, clean, err
 		}
 	}
 	if err := os.Chmod(filepath.Join(mod, "go.sum"), 0o644); err != nil {
 		if !os.IsNotExist(err) {
-			return "", "", clean, err
+			return "", "", nil, clean, err
 		}
 	}
 
-	return mod, src, clean, nil
+	return mod, src, req, clean, nil
 }
 
-func modSrcPath(tempDir, mod string) (string, string, error) {
+func modSrcPath(tempDir, mod string) (string, string, *modfile.Require, error) {
 	if i := strings.Index(mod, "@"); i >= 0 { // trim version
 		mod = mod[:i]
 	}
 	b, err := os.ReadFile(filepath.Join(tempDir, "go.mod"))
 	if err != nil {
-		return "", "", fmt.Errorf("failed to read file: %w", err)
+		return "", "", nil, fmt.Errorf("failed to read file: %w", err)
 	}
 	gomod, err := modfile.Parse("go.mod", b, nil)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to parse go.mod: %w", err)
+		return "", "", nil, fmt.Errorf("failed to parse go.mod: %w", err)
 	}
 	parts := strings.Split(mod, "/")
 	for i := len(parts); i > 1; i-- {
@@ -235,16 +234,16 @@ func modSrcPath(tempDir, mod string) (string, string, error) {
 			if r.Mod.Path == m {
 				p, err := module.EscapePath(r.Mod.Path)
 				if err != nil {
-					return "", "", fmt.Errorf("failed to escape module path %s: %w", r.Mod.Path, err)
+					return "", "", nil, fmt.Errorf("failed to escape module path %s: %w", r.Mod.Path, err)
 				}
 				return filepath.Join(
-					tempDir, "go", "pkg", "mod",
+					build.Default.GOPATH, "pkg", "mod",
 					fmt.Sprintf("%s@%s", p, r.Mod.Version),
-				), filepath.Join(parts[i:]...), nil
+				), filepath.Join(parts[i:]...), r, nil
 			}
 		}
 	}
-	return "", "", errors.New("module not found on go.mod")
+	return "", "", nil, errors.New("module not found on go.mod")
 }
 
 type pluginBuilder struct {

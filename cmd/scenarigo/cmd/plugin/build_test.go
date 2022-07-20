@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"go/build"
 	"io"
+	"io/fs"
 	"log"
 	"net/url"
 	"os"
@@ -78,6 +80,21 @@ go 1.17
 		t.Fatalf("failed to find go command: %s", err)
 	}
 	setupGitServer(t, goCmd)
+
+	t.Cleanup(func() {
+		cache := filepath.Join(build.Default.GOPATH, "pkg", "mod", "127.0.0.1")
+		if err := filepath.Walk(cache, func(path string, info fs.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			return os.Chmod(path, 0o777)
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.RemoveAll(cache); err != nil {
+			t.Fatal(err)
+		}
+	})
 
 	t.Run("success", func(t *testing.T) {
 		tests := map[string]struct {
@@ -419,6 +436,46 @@ require 127.0.0.1/dependent-gomodule.git v1.0.0 // indirect
 				},
 				skipOpen: true,
 			},
+			"override by go get-able module source": {
+				config: `
+schemaVersion: config/v1
+pluginDirectory: gen
+plugins:
+  plugin1.so:
+    src: src/plugin1
+  plugin2.so:
+    src: 127.0.0.1/sub.git/plugin@v1.0.0
+`,
+				files: map[string]string{
+					"src/plugin1/main.go": `package main
+
+import (
+	"127.0.0.1/sub.git/src"
+)
+
+var Src = src.Src
+`,
+					"src/plugin1/go.mod": `module plugin1
+
+go 1.17
+
+require 127.0.0.1/sub.git v1.1.0
+`,
+				},
+				expectPluginPaths: []string{
+					"gen/plugin1.so",
+					"gen/plugin2.so",
+				},
+				expectGoMod: map[string]string{
+					"src/plugin1/go.mod": `module plugin1
+
+go 1.17
+
+require 127.0.0.1/sub.git v1.0.0
+`,
+				},
+				skipOpen: true,
+			},
 		}
 		for name, test := range tests {
 			test := test
@@ -431,7 +488,7 @@ require 127.0.0.1/dependent-gomodule.git v1.0.0 // indirect
 				}
 				cmd := &cobra.Command{}
 				config.ConfigPath = configPath
-				if err := build(cmd, []string{}); err != nil {
+				if err := buildRun(cmd, []string{}); err != nil {
 					t.Fatal(err)
 				}
 				for _, p := range test.expectPluginPaths {
@@ -543,7 +600,7 @@ plugins:
 				}
 				cmd := &cobra.Command{}
 				config.ConfigPath = configPath
-				err := build(cmd, []string{})
+				err := buildRun(cmd, []string{})
 				if err == nil {
 					t.Fatal("no error")
 				}

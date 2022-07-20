@@ -34,9 +34,6 @@ linters:
     - maligned
     - scopelint
 
-    # TODO: v1.0.4 works correctly, but golangci-lint bundles v1.0.1.
-    - nonamedreturns
-
   skip-dirs:
     - gen
 

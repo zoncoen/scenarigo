@@ -14,6 +14,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 	"testing"
 	"text/template"
@@ -573,6 +574,172 @@ require 127.0.0.1/dependent-gomodule.git v1.1.0
 				},
 				skipOpen: true,
 			},
+			"override by local path replace": {
+				config: `
+schemaVersion: config/v1
+pluginDirectory: gen
+plugins:
+  plugin1.so:
+    src: src/plugin1
+`,
+				files: map[string]string{
+					"src/main.go": `package dependent
+
+var Dependency = "local-dependent"
+`,
+					"src/go.mod": `module 127.0.0.1/dependent-gomodule.git
+
+go 1.17
+`,
+					"src/plugin1/main.go": `package main
+
+import (
+	"fmt"
+
+	"127.0.0.1/gomodule.git"
+)
+
+var Dependency = fmt.Sprintf("plugin => %s", gomodule.Dependency)
+`,
+					"src/plugin1/go.mod": `module plugin1
+
+go 1.17
+
+require 127.0.0.1/gomodule.git v1.0.0
+
+require 127.0.0.1/dependent-gomodule.git v1.0.0 // indirect
+
+replace 127.0.0.1/dependent-gomodule.git => ../
+`,
+				},
+				expectPluginPaths: []string{
+					"gen/plugin1.so",
+				},
+				expectGoMod: map[string]string{
+					"src/plugin1/go.mod": `module plugin1
+
+go 1.17
+
+require 127.0.0.1/gomodule.git v1.0.0
+
+require 127.0.0.1/dependent-gomodule.git v1.0.0 // indirect
+
+replace 127.0.0.1/dependent-gomodule.git v1.0.0 => ../
+`,
+				},
+				skipOpen: true,
+			},
+			"override by local path replace (multi replace but same directory)": {
+				config: `
+schemaVersion: config/v1
+pluginDirectory: gen
+plugins:
+  plugin1.so:
+    src: src/plugin1
+  plugin2.so:
+    src: src/plugin2/sub
+  plugin3.so:
+    src: src/plugin3
+`,
+				files: map[string]string{
+					"src/local/main.go": `package dependent
+
+var Dependency = "local-dependent"
+`,
+					"src/local/go.mod": `module 127.0.0.1/dependent-gomodule.git
+
+go 1.17
+`,
+					"src/plugin1/main.go": `package main
+
+import (
+	"fmt"
+
+	"127.0.0.1/gomodule.git"
+)
+
+var Dependency = fmt.Sprintf("plugin => %s", gomodule.Dependency)
+`,
+					"src/plugin1/go.mod": `module plugin1
+
+go 1.17
+
+require 127.0.0.1/gomodule.git v1.0.0
+
+require 127.0.0.1/dependent-gomodule.git v1.0.0 // indirect
+
+replace 127.0.0.1/dependent-gomodule.git => ./../local
+`,
+					"src/plugin2/sub/main.go": `package main
+
+import (
+	"fmt"
+
+	"127.0.0.1/gomodule.git"
+)
+
+var Dependency = fmt.Sprintf("plugin => %s", gomodule.Dependency)
+`,
+					"src/plugin2/sub/go.mod": `module plugin2
+
+go 1.17
+
+require 127.0.0.1/gomodule.git v1.1.0
+
+require 127.0.0.1/dependent-gomodule.git v1.0.0 // indirect
+
+replace 127.0.0.1/dependent-gomodule.git v1.0.0 => ../../local
+`,
+					"src/plugin3/main.go": `package main
+
+import (
+	_ "127.0.0.1/dependent-gomodule.git"
+)
+`,
+					"src/plugin3/go.mod": `module plugin3
+
+go 1.17
+
+require 127.0.0.1/dependent-gomodule.git v1.0.0
+`,
+				},
+				expectPluginPaths: []string{
+					"gen/plugin1.so",
+					"gen/plugin2.so",
+					"gen/plugin3.so",
+				},
+				expectGoMod: map[string]string{
+					"src/plugin1/go.mod": `module plugin1
+
+go 1.17
+
+require 127.0.0.1/gomodule.git v1.1.0
+
+require 127.0.0.1/dependent-gomodule.git v1.0.0 // indirect
+
+replace 127.0.0.1/dependent-gomodule.git v1.0.0 => ../local
+`,
+					"src/plugin2/sub/go.mod": `module plugin2
+
+go 1.17
+
+require 127.0.0.1/gomodule.git v1.1.0
+
+require 127.0.0.1/dependent-gomodule.git v1.0.0 // indirect
+
+replace 127.0.0.1/dependent-gomodule.git v1.0.0 => ../../local
+`,
+					"src/plugin3/go.mod": `module plugin3
+
+go 1.17
+
+require 127.0.0.1/dependent-gomodule.git v1.0.0
+
+replace 127.0.0.1/dependent-gomodule.git v1.0.0 => ../local
+`,
+				},
+				skipOpen: true,
+			},
 		}
 		for name, test := range tests {
 			test := test
@@ -690,7 +857,38 @@ plugins:
 `,
 				expect: "-buildmode=plugin requires exactly one main package",
 			},
-			"replace directive conflicts": {
+			"invalid replace local path": {
+				config: `
+schemaVersion: config/v1
+plugins:
+  plugin1.so:
+    src: src/plugin1
+`,
+				files: map[string]string{
+					"src/plugin1/main.go": `package main
+
+import (
+	"fmt"
+
+	"127.0.0.1/gomodule.git"
+)
+
+var Dependency = fmt.Sprintf("plugin => %s", gomodule.Dependency)
+`,
+					"src/plugin1/go.mod": `module plugin1
+
+go 1.17
+
+require 127.0.0.1/gomodule.git v1.0.0
+
+require 127.0.0.1/dependent-gomodule.git v1.0.0 // indirect
+
+replace 127.0.0.1/dependent-gomodule.git v1.0.0 => ../local1
+`,
+				},
+				expect: "replacement directory ../local1 does not exist",
+			},
+			"replace directive conflicts (different versions)": {
 				config: `
 schemaVersion: config/v1
 plugins:
@@ -742,6 +940,136 @@ replace 127.0.0.1/dependent-gomodule.git v1.0.0 => 127.0.0.1/dependent-gomodule.
 `,
 				},
 				expect: "replace 127.0.0.1/dependent-gomodule.git directive conflicts: plugin1.so => 127.0.0.1/dependent-gomodule.git v1.1.0, plugin2.so => 127.0.0.1/dependent-gomodule.git/v2 v2.0.0",
+			},
+			"replace directive conflicts (version and path)": {
+				config: `
+schemaVersion: config/v1
+plugins:
+  plugin1.so:
+    src: src/plugin1
+  plugin2.so:
+    src: src/plugin2
+`,
+				files: map[string]string{
+					"src/local/main.go": `package dependent
+
+var Dependency = "local-dependent"
+`,
+					"src/local/go.mod": `module 127.0.0.1/dependent-gomodule.git
+
+go 1.17
+`,
+					"src/plugin1/main.go": `package main
+
+import (
+	"fmt"
+
+	"127.0.0.1/gomodule.git"
+)
+
+var Dependency = fmt.Sprintf("plugin => %s", gomodule.Dependency)
+`,
+					"src/plugin1/go.mod": `module plugin1
+
+go 1.17
+
+require 127.0.0.1/gomodule.git v1.0.0
+
+require 127.0.0.1/dependent-gomodule.git v1.0.0 // indirect
+
+replace 127.0.0.1/dependent-gomodule.git v1.0.0 => 127.0.0.1/dependent-gomodule.git v1.1.0
+`,
+					"src/plugin2/main.go": `package main
+
+import (
+	"fmt"
+
+	"127.0.0.1/gomodule.git"
+)
+
+var Dependency = fmt.Sprintf("plugin => %s", gomodule.Dependency)
+`,
+					"src/plugin2/go.mod": `module plugin2
+
+go 1.17
+
+require 127.0.0.1/gomodule.git v1.1.0
+
+require 127.0.0.1/dependent-gomodule.git v1.0.0 // indirect
+
+replace 127.0.0.1/dependent-gomodule.git v1.0.0 => ../local
+`,
+				},
+				expect: "replace 127.0.0.1/dependent-gomodule.git directive conflicts: plugin1.so => 127.0.0.1/dependent-gomodule.git v1.1.0, plugin2.so => ../local",
+			},
+			"replace directive conflicts (different paths)": {
+				config: `
+schemaVersion: config/v1
+plugins:
+  plugin1.so:
+    src: src/plugin1
+  plugin2.so:
+    src: src/plugin2
+`,
+				files: map[string]string{
+					"src/local1/main.go": `package dependent
+
+var Dependency = "local-dependent"
+`,
+					"src/local1/go.mod": `module 127.0.0.1/dependent-gomodule.git
+
+go 1.17
+`,
+					"src/local2/main.go": `package dependent
+
+var Dependency = "local-dependent"
+`,
+					"src/local2/go.mod": `module 127.0.0.1/dependent-gomodule.git
+
+go 1.17
+`,
+					"src/plugin1/main.go": `package main
+
+import (
+	"fmt"
+
+	"127.0.0.1/gomodule.git"
+)
+
+var Dependency = fmt.Sprintf("plugin => %s", gomodule.Dependency)
+`,
+					"src/plugin1/go.mod": `module plugin1
+
+go 1.17
+
+require 127.0.0.1/gomodule.git v1.0.0
+
+require 127.0.0.1/dependent-gomodule.git v1.0.0 // indirect
+
+replace 127.0.0.1/dependent-gomodule.git v1.0.0 => ../local1
+`,
+					"src/plugin2/main.go": `package main
+
+import (
+	"fmt"
+
+	"127.0.0.1/gomodule.git"
+)
+
+var Dependency = fmt.Sprintf("plugin => %s", gomodule.Dependency)
+`,
+					"src/plugin2/go.mod": `module plugin2
+
+go 1.17
+
+require 127.0.0.1/gomodule.git v1.1.0
+
+require 127.0.0.1/dependent-gomodule.git v1.0.0 // indirect
+
+replace 127.0.0.1/dependent-gomodule.git v1.0.0 => ../local2
+`,
+				},
+				expect: "replace 127.0.0.1/dependent-gomodule.git directive conflicts: plugin1.so => ../local1, plugin2.so => ../local2",
 			},
 		}
 		for name, test := range tests {
@@ -1477,10 +1805,16 @@ replace google.golang.org/grpc v1.46.0 => google.golang.org/grpc v1.40.0
 				t.Fatalf("failed to find go command: %s", err)
 			}
 
+			overrideKeys := make([]string, 0, len(test.overrides))
+			for k := range test.overrides {
+				overrideKeys = append(overrideKeys, k)
+			}
+			sort.Strings(overrideKeys)
+
 			cmd := &cobra.Command{}
 			var stdout bytes.Buffer
 			cmd.SetOutput(&stdout)
-			if err := updateGoMod(cmd, goCmd, "test.so", gomod, test.overrides); err != nil {
+			if err := updateGoMod(cmd, goCmd, "test.so", gomod, overrideKeys, test.overrides); err != nil {
 				t.Fatalf("failed to update go.mod: %s", err)
 			}
 

@@ -53,11 +53,11 @@ This command requires go command in $PATH.
 var warnColor = color.New(color.Bold, color.FgYellow)
 
 type overrideModule struct {
-	require    *modfile.Require
-	requiredBy string
-	count      int
-	replace    *modfile.Replace
-	replacedBy string
+	require          *modfile.Require
+	requiredBy       string
+	replace          *modfile.Replace
+	replacedBy       string
+	replaceLocalPath string
 }
 
 func (o *overrideModule) requireReplace() (*modfile.Require, string, *modfile.Replace, string) {
@@ -105,9 +105,6 @@ func buildRun(cmd *cobra.Command, args []string) error {
 			pluginModules[r.Mod.Path] = &overrideModule{
 				require:    r,
 				requiredBy: out,
-				count:      1,
-				replace:    nil,
-				replacedBy: "",
 			}
 		}
 		// NOTE: All module names must be unique and different from the standard modules.
@@ -128,9 +125,6 @@ func buildRun(cmd *cobra.Command, args []string) error {
 		overrides[m] = &overrideModule{
 			require:    o.require,
 			requiredBy: o.requiredBy,
-			count:      1,
-			replace:    nil,
-			replacedBy: "",
 		}
 	}
 
@@ -142,14 +136,17 @@ func buildRun(cmd *cobra.Command, args []string) error {
 		overrides[r.Mod.Path] = &overrideModule{
 			require:    r,
 			requiredBy: "scenarigo",
-			count:      1,
-			replace:    nil,
-			replacedBy: "",
 		}
 	}
 
+	overrideKeys := make([]string, 0, len(overrides))
+	for k := range overrides {
+		overrideKeys = append(overrideKeys, k)
+	}
+	sort.Strings(overrideKeys)
+
 	for _, pb := range pbs {
-		if err := pb.build(cmd, goCmd, overrides); err != nil {
+		if err := pb.build(cmd, goCmd, overrideKeys, overrides); err != nil {
 			return fmt.Errorf("failed to build plugin %s: %w", pb.name, err)
 		}
 	}
@@ -167,34 +164,39 @@ func selectUnifiedVersions(pbs []*pluginBuilder) (map[string]*overrideModule, er
 				overrides[r.Mod.Path] = &overrideModule{
 					require:    r,
 					requiredBy: pb.name,
-					count:      1,
-					replace:    nil,
-					replacedBy: "",
 				}
 				continue
 			}
-			overrides[r.Mod.Path].count++
 			if semver.Compare(o.require.Mod.Version, r.Mod.Version) < 0 {
 				overrides[r.Mod.Path].require = r
 				overrides[r.Mod.Path].requiredBy = pb.name
 			}
 		}
 		for _, r := range pb.gomod.Replace {
+			var localPath string
+			if r.New.Version == "" {
+				// already checked that the path exists by "go mod tidy"
+				localPath = filepathutil.From(filepath.Dir(pb.gomodPath), r.New.Path)
+			}
 			o, ok := overrides[r.Old.Path]
 			if !ok {
 				overrides[r.Old.Path] = &overrideModule{
-					replace:    r,
-					replacedBy: pb.name,
+					replace:          r,
+					replacedBy:       pb.name,
+					replaceLocalPath: localPath,
 				}
 				continue
 			}
 			if o.replace != nil {
 				if o.replace.New.Path != r.New.Path || o.replace.New.Version != r.New.Version {
-					return nil, fmt.Errorf("%s: replace %s directive conflicts: %s => %s %s, %s => %s %s", pb.name, r.Old.Path, o.replacedBy, o.replace.New.Path, o.replace.New.Version, pb.name, r.New.Path, r.New.Version)
+					if (localPath == "" && o.replaceLocalPath == "") || localPath != o.replaceLocalPath {
+						return nil, fmt.Errorf("%s: replace %s directive conflicts: %s => %s, %s => %s", pb.name, r.Old.Path, o.replacedBy, replacePathVersion(o.replace.New.Path, o.replace.New.Version), pb.name, replacePathVersion(r.New.Path, r.New.Version))
+					}
 				}
 			}
 			o.replace = r
 			o.replacedBy = pb.name
+			o.replaceLocalPath = localPath
 			overrides[r.Old.Path] = o
 		}
 	}
@@ -206,6 +208,13 @@ func ctx(cmd *cobra.Command) context.Context {
 		return ctx
 	}
 	return context.Background()
+}
+
+func replacePathVersion(p, v string) string {
+	if v == "" {
+		return p
+	}
+	return fmt.Sprintf("%s %s", p, v)
 }
 
 func findGoCmd(ctx context.Context) (string, error) {
@@ -393,9 +402,9 @@ func newPluginBuilder(cmd *cobra.Command, goCmd, name, mod, src, out, defaultMod
 	}, nil
 }
 
-func (pb *pluginBuilder) build(cmd *cobra.Command, goCmd string, overrides map[string]*overrideModule) error {
+func (pb *pluginBuilder) build(cmd *cobra.Command, goCmd string, overrideKeys []string, overrides map[string]*overrideModule) error {
 	ctx := ctx(cmd)
-	if err := updateGoMod(cmd, goCmd, pb.name, pb.gomodPath, overrides); err != nil {
+	if err := updateGoMod(cmd, goCmd, pb.name, pb.gomodPath, overrideKeys, overrides); err != nil {
 		return err
 	}
 	if err := execute(ctx, pb.dir, goCmd, "build", "-buildmode=plugin", "-o", pb.out, pb.src); err != nil {
@@ -422,8 +431,8 @@ func executeWithEnvs(ctx context.Context, envs []string, wd, name string, args .
 	return nil
 }
 
-func updateGoMod(cmd *cobra.Command, goCmd, name, gomodPath string, overrides map[string]*overrideModule) error {
-	initialRequires, initialReplaces, overrideKeys, err := updateRequireDirectives(cmd, goCmd, gomodPath, overrides)
+func updateGoMod(cmd *cobra.Command, goCmd, name, gomodPath string, overrideKeys []string, overrides map[string]*overrideModule) error {
+	initialRequires, initialReplaces, err := updateRequireDirectives(cmd, goCmd, gomodPath, overrides)
 	if err != nil {
 		return err
 	}
@@ -436,10 +445,9 @@ func updateGoMod(cmd *cobra.Command, goCmd, name, gomodPath string, overrides ma
 	return nil
 }
 
-func updateRequireDirectives(cmd *cobra.Command, goCmd, gomodPath string, overrides map[string]*overrideModule) (map[string]modfile.Require, map[string]modfile.Replace, []string, error) {
+func updateRequireDirectives(cmd *cobra.Command, goCmd, gomodPath string, overrides map[string]*overrideModule) (map[string]modfile.Require, map[string]modfile.Replace, error) {
 	initialRequires := map[string]modfile.Require{}
 	initialReplaces := map[string]modfile.Replace{}
-	overrideKeys := []string{}
 	if err := editGoMod(cmd, goCmd, gomodPath, func(gomod *modfile.File) error {
 		for _, r := range gomod.Require {
 			initialRequires[r.Mod.Path] = *r
@@ -454,17 +462,15 @@ func updateRequireDirectives(cmd *cobra.Command, goCmd, gomodPath string, overri
 		}
 		for _, o := range overrides {
 			require, _, _, _ := o.requireReplace()
-			overrideKeys = append(overrideKeys, require.Mod.Path)
 			if err := gomod.AddRequire(require.Mod.Path, require.Mod.Version); err != nil {
 				return fmt.Errorf("%s: %w", gomodPath, err)
 			}
 		}
 		return nil
 	}); err != nil {
-		return nil, nil, nil, fmt.Errorf("failed to edit require directive: %w", err)
+		return nil, nil, fmt.Errorf("failed to edit require directive: %w", err)
 	}
-	sort.Strings(overrideKeys)
-	return initialRequires, initialReplaces, overrideKeys, nil
+	return initialRequires, initialReplaces, nil
 }
 
 func updateReplaceDirectives(cmd *cobra.Command, goCmd, gomodPath string, overrides map[string]*overrideModule, overrideKeys []string) error {
@@ -493,7 +499,19 @@ func updateReplaceDirectives(cmd *cobra.Command, goCmd, gomodPath string, overri
 			}
 			if replace != nil {
 				if v, ok := requires[replace.Old.Path]; ok {
-					if err := gomod.AddReplace(replace.Old.Path, v, replace.New.Path, replace.New.Version); err != nil {
+					path := replace.New.Path
+					if o.replaceLocalPath != "" {
+						rel, err := filepath.Rel(filepath.Dir(gomodPath), o.replaceLocalPath)
+						if err != nil {
+							return fmt.Errorf("%s: %w", gomodPath, err)
+						}
+						// must be rooted or staring with ./ or ../
+						if sep := string(filepath.Separator); !strings.Contains(rel, sep) {
+							rel += sep
+						}
+						path = rel
+					}
+					if err := gomod.AddReplace(replace.Old.Path, v, path, replace.New.Version); err != nil {
 						return fmt.Errorf("%s: %w", gomodPath, err)
 					}
 				}
@@ -616,21 +634,21 @@ func printUpdatedReplaces(cmd *cobra.Command, name string, overrides map[string]
 				if replace != nil {
 					by = replaceBy
 				}
-				fmt.Fprintf(cmd.OutOrStdout(), "%s: %s: add replace %s %s => %s %s by %s\n", warnColor.Sprint("WARN"), name, k, diff.new.Old.Version, diff.new.New.Path, diff.new.New.Version, by)
+				fmt.Fprintf(cmd.OutOrStdout(), "%s: %s: add replace %s => %s by %s\n", warnColor.Sprint("WARN"), name, replacePathVersion(k, diff.new.Old.Version), replacePathVersion(diff.new.New.Path, diff.new.New.Version), by)
 			} else {
-				fmt.Fprintf(cmd.OutOrStdout(), "%s: %s: add replace %s %s => %s %s\n", warnColor.Sprint("WARN"), name, k, diff.new.Old.Version, diff.new.New.Path, diff.new.New.Version)
+				fmt.Fprintf(cmd.OutOrStdout(), "%s: %s: add replace %s => %s\n", warnColor.Sprint("WARN"), name, replacePathVersion(k, diff.new.Old.Version), replacePathVersion(diff.new.New.Path, diff.new.New.Version))
 			}
 		case diff.new.Old.Path == "":
-			fmt.Fprintf(cmd.OutOrStdout(), "%s: %s: remove replace %s %s => %s %s\n", warnColor.Sprint("WARN"), name, k, diff.old.Old.Version, diff.old.New.Path, diff.old.New.Version)
+			fmt.Fprintf(cmd.OutOrStdout(), "%s: %s: remove replace %s => %s\n", warnColor.Sprint("WARN"), name, replacePathVersion(k, diff.old.Old.Version), replacePathVersion(diff.old.New.Path, diff.old.New.Version))
 		case diff.old.New.Path != diff.new.New.Path || diff.old.New.Version != diff.new.New.Version:
 			if o := overrides[k]; o != nil {
 				_, by, replace, replaceBy := o.requireReplace()
 				if replace != nil {
 					by = replaceBy
 				}
-				fmt.Fprintf(cmd.OutOrStdout(), "%s: %s: change replace %s %s => %s %s ==> %s %s => %s %s by %s\n", warnColor.Sprint("WARN"), name, k, diff.old.Old.Version, diff.old.New.Path, diff.old.New.Version, k, diff.new.Old.Version, diff.new.New.Path, diff.new.New.Version, by)
+				fmt.Fprintf(cmd.OutOrStdout(), "%s: %s: change replace %s => %s ==> %s => %s by %s\n", warnColor.Sprint("WARN"), name, replacePathVersion(k, diff.old.Old.Version), replacePathVersion(diff.old.New.Path, diff.old.New.Version), replacePathVersion(k, diff.new.Old.Version), replacePathVersion(diff.new.New.Path, diff.new.New.Version), by)
 			} else {
-				fmt.Fprintf(cmd.OutOrStdout(), "%s: %s: change replace %s %s => %s %s ==> %s %s => %s %s\n", warnColor.Sprint("WARN"), name, k, diff.old.Old.Version, diff.old.New.Path, diff.old.New.Version, k, diff.new.Old.Version, diff.new.New.Path, diff.new.New.Version)
+				fmt.Fprintf(cmd.OutOrStdout(), "%s: %s: change replace %s => %s ==> %s => %s\n", warnColor.Sprint("WARN"), name, replacePathVersion(k, diff.old.Old.Version), replacePathVersion(diff.old.New.Path, diff.old.New.Version), replacePathVersion(k, diff.new.Old.Version), replacePathVersion(diff.new.New.Path, diff.new.New.Version))
 			}
 		}
 	}

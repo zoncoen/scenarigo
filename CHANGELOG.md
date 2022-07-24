@@ -1,5 +1,11 @@
 # CHANGELOG
 
+<a name="v0.12.4"></a>
+## [v0.12.4] - 2022-07-25
+### Bug Fixes
+- **plugin:** enable to replace modules to local paths
+- **plugin:** keep replace directives
+
 <a name="v0.12.3"></a>
 ## [v0.12.3] - 2022-07-21
 ### Bug Fixes
@@ -247,6 +253,7 @@ change protocl.Protocol interface
 - first release
 
 
+[v0.12.4]: https://github.com/zoncoen/scenarigo/compare/v0.12.3...v0.12.4
 [v0.12.3]: https://github.com/zoncoen/scenarigo/compare/v0.12.2...v0.12.3
 [v0.12.2]: https://github.com/zoncoen/scenarigo/compare/v0.12.1...v0.12.2
 [v0.12.1]: https://github.com/zoncoen/scenarigo/compare/v0.12.0...v0.12.1

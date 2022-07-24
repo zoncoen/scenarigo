@@ -5,6 +5,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/fatih/color"
@@ -29,19 +31,85 @@ func init() {
 
 // Config represents a configuration.
 type Config struct {
-	SchemaVersion   string                  `yaml:"schemaVersion,omitempty"`
-	Scenarios       []string                `yaml:"scenarios,omitempty"`
-	PluginDirectory string                  `yaml:"pluginDirectory,omitempty"`
-	Plugins         map[string]PluginConfig `yaml:"plugins,omitempty"`
-	Output          OutputConfig            `yaml:"output,omitempty"`
+	SchemaVersion   string          `yaml:"schemaVersion,omitempty"`
+	Scenarios       []string        `yaml:"scenarios,omitempty"`
+	PluginDirectory string          `yaml:"pluginDirectory,omitempty"`
+	Plugins         PluginConfigMap `yaml:"plugins,omitempty"`
+	Output          OutputConfig    `yaml:"output,omitempty"`
 
 	// absolute path to the configuration file
 	Root string `yaml:"-"`
 }
 
+// PluginConfigMap represents a plugin configurations.
+type PluginConfigMap map[string]PluginConfig
+
+func (m *PluginConfigMap) UnmarshalYAML(b []byte) error {
+	var s yaml.MapSlice
+	if err := yaml.Unmarshal(b, &s); err != nil {
+		return err
+	}
+	configs := map[string]PluginConfig{}
+	for i, item := range s {
+		name, err := toYAMLString(item.Key)
+		if err != nil {
+			return err
+		}
+		val, ok := item.Value.(map[string]interface{})
+		if !ok {
+			return errors.Errorf("%T was used where mapping is expected", item.Value)
+		}
+		var src string
+		for k, v := range val {
+			switch k {
+			case "src":
+				src, err = toYAMLString(v)
+				if err != nil {
+					return err
+				}
+			default:
+				return errors.Errorf(`unknown field "%s"`, k)
+			}
+		}
+		configs[name] = PluginConfig{
+			Order: i + 1,
+			Name:  name,
+			Src:   src,
+		}
+	}
+	*m = configs
+	return nil
+}
+
+func toYAMLString(in interface{}) (string, error) {
+	switch v := in.(type) {
+	case string:
+		return v, nil
+	case uint64:
+		return strconv.Itoa(int(v)), nil
+	case int64:
+		return strconv.Itoa(int(v)), nil
+	}
+	return "", errors.Errorf("value of type %T is not assignable to type string", in)
+}
+
+// ToSlice returns m as a slice.
+func (m PluginConfigMap) ToSlice() []PluginConfig {
+	s := []PluginConfig{}
+	for _, p := range m {
+		s = append(s, p)
+	}
+	sort.Slice(s, func(i, j int) bool {
+		return s[i].Order < s[j].Order
+	})
+	return s
+}
+
 // PluginConfig represents a plugin configuration.
 type PluginConfig struct {
-	Src string `yaml:"src,omitempty"`
+	Order int    `yaml:"-"`
+	Name  string `yaml:"-"`
+	Src   string `yaml:"src,omitempty"`
 }
 
 // OutputConfig represents a output configuration.

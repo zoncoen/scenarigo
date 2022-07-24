@@ -90,7 +90,8 @@ func buildRun(cmd *cobra.Command, args []string) error {
 	pbs := make([]*pluginBuilder, 0, len(cfg.Plugins))
 	pluginModules := map[string]*overrideModule{}
 	pluginDir := filepathutil.From(cfg.Root, cfg.PluginDirectory)
-	for out, p := range cfg.Plugins {
+	for _, p := range cfg.Plugins.ToSlice() {
+		out := p.Name
 		mod := filepathutil.From(cfg.Root, p.Src)
 		var src string
 		if _, err := os.Stat(mod); err != nil {

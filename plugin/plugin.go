@@ -32,7 +32,7 @@ func Open(path string) (Plugin, error) {
 	if p, ok := cache[path]; ok {
 		return p, nil
 	}
-	newPlugin = &openedPlugin{} // nolint:exhaustruct
+	newPlugin = &openedPlugin{} //nolint:exhaustruct
 	defer func() { newPlugin = nil }()
 	p, err := plugin.Open(path)
 	if err != nil {

@@ -66,7 +66,7 @@ func (r *Request) Invoke(ctx *context.Context) (*context.Context, interface{}, e
 	}
 
 	ctx = ctx.WithRequest(reqBody)
-	// nolint:exhaustruct
+	//nolint:exhaustruct
 	if b, err := yaml.Marshal(Request{
 		Method: req.Method,
 		URL:    req.URL.String(),

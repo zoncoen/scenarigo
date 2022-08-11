@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/goccy/go-yaml"
-	"github.com/golang/protobuf/proto" // nolint:staticcheck
+	"github.com/golang/protobuf/proto" //nolint:staticcheck
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"

@@ -4,7 +4,7 @@ import (
 	"context"
 	"reflect"
 
-	"github.com/golang/protobuf/proto" // nolint:staticcheck
+	"github.com/golang/protobuf/proto" //nolint:staticcheck
 	"google.golang.org/grpc"
 )
 

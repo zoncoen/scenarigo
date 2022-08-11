@@ -10,7 +10,7 @@ import (
 	"github.com/zoncoen/scenarigo/internal/reflectutil"
 )
 
-// nolint:exhaustruct
+//nolint:exhaustruct
 var (
 	yamlMapItemType  = reflect.TypeOf(yaml.MapItem{})
 	yamlMapSliceType = reflect.TypeOf(yaml.MapSlice{})

@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/goccy/go-yaml"
-	"github.com/golang/protobuf/jsonpb" // nolint:staticcheck
-	"github.com/golang/protobuf/proto"  // nolint:staticcheck
+	"github.com/golang/protobuf/jsonpb" //nolint:staticcheck
+	"github.com/golang/protobuf/proto"  //nolint:staticcheck
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -162,7 +162,7 @@ func invoke(ctx *context.Context, method reflect.Value, r *Request) (*context.Co
 
 			ctx = ctx.WithRequest(req)
 			reqMD, _ := metadata.FromOutgoingContext(reqCtx)
-			// nolint:exhaustruct
+			//nolint:exhaustruct
 			if b, err := yaml.Marshal(Request{
 				Method:   r.Method,
 				Metadata: reqMD,

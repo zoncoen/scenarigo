@@ -9,7 +9,7 @@ import (
 
 	"github.com/goccy/go-yaml"
 	"github.com/golang/mock/gomock"
-	"github.com/golang/protobuf/proto" // nolint:staticcheck
+	"github.com/golang/protobuf/proto" //nolint:staticcheck
 	"github.com/google/go-cmp/cmp"
 	"github.com/zoncoen/scenarigo/context"
 	"github.com/zoncoen/scenarigo/internal/mockutil"
@@ -281,7 +281,7 @@ func TestValidateMethod(t *testing.T) {
 			},
 			"first return value must be proto.Message": {
 				method: reflect.ValueOf(func(ctx gocontext.Context, in proto.Message, opts ...grpc.CallOption) (*struct{}, error) {
-					return nil, nil // nolint:nilnil
+					return nil, nil //nolint:nilnil
 				}),
 			},
 			"second return value must be error": {

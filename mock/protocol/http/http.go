@@ -26,10 +26,10 @@ const healthPath = "/_health"
 type HTTP struct{}
 
 // Name implements protocol.Protocol interface.
-func (_ HTTP) Name() string { return "http" } // nolint:revive
+func (_ HTTP) Name() string { return "http" } //nolint:revive
 
 // UnmarshalConfig implements protocol.Protocol interface.
-func (_ HTTP) UnmarshalConfig(b []byte) (interface{}, error) { // nolint:revive
+func (_ HTTP) UnmarshalConfig(b []byte) (interface{}, error) { //nolint:revive
 	var config ServerConfig
 	if err := yaml.Unmarshal(b, &config); err != nil {
 		return nil, err
@@ -38,7 +38,7 @@ func (_ HTTP) UnmarshalConfig(b []byte) (interface{}, error) { // nolint:revive
 }
 
 // NewServer implements protocol.Protocol interface.
-func (_ *HTTP) NewServer(iter *protocol.MockIterator, l logger.Logger, config interface{}) (protocol.Server, error) { // nolint:revive
+func (_ *HTTP) NewServer(iter *protocol.MockIterator, l logger.Logger, config interface{}) (protocol.Server, error) { //nolint:revive
 	if iter == nil {
 		return nil, errors.New("mock iterator is nil")
 	}

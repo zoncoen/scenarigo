@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/goccy/go-yaml"
-	"github.com/golang/protobuf/proto" // nolint:staticcheck
+	"github.com/golang/protobuf/proto" //nolint:staticcheck
 	"google.golang.org/grpc/status"
 
 	// Register proto messages to unmarshal com.google.protobuf.Any.

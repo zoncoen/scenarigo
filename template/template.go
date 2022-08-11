@@ -52,7 +52,7 @@ func (t *Template) Execute(data interface{}) (_ interface{}, retErr error) {
 	v, err := t.executeExpr(t.expr, data)
 	if err != nil {
 		if strings.Contains(t.str, "\n") {
-			return nil, errors.Wrapf(err, "failed to execute: \n%s\n", t.str) // nolint:revive
+			return nil, errors.Wrapf(err, "failed to execute: \n%s\n", t.str) //nolint:revive
 		}
 		return nil, errors.Wrapf(err, "failed to execute: %s", t.str)
 	}
@@ -179,13 +179,13 @@ func (t *Template) add(x, y interface{}, withIndent bool) (interface{}, error) {
 
 // align indents of marshaled texts
 //
-// example: addIndent("a: 1\nb:2", "- ")
-// === before ===
-// - a: 1
-// b: 2
-// === after ===
-// - a: 1
-//   b: 2
+//	example: addIndent("a: 1\nb:2", "- ")
+//	=== before ===
+//	- a: 1
+//	b: 2
+//	=== after ===
+//	- a: 1
+//	  b: 2
 func (t *Template) addIndent(str, preStr string) (string, error) {
 	if t.executingLeftArrowExprArg {
 		if strings.ContainsRune(str, '\n') && preStr != "" {
@@ -292,7 +292,7 @@ func (t *Template) executeFuncCall(call *ast.CallExpr, data interface{}) (interf
 			return nil, errors.Errorf("second returned value must be an error")
 		}
 		if !vs[1].IsNil() {
-			return nil, vs[1].Interface().(error) // nolint:forcetypeassert
+			return nil, vs[1].Interface().(error) //nolint:forcetypeassert
 		}
 		return vs[0].Interface(), nil
 	default:

@@ -130,7 +130,7 @@ func echoResponse(t *testing.T, id, body string) *test.EchoResponse {
 	}
 
 	// Ensure at least one of the unexported fields is not zero value.
-	// nolint:govet
+	//nolint:govet
 	if reflect.DeepEqual(msg, test.EchoResponse{
 		MessageId:   id,
 		MessageBody: body,

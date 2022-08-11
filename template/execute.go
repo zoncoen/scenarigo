@@ -12,7 +12,7 @@ import (
 	"github.com/zoncoen/scenarigo/internal/reflectutil"
 )
 
-// nolint:exhaustruct
+//nolint:exhaustruct
 var (
 	yamlMapItemType = reflect.TypeOf(yaml.MapItem{})
 	lazyFuncType    = reflect.TypeOf(lazyFunc{})
@@ -27,7 +27,7 @@ func Execute(i, data interface{}) (interface{}, error) {
 	if v.IsValid() {
 		return v.Interface(), nil
 	}
-	return nil, nil // nolint:nilnil
+	return nil, nil //nolint:nilnil
 }
 
 func structFieldName(field reflect.StructField) string {
@@ -44,7 +44,7 @@ func structFieldName(field reflect.StructField) string {
 	return fieldName
 }
 
-// nolint:gocyclo,cyclop,maintidx
+//nolint:gocyclo,cyclop,maintidx
 func execute(in reflect.Value, data interface{}) (reflect.Value, error) {
 	v := reflectutil.Elem(in)
 	switch v.Kind() {
@@ -71,7 +71,7 @@ func execute(in reflect.Value, data interface{}) (reflect.Value, error) {
 						}
 						e = x
 					}
-					f := ke.Interface().(lazyFunc) // nolint:forcetypeassert
+					f := ke.Interface().(lazyFunc) //nolint:forcetypeassert
 					res, err := executeLeftArrowFunction(f.f, e)
 					if err != nil {
 						return reflect.Value{}, fmt.Errorf("failed to execute left arrow function: %w", err)
@@ -117,7 +117,7 @@ func execute(in reflect.Value, data interface{}) (reflect.Value, error) {
 							}
 							value = x
 						}
-						f := ke.Interface().(lazyFunc) // nolint:forcetypeassert
+						f := ke.Interface().(lazyFunc) //nolint:forcetypeassert
 						res, err := executeLeftArrowFunction(f.f, value)
 						if err != nil {
 							return reflect.Value{}, fmt.Errorf("failed to execute left arrow function: %w", err)

@@ -34,7 +34,7 @@ func TestHandler(t *testing.T) {
 				steps: []step{
 					{
 						request: func() *http.Request {
-							return httptest.NewRequest("GET", "/", nil)
+							return httptest.NewRequest(http.MethodGet, "/", nil)
 						},
 						expect: &expect{
 							code: 200,
@@ -51,7 +51,7 @@ func TestHandler(t *testing.T) {
 				steps: []step{
 					{
 						request: func() *http.Request {
-							return httptest.NewRequest("POST", "/echo", strings.NewReader(`{"message":"hello"}`))
+							return httptest.NewRequest(http.MethodPost, "/echo", strings.NewReader(`{"message":"hello"}`))
 						},
 						expect: &expect{
 							code: 200,
@@ -107,7 +107,7 @@ func TestHandler(t *testing.T) {
 				steps: []step{
 					{
 						request: func() *http.Request {
-							return httptest.NewRequest("GET", "/", nil)
+							return httptest.NewRequest(http.MethodGet, "/", nil)
 						},
 						expect: &expect{
 							code: 500,
@@ -124,7 +124,7 @@ func TestHandler(t *testing.T) {
 				steps: []step{
 					{
 						request: func() *http.Request {
-							return httptest.NewRequest("GET", "/", nil)
+							return httptest.NewRequest(http.MethodGet, "/", nil)
 						},
 						expect: &expect{
 							code: 200,
@@ -136,7 +136,7 @@ func TestHandler(t *testing.T) {
 					},
 					{
 						request: func() *http.Request {
-							return httptest.NewRequest("GET", "/", nil)
+							return httptest.NewRequest(http.MethodGet, "/", nil)
 						},
 						expect: &expect{
 							code: 500,
@@ -153,7 +153,7 @@ func TestHandler(t *testing.T) {
 				steps: []step{
 					{
 						request: func() *http.Request {
-							return httptest.NewRequest("POST", "/", strings.NewReader(`{"message":"hello"}`))
+							return httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"message":"hello"}`))
 						},
 						expect: &expect{
 							code: 500,
@@ -170,7 +170,7 @@ func TestHandler(t *testing.T) {
 				steps: []step{
 					{
 						request: func() *http.Request {
-							r := httptest.NewRequest("POST", "/echo", strings.NewReader("hello"))
+							r := httptest.NewRequest(http.MethodPost, "/echo", strings.NewReader("hello"))
 							r.Header.Add("Content-Type", "text/plain")
 							return r
 						},
@@ -189,7 +189,7 @@ func TestHandler(t *testing.T) {
 				steps: []step{
 					{
 						request: func() *http.Request {
-							return httptest.NewRequest("POST", "/echo", strings.NewReader(`{"message":""}`))
+							return httptest.NewRequest(http.MethodPost, "/echo", strings.NewReader(`{"message":""}`))
 						},
 						expect: &expect{
 							code: 500,

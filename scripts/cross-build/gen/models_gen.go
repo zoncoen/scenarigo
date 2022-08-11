@@ -11923,7 +11923,6 @@ func (ReviewRequestedEvent) IsNode()                     {}
 
 // A hovercard context with a message describing the current code review state of the pull
 // request.
-//
 type ReviewStatusHovercardContext struct {
 	// A string describing this context
 	Message string `json:"message"`

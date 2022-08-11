@@ -69,10 +69,11 @@ go %s
 	if err != nil {
 		t.Fatal(err)
 	}
+	vs := getModuleVersions(t)
 	var b bytes.Buffer
-	if err := tmpl.Execute(&b, map[string]string{
-		"goVersion":     goVersion,
-		"grpcGoVersion": grpcGoVersion(t),
+	if err := tmpl.Execute(&b, map[string]interface{}{
+		"goVersion": goVersion,
+		"modules":   vs,
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -1098,19 +1099,17 @@ replace 127.0.0.1/dependent-gomodule.git v1.0.0 => ../local2
 	})
 }
 
-func grpcGoVersion(t *testing.T) string {
+func getModuleVersions(t *testing.T) map[string]string {
 	t.Helper()
 	gomod, err := modfile.Parse("go.mod", scenarigo.GoModBytes, nil)
 	if err != nil {
 		t.Fatalf("failed to parse go.mod of scenarigo: %s", err)
 	}
+	vs := map[string]string{}
 	for _, r := range gomod.Require {
-		if r.Mod.Path == "google.golang.org/grpc" {
-			return r.Mod.Version
-		}
+		vs[r.Mod.Path] = r.Mod.Version
 	}
-	t.Fatal("oogle.golang.org/grpc not found")
-	return ""
+	return vs
 }
 
 func TestFindGoCmd(t *testing.T) {

@@ -179,13 +179,13 @@ func (t *Template) add(x, y interface{}, withIndent bool) (interface{}, error) {
 
 // align indents of marshaled texts
 //
-// example: addIndent("a: 1\nb:2", "- ")
-// === before ===
-// - a: 1
-// b: 2
-// === after ===
-// - a: 1
-//   b: 2
+//	example: addIndent("a: 1\nb:2", "- ")
+//	=== before ===
+//	- a: 1
+//	b: 2
+//	=== after ===
+//	- a: 1
+//	  b: 2
 func (t *Template) addIndent(str, preStr string) (string, error) {
 	if t.executingLeftArrowExprArg {
 		if strings.ContainsRune(str, '\n') && preStr != "" {

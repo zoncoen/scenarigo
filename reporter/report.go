@@ -104,7 +104,6 @@ This struct can be marshalled as JUnit-like format XML.
 		panic(err)
 	}
 	fmt.Println(b)
-
 */
 type TestReport struct {
 	XMLName xml.Name             `json:"-" xml:"testsuites"`

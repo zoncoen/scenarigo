@@ -32,15 +32,17 @@ func (m *fixedDurationMeasurer) getDuration() time.Duration {
 }
 
 /*
-400ms parent
-300ms |-child1
-      | |-child1-1 |----->
-      | |-child1-2 |  ------>
-200ms |-child2     |  |  |  |
-        |-child2-1 |  --->  |
-        |-child2-2 |  |  |  |  --->
-                   |  |  |  |  |  |
-                   0  1  2  3  4  5 (100ms)
+timeline diagram
+
+	400ms parent
+	300ms |-child1
+	      | |-child1-1 |----->
+	      | |-child1-2 |  ------>
+	200ms |-child2     |  |  |  |
+	        |-child2-1 |  --->  |
+	        |-child2-2 |  |  |  |  --->
+	                   |  |  |  |  |  |
+	                   0  1  2  3  4  5 (100ms)
 */
 func TestDurationMeasurer(t *testing.T) {
 	t.Parallel()

@@ -74,9 +74,13 @@ $(GOCREDITS): | $(BIN_DIR)
 	@$(GO) install github.com/Songmu/gocredits/cmd/gocredits@v0.2.0
 
 GOLANGCI_LINT := $(BIN_DIR)/golangci-lint
-GOLANGCI_LINT_VERSION := v1.46.2
+GOLANGCI_LINT_VERSION := 1.48.0
+GOLANGCI_LINT_GZIP := $(shell echo golangci-lint-$(GOLANGCI_LINT_VERSION)-$(UNAME_OS)-$(UNAME_ARCH).tar.gz | tr '[:upper:]' '[:lower:]')
 $(GOLANGCI_LINT): | $(BIN_DIR)
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(BIN_DIR) $(GOLANCI_LINT_VERSION)
+	@curl -sSOL \
+		"https://github.com/golangci/golangci-lint/releases/download/v$(GOLANGCI_LINT_VERSION)/$(GOLANGCI_LINT_GZIP)"
+	@tar -C $(BIN_DIR) --strip=1 -xf $(GOLANGCI_LINT_GZIP) golangci-lint-1.48.0-darwin-arm64/golangci-lint
+	@rm $(GOLANGCI_LINT_GZIP)
 
 LOOPPOINTER := $(BIN_DIR)/looppointer
 $(LOOPPOINTER): | $(BIN_DIR)

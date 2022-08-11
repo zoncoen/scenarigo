@@ -12,6 +12,7 @@ jobs:
     - name: golangci-lint
       uses: reviewdog/action-golangci-lint@v2
       with:
+        golangci_lint_version: v1.48.0
         fail_on_error: true
     - name: Install Go
       uses: actions/setup-go@v3

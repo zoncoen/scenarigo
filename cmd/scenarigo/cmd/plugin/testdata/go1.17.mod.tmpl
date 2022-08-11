@@ -2,14 +2,14 @@ module plugins/plugin
 
 go {{.goVersion}}
 
-require google.golang.org/grpc {{.grpcGoVersion}}
+require google.golang.org/grpc {{index .modules "google.golang.org/grpc"}}
 
 require (
-	github.com/golang/protobuf v1.5.2 // indirect
-	github.com/google/go-cmp v0.5.8 // indirect
-	golang.org/x/net v0.0.0-20210813160813-60bc85c4be6d // indirect
-	golang.org/x/sys v0.0.0-20211205182925-97ca703d548d // indirect
-	golang.org/x/text v0.3.7 // indirect
-	google.golang.org/genproto v0.0.0-20220413183235-5e96e2839df9 // indirect
-	google.golang.org/protobuf v1.28.0 // indirect
+	github.com/golang/protobuf {{index .modules "github.com/golang/protobuf"}} // indirect
+	github.com/google/go-cmp {{index .modules "github.com/google/go-cmp"}} // indirect
+	golang.org/x/net {{index .modules "golang.org/x/net"}} // indirect
+	golang.org/x/sys {{index .modules "golang.org/x/sys"}} // indirect
+	golang.org/x/text {{index .modules "golang.org/x/text"}} // indirect
+	google.golang.org/genproto {{index .modules "google.golang.org/genproto"}} // indirect
+	google.golang.org/protobuf {{index .modules "google.golang.org/protobuf"}} // indirect
 )

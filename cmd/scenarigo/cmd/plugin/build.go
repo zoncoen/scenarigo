@@ -26,9 +26,19 @@ import (
 	"github.com/zoncoen/scenarigo/version"
 )
 
-var gomodVer string
+var (
+	goVer        string
+	goMajorMinor string
+	gomodVer     string
+)
 
 func init() {
+	goVer = runtime.Version()
+	e := strings.Split(strings.TrimPrefix(goVer, "go"), ".")
+	if len(e) < 2 {
+		panic(fmt.Sprintf("%q is invalid Go version", goVer))
+	}
+	goMajorMinor = strings.Join(e[:2], ".")
 	gomod, err := modfile.Parse("go.mod", scenarigo.GoModBytes, nil)
 	if err != nil {
 		panic(fmt.Errorf("failed to parse go.mod of scenarigo: %w", err))
@@ -154,6 +164,26 @@ func buildRun(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+func findGoCmd(ctx context.Context) (string, error) {
+	goCmd, err := exec.LookPath("go")
+	var verr error
+	if err == nil {
+		verr = checkGoVersion(ctx, goCmd, goVer)
+		if verr == nil {
+			return goCmd, nil
+		}
+	}
+	if goCmd, err := exec.LookPath(goVer); err == nil {
+		if err := checkGoVersion(ctx, goCmd, goVer); err == nil {
+			return goCmd, nil
+		}
+	}
+	if err == nil {
+		return "", verr
+	}
+	return "", fmt.Errorf("go command required: %w", err)
+}
+
 func selectUnifiedVersions(pbs []*pluginBuilder) (map[string]*overrideModule, error) {
 	overrides := map[string]*overrideModule{}
 	for _, pb := range pbs {
@@ -215,27 +245,6 @@ func replacePathVersion(p, v string) string {
 		return p
 	}
 	return fmt.Sprintf("%s %s", p, v)
-}
-
-func findGoCmd(ctx context.Context) (string, error) {
-	goVersion := runtime.Version()
-	goCmd, err := exec.LookPath("go")
-	var verr error
-	if err == nil {
-		verr = checkGoVersion(ctx, goCmd, goVersion)
-		if verr == nil {
-			return goCmd, nil
-		}
-	}
-	if goCmd, err := exec.LookPath(goVersion); err == nil {
-		if err := checkGoVersion(ctx, goCmd, goVersion); err == nil {
-			return goCmd, nil
-		}
-	}
-	if err == nil {
-		return "", verr
-	}
-	return "", fmt.Errorf("go command required: %w", err)
 }
 
 func checkGoVersion(ctx context.Context, goCmd, ver string) error {
@@ -379,8 +388,8 @@ func newPluginBuilder(cmd *cobra.Command, goCmd, name, mod, src, out, defaultMod
 		}
 	}
 
-	if err := execute(ctx, dir, goCmd, "mod", "tidy"); err != nil {
-		return nil, fmt.Errorf(`"go mod tidy" failed: %w`, err)
+	if err := modTidy(ctx, dir, goCmd); err != nil {
+		return nil, err
 	}
 
 	b, err := os.ReadFile(gomodPath)
@@ -400,6 +409,19 @@ func newPluginBuilder(cmd *cobra.Command, goCmd, name, mod, src, out, defaultMod
 		gomod:     gomod,
 		out:       out,
 	}, nil
+}
+
+func modTidy(ctx context.Context, dir, goCmd string) error {
+	if cmd := os.Getenv("GO_MOD_TIDY"); cmd != "" {
+		if err := execute(ctx, dir, goCmd, strings.Split(cmd, " ")...); err != nil {
+			return err
+		}
+		return nil
+	}
+	if err := execute(ctx, dir, goCmd, "mod", "tidy", fmt.Sprintf("-compat=%s", goMajorMinor)); err != nil {
+		return fmt.Errorf(`"go mod tidy" failed: %w`, err)
+	}
+	return nil
 }
 
 func (pb *pluginBuilder) build(cmd *cobra.Command, goCmd string, overrideKeys []string, overrides map[string]*overrideModule) error {
@@ -677,8 +699,8 @@ func editGoMod(cmd *cobra.Command, goCmd, gomodPath string, edit func(*modfile.F
 	if _, err := f.Write(edited); err != nil {
 		return fmt.Errorf("failed to edit %s: %w", gomodPath, err)
 	}
-	if err := execute(ctx(cmd), filepath.Dir(gomodPath), goCmd, "mod", "tidy"); err != nil {
-		return fmt.Errorf(`"go mod tidy" failed: %w`, err)
+	if err := modTidy(ctx(cmd), filepath.Dir(gomodPath), goCmd); err != nil {
+		return err
 	}
 
 	return nil

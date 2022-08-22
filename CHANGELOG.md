@@ -1,5 +1,10 @@
 # CHANGELOG
 
+<a name="v0.12.5"></a>
+## [v0.12.5] - 2022-08-22
+### Bug Fixes
+- **plugin:** go mod tidy with -compat option
+
 <a name="v0.12.4"></a>
 ## [v0.12.4] - 2022-07-25
 ### Bug Fixes
@@ -78,12 +83,12 @@ This package requires Go 1.17 or later.
 - use yaml.PathBuilder to specify the pos
 
 ### Features
-- add plugin sub-command
 - add setup feature
 - add "scenarigo plugin list" command
 - add "scenarigo config validate" command
-- **plugin:** enable to build plugin from remote "go gettable" src
+- add plugin sub-command
 - **plugin:** enable registration of setup functions to be executed for each scenario
+- **plugin:** enable to build plugin from remote "go gettable" src
 - **template:** add bool literals
 
 <a name="v0.8.1"></a>
@@ -253,6 +258,7 @@ change protocl.Protocol interface
 - first release
 
 
+[v0.12.5]: https://github.com/zoncoen/scenarigo/compare/v0.12.4...v0.12.5
 [v0.12.4]: https://github.com/zoncoen/scenarigo/compare/v0.12.3...v0.12.4
 [v0.12.3]: https://github.com/zoncoen/scenarigo/compare/v0.12.2...v0.12.3
 [v0.12.2]: https://github.com/zoncoen/scenarigo/compare/v0.12.1...v0.12.2

@@ -42,6 +42,7 @@ type Step struct {
 	Ref         interface{}               `yaml:"ref,omitempty"`
 	Bind        Bind                      `yaml:"bind,omitempty"`
 	Retry       *RetryPolicy              `yaml:"retry,omitempty"`
+	Timeout     *Duration                 `yaml:"timeout,omitempty"`
 }
 
 type rawMessage []byte
@@ -61,6 +62,7 @@ type stepUnmarshaller struct {
 	Ref         interface{}            `yaml:"ref,omitempty"`
 	Bind        Bind                   `yaml:"bind,omitempty"`
 	Retry       *RetryPolicy           `yaml:"retry,omitempty"`
+	Timeout     *Duration              `yaml:"timeout,omitempty"`
 
 	Request rawMessage `yaml:"request,omitempty"`
 	Expect  rawMessage `yaml:"expect,omitempty"`
@@ -82,6 +84,7 @@ func (s *Step) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	s.Ref = unmarshaled.Ref
 	s.Bind = unmarshaled.Bind
 	s.Retry = unmarshaled.Retry
+	s.Timeout = unmarshaled.Timeout
 
 	p := protocol.Get(s.Protocol)
 	if p == nil {

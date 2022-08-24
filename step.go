@@ -1,6 +1,7 @@
 package scenarigo
 
 import (
+	gocontext "context"
 	"fmt"
 	"path/filepath"
 	"time"
@@ -108,45 +109,8 @@ func invokeAndAssert(ctx *context.Context, s *schema.Step, stepIdx int) *context
 		ctx.Reporter().Logf("[%d] send request", i)
 		i++
 
-		reqTime := time.Now()
-		newCtx, resp, err := s.Request.Invoke(ctx)
-		ctx.Reporter().Logf("elapsed time: %f sec", time.Since(reqTime).Seconds())
-
-		if err != nil {
-			ctx.Reporter().Log(
-				errors.WithNodeAndColored(
-					errors.WithPath(err, fmt.Sprintf("steps[%d].request", stepIdx)),
-					ctx.Node(),
-					ctx.EnabledColor(),
-				),
-			)
-			continue
-		}
-		assertion, err := s.Expect.Build(newCtx)
-		if err != nil {
-			ctx.Reporter().Log(
-				errors.WithNodeAndColored(
-					errors.WithPath(err, fmt.Sprintf("steps[%d].expect", stepIdx)),
-					ctx.Node(),
-					ctx.EnabledColor(),
-				),
-			)
-			continue
-		}
-		if err := assertion.Assert(resp); err != nil {
-			err = errors.WithNodeAndColored(
-				errors.WithPath(err, fmt.Sprintf("steps[%d].expect", stepIdx)),
-				ctx.Node(),
-				ctx.EnabledColor(),
-			)
-			var assertErr *assert.Error
-			if errors.As(err, &assertErr) {
-				for _, err := range assertErr.Errors {
-					ctx.Reporter().Log(err)
-				}
-			} else {
-				ctx.Reporter().Log(err)
-			}
+		newCtx, ok := attempt(ctx, s, stepIdx)
+		if !ok {
 			continue
 		}
 		return newCtx
@@ -154,4 +118,54 @@ func invokeAndAssert(ctx *context.Context, s *schema.Step, stepIdx int) *context
 
 	ctx.Reporter().FailNow()
 	return ctx
+}
+
+func attempt(ctx *context.Context, s *schema.Step, stepIdx int) (*context.Context, bool) {
+	reqTime := time.Now()
+	if s.Timeout != nil && *s.Timeout > 0 {
+		reqCtx, cancel := gocontext.WithTimeout(ctx.RequestContext(), time.Duration(*s.Timeout))
+		defer cancel()
+		ctx = ctx.WithRequestContext(reqCtx)
+	}
+	newCtx, resp, err := s.Request.Invoke(ctx)
+	ctx.Reporter().Logf("elapsed time: %f sec", time.Since(reqTime).Seconds())
+
+	if err != nil {
+		ctx.Reporter().Log(
+			errors.WithNodeAndColored(
+				errors.WithPath(err, fmt.Sprintf("steps[%d].request", stepIdx)),
+				ctx.Node(),
+				ctx.EnabledColor(),
+			),
+		)
+		return nil, false
+	}
+	assertion, err := s.Expect.Build(newCtx)
+	if err != nil {
+		ctx.Reporter().Log(
+			errors.WithNodeAndColored(
+				errors.WithPath(err, fmt.Sprintf("steps[%d].expect", stepIdx)),
+				ctx.Node(),
+				ctx.EnabledColor(),
+			),
+		)
+		return nil, false
+	}
+	if err := assertion.Assert(resp); err != nil {
+		err = errors.WithNodeAndColored(
+			errors.WithPath(err, fmt.Sprintf("steps[%d].expect", stepIdx)),
+			ctx.Node(),
+			ctx.EnabledColor(),
+		)
+		var assertErr *assert.Error
+		if errors.As(err, &assertErr) {
+			for _, err := range assertErr.Errors {
+				ctx.Reporter().Log(err)
+			}
+		} else {
+			ctx.Reporter().Log(err)
+		}
+		return nil, false
+	}
+	return newCtx, true
 }

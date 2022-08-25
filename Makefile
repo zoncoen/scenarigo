@@ -10,6 +10,8 @@ TOOLS_DIR := $(CURDIR)/tools
 
 UNAME_OS := $(shell uname -s)
 UNAME_ARCH := $(shell uname -m)
+GOOS := $(shell $(GO) env GOOS)
+GOARCH := $(shell $(GO) env GOARCH)
 
 PROTO_DIR := $(CURDIR)/testdata/proto
 GEN_PB_DIR := $(CURDIR)/testdata/gen/pb
@@ -75,11 +77,12 @@ $(GOCREDITS): | $(BIN_DIR)
 
 GOLANGCI_LINT := $(BIN_DIR)/golangci-lint
 GOLANGCI_LINT_VERSION := 1.48.0
-GOLANGCI_LINT_GZIP := $(shell echo golangci-lint-$(GOLANGCI_LINT_VERSION)-$(UNAME_OS)-$(UNAME_ARCH).tar.gz | tr '[:upper:]' '[:lower:]')
+GOLANGCI_LINT_OS_ARCH := $(shell echo golangci-lint-$(GOLANGCI_LINT_VERSION)-$(GOOS)-$(GOARCH))
+GOLANGCI_LINT_GZIP := $(GOLANGCI_LINT_OS_ARCH).tar.gz
 $(GOLANGCI_LINT): | $(BIN_DIR)
 	@curl -sSOL \
 		"https://github.com/golangci/golangci-lint/releases/download/v$(GOLANGCI_LINT_VERSION)/$(GOLANGCI_LINT_GZIP)"
-	@tar -C $(BIN_DIR) --strip=1 -xf $(GOLANGCI_LINT_GZIP) golangci-lint-1.48.0-darwin-arm64/golangci-lint
+	@tar -C $(BIN_DIR) --strip=1 -xf $(GOLANGCI_LINT_GZIP) $(GOLANGCI_LINT_OS_ARCH)/golangci-lint
 	@rm $(GOLANGCI_LINT_GZIP)
 
 LOOPPOINTER := $(BIN_DIR)/looppointer

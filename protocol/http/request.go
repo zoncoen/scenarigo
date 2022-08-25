@@ -218,7 +218,7 @@ func (r *Request) buildRequest(ctx *context.Context) (*http.Request, interface{}
 		reader = bytes.NewReader(b)
 	}
 
-	req, err := http.NewRequest(method, urlStr, reader)
+	req, err := http.NewRequest(strings.ToUpper(method), urlStr, reader)
 	if err != nil {
 		return nil, nil, errors.Errorf("failed to create request: %s", err)
 	}

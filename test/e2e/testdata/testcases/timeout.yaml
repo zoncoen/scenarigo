@@ -1,0 +1,12 @@
+title: timeout
+scenarios:
+- filename: timeout/success.yaml
+  mocks: timeout/success.yaml
+  success: true
+  output:
+    stdout: timeout/success.txt
+- filename: timeout/failure.yaml
+  mocks: timeout/failure.yaml
+  success: false
+  output:
+    stdout: timeout/failure.txt

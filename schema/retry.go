@@ -3,7 +3,6 @@ package schema
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/lestrrat-go/backoff"
@@ -34,53 +33,41 @@ func (p *RetryPolicy) Build() (backoff.Policy, error) {
 
 // RetryPolicyConstant represents a constant retry policy.
 type RetryPolicyConstant struct {
-	Interval       string  `yaml:"interval"`
-	MaxElapsedTime *string `yaml:"maxElapsedTime"`
-	MaxRetries     *int    `yaml:"maxRetries"`
+	Interval       *Duration `yaml:"interval"`
+	MaxElapsedTime *Duration `yaml:"maxElapsedTime"`
+	MaxRetries     *int      `yaml:"maxRetries"`
 }
 
 // Build returns p as backoff.Policy.
 func (p *RetryPolicyConstant) Build() (backoff.Policy, error) {
-	if p.Interval == "" {
+	if p.Interval == nil {
 		return nil, errors.New("interval must be specified")
-	}
-	interval, err := time.ParseDuration(p.Interval)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse interval: %w", err)
 	}
 	opts := []backoff.Option{}
 	if p.MaxElapsedTime != nil {
-		t, err := time.ParseDuration(*p.MaxElapsedTime)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse max elapsed time: %w", err)
-		}
-		opts = append(opts, backoff.WithMaxElapsedTime(t))
+		opts = append(opts, backoff.WithMaxElapsedTime(time.Duration(*p.MaxElapsedTime)))
 	}
 	if p.MaxRetries != nil {
 		opts = append(opts, backoff.WithMaxRetries(*p.MaxRetries))
 	}
-	return backoff.NewConstant(interval, opts...), nil
+	return backoff.NewConstant(time.Duration(*p.Interval), opts...), nil
 }
 
 // RetryPolicyExponential represents a exponential retry policy.
 type RetryPolicyExponential struct {
-	InitialInterval *string  `yaml:"initialInterval"`
-	Factor          *float64 `yaml:"factor"`
-	JitterFactor    *float64 `yaml:"jitterFactor"`
-	MaxInterval     *string  `yaml:"maxInterval"`
-	MaxElapsedTime  *string  `yaml:"maxElapsedTime"`
-	MaxRetries      *int     `yaml:"maxRetries"`
+	InitialInterval *Duration `yaml:"initialInterval"`
+	Factor          *float64  `yaml:"factor"`
+	JitterFactor    *float64  `yaml:"jitterFactor"`
+	MaxInterval     *Duration `yaml:"maxInterval"`
+	MaxElapsedTime  *Duration `yaml:"maxElapsedTime"`
+	MaxRetries      *int      `yaml:"maxRetries"`
 }
 
 // Build returns p as backoff.Policy.
 func (p *RetryPolicyExponential) Build() (backoff.Policy, error) {
 	opts := []backoff.Option{}
 	if p.InitialInterval != nil {
-		t, err := time.ParseDuration(*p.InitialInterval)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse max elapsed time: %w", err)
-		}
-		opts = append(opts, backoff.WithInterval(t))
+		opts = append(opts, backoff.WithInterval(time.Duration(*p.InitialInterval)))
 	}
 	if p.Factor != nil {
 		opts = append(opts, backoff.WithFactor(*p.Factor))
@@ -89,18 +76,10 @@ func (p *RetryPolicyExponential) Build() (backoff.Policy, error) {
 		opts = append(opts, backoff.WithJitterFactor(*p.JitterFactor))
 	}
 	if p.MaxInterval != nil {
-		t, err := time.ParseDuration(*p.MaxInterval)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse max interval: %w", err)
-		}
-		opts = append(opts, backoff.WithMaxInterval(t))
+		opts = append(opts, backoff.WithMaxInterval(time.Duration(*p.MaxInterval)))
 	}
 	if p.MaxElapsedTime != nil {
-		t, err := time.ParseDuration(*p.MaxElapsedTime)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse max elapsed time: %w", err)
-		}
-		opts = append(opts, backoff.WithMaxElapsedTime(t))
+		opts = append(opts, backoff.WithMaxElapsedTime(time.Duration(*p.MaxElapsedTime)))
 	}
 	if p.MaxRetries != nil {
 		opts = append(opts, backoff.WithMaxRetries(*p.MaxRetries))

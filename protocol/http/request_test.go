@@ -111,7 +111,7 @@ func TestRequest_Invoke(t *testing.T) {
 					status: "200 OK",
 				},
 			},
-			"Post": {
+			"POST": {
 				request: &Request{
 					Method: http.MethodPost,
 					URL:    srv.URL + "/echo",
@@ -124,7 +124,20 @@ func TestRequest_Invoke(t *testing.T) {
 					Body:   map[string]interface{}{"message": "hey", "id": "123"},
 				},
 			},
-			"Post (gzipped)": {
+			"lower case method": {
+				request: &Request{
+					Method: "post",
+					URL:    srv.URL + "/echo",
+					Query:  url.Values{"id": []string{"123"}},
+					Header: map[string][]string{"Authorization": {auth}},
+					Body:   map[string]string{"message": "hey"},
+				},
+				response: response{
+					status: "200 OK",
+					Body:   map[string]interface{}{"message": "hey", "id": "123"},
+				},
+			},
+			"POST (gzipped)": {
 				request: &Request{
 					Method: http.MethodPost,
 					URL:    srv.URL + "/echo/gzipped",

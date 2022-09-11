@@ -14,13 +14,11 @@ import (
 	"github.com/zoncoen/scenarigo/scripts/cross-build/gen"
 )
 
-var (
-	go117 *semver.Version
-)
+var go118 *semver.Version
 
 func init() {
 	var err error
-	go117, err = semver.NewVersion("1.17.0")
+	go118, err = semver.NewVersion("1.18.0")
 	if err != nil {
 		panic(err)
 	}
@@ -71,7 +69,7 @@ func getVers(token string) ([]string, error) {
 		if err != nil {
 			continue
 		}
-		if !v.LessThan(go117) {
+		if !v.LessThan(go118) {
 			vers = append(vers, v.Original())
 		}
 	}

@@ -11,6 +11,7 @@ import (
 	"google.golang.org/grpc/status"
 
 	// Register proto messages to unmarshal com.google.protobuf.Any.
+
 	_ "google.golang.org/genproto/googleapis/rpc/errdetails"
 
 	"github.com/zoncoen/scenarigo/assert"
@@ -59,9 +60,41 @@ func (e *Expect) Build(ctx *context.Context) (assert.Assertion, error) {
 	if e.Status.Message != "" {
 		executedMsg, err := ctx.ExecuteTemplate(e.Status.Message)
 		if err != nil {
-			return nil, errors.WrapPathf(err, "message", "invalid expect response: %s", err)
+			return nil, errors.WrapPathf(err, "status.message", "invalid expect response: %s", err)
 		}
 		statusMsgAssertion = assert.Build(executedMsg)
+	}
+
+	var statusDetailAssertions []assert.Assertion
+	if l := len(e.Status.Details); l > 0 {
+		statusDetailAssertions = make([]assert.Assertion, l)
+		for i, d := range e.Status.Details {
+			if len(d) != 1 {
+				return nil, errors.ErrorPath(fmt.Sprintf("status.details[%d]", i), "an element of status.details list must be a map of size 1 with the detail message name as the key and the value as the detail message object")
+			}
+			for k, v := range d {
+				executed, err := ctx.ExecuteTemplate(k)
+				if err != nil {
+					return nil, errors.WrapPath(err, fmt.Sprintf("status.details[%d].'%s'", i, k), "failed to execute template")
+				}
+				fullName := assert.Build(executed)
+				executed, err = ctx.ExecuteTemplate(v)
+				if err != nil {
+					return nil, errors.WrapPath(err, fmt.Sprintf("status.details[%d].'%s'", i, k), "failed to execute template")
+				}
+				fields := assert.Build(executed)
+				statusDetailAssertions[i] = assert.AssertionFunc(func(v interface{}) error {
+					if err := fullName.Assert(proto.MessageV2(v).ProtoReflect().Descriptor().FullName()); err != nil {
+						return err
+					}
+					if err := fields.Assert(v); err != nil {
+						return errors.WithPath(err, fmt.Sprintf("'%s'", k))
+					}
+					return nil
+				})
+				break
+			}
+		}
 	}
 
 	headerAssertion, err := assertutil.BuildHeaderAssertion(ctx, e.Header)
@@ -94,8 +127,8 @@ func (e *Expect) Build(ctx *context.Context) (assert.Assertion, error) {
 		if err := e.assertStatusMessage(statusMsgAssertion, stErr); err != nil {
 			return errors.WithPath(err, "status.message")
 		}
-		if err := e.assertStatusDetails(stErr); err != nil {
-			return errors.WithPath(err, "status.details")
+		if err := e.assertStatusDetails(statusDetailAssertions, stErr); err != nil {
+			return errors.WithPath(err, "status")
 		}
 		if err := headerAssertion.Assert(resp.Header); err != nil {
 			return errors.WithPath(err, "header")
@@ -142,42 +175,20 @@ func (e *Expect) assertStatusMessage(assertion assert.Assertion, sts *status.Sta
 	)
 }
 
-func (e *Expect) assertStatusDetails(sts *status.Status) error {
-	if len(e.Status.Details) == 0 {
+func (e *Expect) assertStatusDetails(assertions []assert.Assertion, sts *status.Status) error {
+	if len(assertions) == 0 {
 		return nil
 	}
 
 	actualDetails := sts.Details()
 
-	for i, expecteDetailMap := range e.Status.Details {
+	for i, assertion := range assertions {
 		if i >= len(actualDetails) {
-			return errors.Errorf(`expected status.details[%d] is not found%s`, i, appendDetailsString(sts))
+			return errors.ErrorPathf(fmt.Sprintf("details[%d]", i), `not found%s`, appendDetailsString(sts))
 		}
 
-		if len(expecteDetailMap) != 1 {
-			return errors.Errorf("invalid yaml: expect status.details[%d]:"+
-				"An element of status.details list must be a map of size 1 with the detail message name as the key and the value as the detail message object.", i)
-		}
-
-		var expectName string
-		var expectDetail interface{}
-		for k, v := range expecteDetailMap {
-			expectName = k
-			expectDetail = v
-			break
-		}
-
-		actual, ok := actualDetails[i].(proto.Message)
-		if !ok {
-			return errors.Errorf(`expected status.details[%d] is "%s" but got detail is not a proto message: "%#v"`, i, expectName, actualDetails[i])
-		}
-
-		if name := string(proto.MessageV2(actual).ProtoReflect().Descriptor().FullName()); name != expectName {
-			return errors.Errorf(`expected status.details[%d] is "%s" but got detail is "%s"%s`, i, expectName, name, appendDetailsString(sts))
-		}
-
-		if err := assert.Build(expectDetail).Assert(actual); err != nil {
-			return err
+		if err := assertion.Assert(actualDetails[i]); err != nil {
+			return errors.WrapPath(err, fmt.Sprintf("details[%d]", i), appendDetailsString(sts))
 		}
 	}
 

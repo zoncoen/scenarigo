@@ -137,8 +137,8 @@ func TestExpect_Build(t *testing.T) {
 			"assert in case of error": {
 				expect: &Expect{
 					Status: ExpectStatus{
-						Code:    "InvalidArgument",
-						Message: "invalid argument",
+						Code:    `{{"InvalidArgument"}}`,
+						Message: `{{"invalid argument"}}`,
 						Details: []map[string]yaml.MapSlice{
 							{
 								"google.rpc.LocalizedMessage": yaml.MapSlice{
@@ -149,9 +149,9 @@ func TestExpect_Build(t *testing.T) {
 								},
 							},
 							{
-								"google.rpc.DebugInfo": yaml.MapSlice{
+								`{{"google.rpc.DebugInfo"}}`: yaml.MapSlice{
 									yaml.MapItem{
-										Key:   "detail",
+										Key:   `{{"detail"}}`,
 										Value: "debug",
 									},
 								},
@@ -505,6 +505,38 @@ func TestExpect_Build(t *testing.T) {
 				},
 				expectAssertError: true,
 			},
+			"wrong status details: name is an invalid template": {
+				expect: &Expect{
+					Status: ExpectStatus{
+						Details: []map[string]yaml.MapSlice{
+							{
+								"{{google.rpc.LocalizedMessage": yaml.MapSlice{
+									yaml.MapItem{
+										Key:   "locale",
+										Value: "ja-JP",
+									},
+								},
+							},
+						},
+					},
+				},
+				v: response{
+					rvalues: []reflect.Value{
+						reflect.Zero(reflect.TypeOf(&test.EchoResponse{})),
+						reflect.ValueOf(mustWithDetails(
+							status.New(codes.InvalidArgument, "invalid argument"),
+							&errdetails.LocalizedMessage{
+								Locale:  "ja-JP",
+								Message: "エラー",
+							},
+							&errdetails.DebugInfo{
+								Detail: "debug",
+							},
+						).Err()),
+					},
+				},
+				expectBuildError: true,
+			},
 			"wrong status details: name is wrong": {
 				expect: &Expect{
 					Status: ExpectStatus{
@@ -536,6 +568,38 @@ func TestExpect_Build(t *testing.T) {
 					},
 				},
 				expectAssertError: true,
+			},
+			"wrong status details: value is an invalid template": {
+				expect: &Expect{
+					Status: ExpectStatus{
+						Details: []map[string]yaml.MapSlice{
+							{
+								"google.rpc.LocalizedMessage": yaml.MapSlice{
+									yaml.MapItem{
+										Key:   "{{locale",
+										Value: "ja-JP",
+									},
+								},
+							},
+						},
+					},
+				},
+				v: response{
+					rvalues: []reflect.Value{
+						reflect.Zero(reflect.TypeOf(&test.EchoResponse{})),
+						reflect.ValueOf(mustWithDetails(
+							status.New(codes.InvalidArgument, "invalid argument"),
+							&errdetails.LocalizedMessage{
+								Locale:  "ja-JP",
+								Message: "エラー",
+							},
+							&errdetails.DebugInfo{
+								Detail: "debug",
+							},
+						).Err()),
+					},
+				},
+				expectBuildError: true,
 			},
 			"wrong status details: value is wrong": {
 				expect: &Expect{

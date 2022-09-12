@@ -69,7 +69,7 @@ $(GIT_CHGLOG): | $(BIN_DIR)
 
 GO_LICENSES := $(BIN_DIR)/go-licenses
 $(GO_LICENSES): | $(BIN_DIR)
-	@$(GO) install github.com/google/go-licenses@v1.2.1
+	@$(GO) install github.com/google/go-licenses@v1.3.0
 
 GOCREDITS := $(BIN_DIR)/gocredits
 $(GOCREDITS): | $(BIN_DIR)

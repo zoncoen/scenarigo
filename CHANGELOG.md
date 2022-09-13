@@ -1,5 +1,12 @@
 # CHANGELOG
 
+<a name="v0.12.6"></a>
+## [v0.12.6] - 2022-09-12
+### Features
+- enable to specify step timeout
+- **grpc:** enable to use template in error details
+- **http:** make method name case-insensitive
+
 <a name="v0.12.5"></a>
 ## [v0.12.5] - 2022-08-22
 ### Bug Fixes
@@ -258,6 +265,7 @@ change protocl.Protocol interface
 - first release
 
 
+[v0.12.6]: https://github.com/zoncoen/scenarigo/compare/v0.12.5...v0.12.6
 [v0.12.5]: https://github.com/zoncoen/scenarigo/compare/v0.12.4...v0.12.5
 [v0.12.4]: https://github.com/zoncoen/scenarigo/compare/v0.12.3...v0.12.4
 [v0.12.3]: https://github.com/zoncoen/scenarigo/compare/v0.12.2...v0.12.3

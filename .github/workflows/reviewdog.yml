@@ -1,10 +1,8 @@
 name: reviewdog
 on:
-  push:
   pull_request:
 jobs:
   golangci-lint:
-    name: runner / golangci-lint
     runs-on: ubuntu-latest
     steps:
     - name: Check out code into the Go module directory

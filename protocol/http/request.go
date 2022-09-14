@@ -145,39 +145,9 @@ func (r *Request) buildRequest(ctx *context.Context) (*http.Request, interface{}
 		method = r.Method
 	}
 
-	x, err := ctx.ExecuteTemplate(r.URL)
+	urlStr, err := r.buildURL(ctx)
 	if err != nil {
-		return nil, nil, errors.WrapPathf(err, "url", "failed to get URL")
-	}
-	urlStr, ok := x.(string)
-	if !ok {
-		return nil, nil, errors.ErrorPathf("url", `URL must be "string" but got "%T"`, x)
-	}
-
-	if r.Query != nil {
-		u, err := url.Parse(urlStr)
-		if err != nil {
-			return nil, nil, errors.WrapPathf(err, "url", "invalid url: %s", urlStr)
-		}
-		query := u.Query()
-
-		x, err := ctx.ExecuteTemplate(r.Query)
-		if err != nil {
-			return nil, nil, errors.WrapPathf(err, "query", "failed to set query")
-		}
-		q, err := reflectutil.ConvertStringsMap(reflect.ValueOf(x))
-		if err != nil {
-			return nil, nil, errors.WrapPathf(err, "query", "failed to set query")
-		}
-		for k, vs := range q {
-			vs := vs
-			for _, v := range vs {
-				query.Add(k, v)
-			}
-		}
-
-		u.RawQuery = query.Encode()
-		urlStr = u.String()
+		return nil, nil, err
 	}
 
 	header := http.Header{}
@@ -232,4 +202,43 @@ func (r *Request) buildRequest(ctx *context.Context) (*http.Request, interface{}
 	}
 
 	return req, body, nil
+}
+
+func (r *Request) buildURL(ctx *context.Context) (string, error) {
+	x, err := ctx.ExecuteTemplate(r.URL)
+	if err != nil {
+		return "", errors.WrapPathf(err, "url", "failed to get URL")
+	}
+	urlStr, ok := x.(string)
+	if !ok {
+		return "", errors.ErrorPathf("url", `URL must be "string" but got "%T"`, x)
+	}
+
+	if r.Query != nil {
+		u, err := url.Parse(urlStr)
+		if err != nil {
+			return "", errors.WrapPathf(err, "url", "invalid url: %s", urlStr)
+		}
+		query := u.Query()
+
+		x, err := ctx.ExecuteTemplate(r.Query)
+		if err != nil {
+			return "", errors.WrapPathf(err, "query", "failed to set query")
+		}
+		q, err := reflectutil.ConvertStringsMap(reflect.ValueOf(x))
+		if err != nil {
+			return "", errors.WrapPathf(err, "query", "failed to set query")
+		}
+		for k, vs := range q {
+			vs := vs
+			for _, v := range vs {
+				query.Add(k, v)
+			}
+		}
+
+		u.RawQuery = query.Encode()
+		urlStr = u.String()
+	}
+
+	return urlStr, nil
 }

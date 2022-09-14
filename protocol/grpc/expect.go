@@ -11,7 +11,6 @@ import (
 	"google.golang.org/grpc/status"
 
 	// Register proto messages to unmarshal com.google.protobuf.Any.
-
 	_ "google.golang.org/genproto/googleapis/rpc/errdetails"
 
 	"github.com/zoncoen/scenarigo/assert"
@@ -65,36 +64,9 @@ func (e *Expect) Build(ctx *context.Context) (assert.Assertion, error) {
 		statusMsgAssertion = assert.Build(executedMsg)
 	}
 
-	var statusDetailAssertions []assert.Assertion
-	if l := len(e.Status.Details); l > 0 {
-		statusDetailAssertions = make([]assert.Assertion, l)
-		for i, d := range e.Status.Details {
-			if len(d) != 1 {
-				return nil, errors.ErrorPath(fmt.Sprintf("status.details[%d]", i), "an element of status.details list must be a map of size 1 with the detail message name as the key and the value as the detail message object")
-			}
-			for k, v := range d {
-				executed, err := ctx.ExecuteTemplate(k)
-				if err != nil {
-					return nil, errors.WrapPath(err, fmt.Sprintf("status.details[%d].'%s'", i, k), "failed to execute template")
-				}
-				fullName := assert.Build(executed)
-				executed, err = ctx.ExecuteTemplate(v)
-				if err != nil {
-					return nil, errors.WrapPath(err, fmt.Sprintf("status.details[%d].'%s'", i, k), "failed to execute template")
-				}
-				fields := assert.Build(executed)
-				statusDetailAssertions[i] = assert.AssertionFunc(func(v interface{}) error {
-					if err := fullName.Assert(proto.MessageV2(v).ProtoReflect().Descriptor().FullName()); err != nil {
-						return err
-					}
-					if err := fields.Assert(v); err != nil {
-						return errors.WithPath(err, fmt.Sprintf("'%s'", k))
-					}
-					return nil
-				})
-				break
-			}
-		}
+	statusDetailAssertions, err := e.buildStatusDetailAssertions(ctx)
+	if err != nil {
+		return nil, err
 	}
 
 	headerAssertion, err := assertutil.BuildHeaderAssertion(ctx, e.Header)
@@ -141,6 +113,41 @@ func (e *Expect) Build(ctx *context.Context) (assert.Assertion, error) {
 		}
 		return nil
 	}), nil
+}
+
+func (e *Expect) buildStatusDetailAssertions(ctx *context.Context) ([]assert.Assertion, error) {
+	var statusDetailAssertions []assert.Assertion
+	if l := len(e.Status.Details); l > 0 {
+		statusDetailAssertions = make([]assert.Assertion, l)
+		for i, d := range e.Status.Details {
+			if len(d) != 1 {
+				return nil, errors.ErrorPath(fmt.Sprintf("status.details[%d]", i), "an element of status.details list must be a map of size 1 with the detail message name as the key and the value as the detail message object")
+			}
+			for k, v := range d {
+				executed, err := ctx.ExecuteTemplate(k)
+				if err != nil {
+					return nil, errors.WrapPath(err, fmt.Sprintf("status.details[%d].'%s'", i, k), "failed to execute template")
+				}
+				fullName := assert.Build(executed)
+				executed, err = ctx.ExecuteTemplate(v)
+				if err != nil {
+					return nil, errors.WrapPath(err, fmt.Sprintf("status.details[%d].'%s'", i, k), "failed to execute template")
+				}
+				fields := assert.Build(executed)
+				statusDetailAssertions[i] = assert.AssertionFunc(func(v interface{}) error {
+					if err := fullName.Assert(proto.MessageV2(v).ProtoReflect().Descriptor().FullName()); err != nil {
+						return err
+					}
+					if err := fields.Assert(v); err != nil {
+						return errors.WithPath(err, fmt.Sprintf("'%s'", k))
+					}
+					return nil
+				})
+				break
+			}
+		}
+	}
+	return statusDetailAssertions, nil
 }
 
 func assertStatusCode(assertion assert.Assertion, sts *status.Status) error {

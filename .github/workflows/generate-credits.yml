@@ -1,6 +1,8 @@
 name: generate CREDITS
 on:
-  pull_request_target
+  pull_request_target:
+    branches:
+    - 'dependabot/**'
 jobs:
   generate:
     runs-on: ubuntu-latest

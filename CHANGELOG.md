@@ -1,7 +1,12 @@
 # CHANGELOG
 
+<a name="v0.12.7"></a>
+## [v0.12.7] - 2022-09-27
+### Features
+- **template:** enable to call methods
+
 <a name="v0.12.6"></a>
-## [v0.12.6] - 2022-09-12
+## [v0.12.6] - 2022-09-13
 ### Features
 - enable to specify step timeout
 - **grpc:** enable to use template in error details
@@ -265,6 +270,7 @@ change protocl.Protocol interface
 - first release
 
 
+[v0.12.7]: https://github.com/zoncoen/scenarigo/compare/v0.12.6...v0.12.7
 [v0.12.6]: https://github.com/zoncoen/scenarigo/compare/v0.12.5...v0.12.6
 [v0.12.5]: https://github.com/zoncoen/scenarigo/compare/v0.12.4...v0.12.5
 [v0.12.4]: https://github.com/zoncoen/scenarigo/compare/v0.12.3...v0.12.4

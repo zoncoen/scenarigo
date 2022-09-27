@@ -11,7 +11,7 @@ import (
 func TestSet(t *testing.T) {
 	type myStr string
 	type myStruct struct {
-		str string //nolint:unused,structcheck
+		str string //nolint:unused
 	}
 	tests := map[string]struct {
 		target reflect.Value

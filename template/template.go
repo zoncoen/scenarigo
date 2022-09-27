@@ -236,45 +236,63 @@ func (t *Template) requiredFuncArgType(funcType reflect.Type, argIdx int) reflec
 }
 
 func (t *Template) executeFuncCall(call *ast.CallExpr, data interface{}) (interface{}, error) {
-	fun, err := t.executeExpr(call.Fun, data)
-	if err != nil {
-		return nil, err
-	}
-	funv := reflect.ValueOf(fun)
-	if funv.Kind() != reflect.Func {
-		return nil, errors.Errorf("not function")
-	}
-	funcType := funv.Type()
-	if funcType.IsVariadic() {
-		minArgNum := funcType.NumIn() - 1
-		if len(call.Args) < minArgNum {
-			return nil, errors.Errorf(
-				"too few arguments to function: expected minimum argument number is %d. but specified %d arguments",
-				minArgNum, len(call.Args),
-			)
-		}
-	} else if funcType.NumIn() != len(call.Args) {
-		return nil, errors.Errorf(
-			"expected function argument number is %d. but specified %d arguments",
-			funv.Type().NumIn(), len(call.Args),
-		)
-	}
-
-	args := make([]reflect.Value, len(call.Args))
-	for i, arg := range call.Args {
-		a, err := t.executeExpr(arg, data)
+	var fn reflect.Value
+	fnName := "function"
+	args := make([]reflect.Value, 0, len(call.Args)+1)
+	selector, ok := call.Fun.(*ast.SelectorExpr)
+	if ok {
+		x, err := t.executeExpr(selector.X, data)
 		if err != nil {
 			return nil, err
 		}
-		requiredType := t.requiredFuncArgType(funcType, i)
-		v := reflect.ValueOf(a)
-		if v.IsValid() && v.Type().ConvertibleTo(requiredType) {
-			v = v.Convert(requiredType)
+		v, err := lookup(selector.Sel, x)
+		if err == nil {
+			fn = reflect.ValueOf(v)
+		} else {
+			r, m, ok := getMethod(x, selector.Sel.Name)
+			if !ok {
+				return nil, err
+			}
+			fn = m.Func
+			args = append(args, r)
 		}
-		args[i] = v
+		fnName = selector.Sel.Name
+	} else {
+		f, err := t.executeExpr(call.Fun, data)
+		if err != nil {
+			return nil, err
+		}
+		fn = reflect.ValueOf(f)
+		if id, ok := call.Fun.(*ast.Ident); ok {
+			fnName = id.Name
+		}
+	}
+	if fn.Kind() != reflect.Func {
+		return nil, errors.Errorf("not function")
+	}
+	fnType := fn.Type()
+	argNum := len(args) + len(call.Args)
+	if fnType.IsVariadic() {
+		minArgNum := fnType.NumIn() - 1
+		if argNum < minArgNum {
+			return nil, errors.Errorf(
+				"too few arguments to function: expected minimum argument number is %d. but specified %d arguments",
+				minArgNum, argNum,
+			)
+		}
+	} else if fnType.NumIn() != argNum {
+		return nil, errors.Errorf(
+			"expected function argument number is %d but specified %d arguments",
+			fn.Type().NumIn(), argNum,
+		)
 	}
 
-	vs := funv.Call(args)
+	args, err := t.executeArgs(fnName, fnType, args, call.Args, data)
+	if err != nil {
+		return nil, err
+	}
+
+	vs := fn.Call(args)
 	switch len(vs) {
 	case 1:
 		if !vs[0].IsValid() || !vs[0].CanInterface() {
@@ -298,6 +316,50 @@ func (t *Template) executeFuncCall(call *ast.CallExpr, data interface{}) (interf
 	default:
 		return nil, errors.Errorf("function should return a value or a value and an error")
 	}
+}
+
+func getMethod(in interface{}, name string) (reflect.Value, *reflect.Method, bool) {
+	r := reflectutil.Elem(reflect.ValueOf(in))
+	m, ok := r.Type().MethodByName(name)
+	if ok {
+		return r, &m, true
+	}
+	if r.CanAddr() {
+		r = r.Addr()
+		m, ok := r.Type().MethodByName(name)
+		if ok {
+			return r, &m, true
+		}
+	} else {
+		ptr := makePtr(r)
+		m, ok := ptr.Type().MethodByName(name)
+		if ok {
+			return ptr, &m, true
+		}
+	}
+	return reflect.Value{}, nil, false
+}
+
+func (t *Template) executeArgs(fnName string, fnType reflect.Type, vs []reflect.Value, args []ast.Expr, data interface{}) ([]reflect.Value, error) {
+	for i, arg := range args {
+		a, err := t.executeExpr(arg, data)
+		if err != nil {
+			return nil, err
+		}
+		requiredType := t.requiredFuncArgType(fnType, len(vs))
+		v := reflect.ValueOf(a)
+		if v.IsValid() {
+			vv, ok, _ := reflectutil.Convert(requiredType, v)
+			if ok {
+				v = vv
+			}
+		}
+		if typ := v.Type(); typ != requiredType {
+			return nil, errors.Errorf("can't use %s as %s in arguments[%d] to %s", typ, requiredType, i, fnName)
+		}
+		vs = append(vs, v)
+	}
+	return vs, nil
 }
 
 func (t *Template) executeLeftArrowExpr(e *ast.LeftArrowExpr, data interface{}) (interface{}, error) {

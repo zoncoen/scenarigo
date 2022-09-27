@@ -9,6 +9,7 @@ import (
 	"github.com/goccy/go-yaml"
 	"github.com/google/go-cmp/cmp"
 	"github.com/pkg/errors"
+	"github.com/zoncoen/scenarigo/internal/testutil"
 )
 
 func TestNew(t *testing.T) {
@@ -134,7 +135,7 @@ func TestTemplate_Execute(t *testing.T) {
 					return a0 + a1
 				},
 			},
-			expectError: "expected function argument number is 2. but specified 3 arguments",
+			expectError: "expected function argument number is 2 but specified 3 arguments",
 		},
 		"invalid function argument ( variadic arguments )": {
 			str: `{{f()}}`,
@@ -149,6 +150,22 @@ func TestTemplate_Execute(t *testing.T) {
 			},
 			expectError: "too few arguments to function: expected minimum argument number is 1. but specified 0 arguments",
 		},
+		"invalid function argument type (ident)": {
+			str: `{{fn("1")}}`,
+			data: map[string]func(int){
+				"fn": func(a int) {},
+			},
+			expectError: "can't use string as int in arguments[0] to fn",
+		},
+		"invalid function argument type (selector)": {
+			str: `{{m.fn("1")}}`,
+			data: map[string]interface{}{
+				"m": map[string]func(int){
+					"fn": func(a int) {},
+				},
+			},
+			expectError: "can't use string as int in arguments[0] to fn",
+		},
 		"function call (second value is not an error)": {
 			str: `{{f()}}`,
 			data: map[string]interface{}{
@@ -162,6 +179,31 @@ func TestTemplate_Execute(t *testing.T) {
 				"f": func() (interface{}, error) { return nil, errors.New("f() error") },
 			},
 			expectError: "f() error",
+		},
+
+		"method call": {
+			str: `{{s.Echo("a") + s.Repeat("b") + p.Echo("c") + p.Self().Repeat(d)}}`,
+			data: map[string]interface{}{
+				"s": echoStruct{},
+				"p": &echoStruct{},
+				"d": testutil.ToPtr("d"),
+			},
+			expect: "abbcdd",
+		},
+		"method not found": {
+			str: `{{p.Invalid()}}`,
+			data: map[string]interface{}{
+				"p": &echoStruct{},
+			},
+			expectError: `failed to execute: {{p.Invalid()}}: ".Invalid" not found`,
+		},
+		"invalid method argument": {
+			str: `{{p.Repeat(a)}}`,
+			data: map[string]interface{}{
+				"p": &echoStruct{},
+				"a": 1.2,
+			},
+			expectError: "can't use float64 as string in arguments[0] to Repeat",
 		},
 
 		"left arrow func": {
@@ -456,6 +498,20 @@ func TestTemplate_ExecuteDirect(t *testing.T) {
 			}
 		})
 	}
+}
+
+type echoStruct struct{}
+
+func (s *echoStruct) Self() *echoStruct {
+	return s
+}
+
+func (s echoStruct) Echo(str string) interface{} {
+	return str
+}
+
+func (s *echoStruct) Repeat(str string) string {
+	return strings.Repeat(str, 2)
 }
 
 var _ Func = &echoFunc{}

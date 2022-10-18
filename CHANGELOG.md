@@ -1,5 +1,10 @@
 # CHANGELOG
 
+<a name="v0.12.8"></a>
+## [v0.12.8] - 2022-10-18
+### Bug Fixes
+- don't bind vars if included scenario failed
+
 <a name="v0.12.7"></a>
 ## [v0.12.7] - 2022-09-27
 ### Features
@@ -270,6 +275,7 @@ change protocl.Protocol interface
 - first release
 
 
+[v0.12.8]: https://github.com/zoncoen/scenarigo/compare/v0.12.7...v0.12.8
 [v0.12.7]: https://github.com/zoncoen/scenarigo/compare/v0.12.6...v0.12.7
 [v0.12.6]: https://github.com/zoncoen/scenarigo/compare/v0.12.5...v0.12.6
 [v0.12.5]: https://github.com/zoncoen/scenarigo/compare/v0.12.4...v0.12.5

@@ -1,12 +1,14 @@
 name: generate CREDITS
 on:
   pull_request_target:
-    branches:
-    - 'dependabot/**'
+    types:
+    - opened
+    - synchronize
+    - reopened
 jobs:
   generate:
+    if:  startsWith(github.head_ref, 'dependabot/') && github.actor == 'dependabot[bot]'
     runs-on: ubuntu-latest
-    if: github.actor == 'dependabot[bot]'
     steps:
     - name: Install Go
       uses: actions/setup-go@v3

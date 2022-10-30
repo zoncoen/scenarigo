@@ -201,10 +201,19 @@ func (e *PathError) yml() string {
 func (e *PathError) Error() string {
 	yml := e.yml()
 	if yml != "" {
+		var b strings.Builder
+		for _, l := range strings.Split(yml, "\n") {
+			if len(l) > 0 {
+				b.WriteString("    ")
+				b.WriteString(strings.TrimRight(l, " "))
+				b.WriteString("\n")
+			}
+		}
+		yml = b.String()
 		if !strings.HasSuffix(yml, "\n") {
 			yml += "\n"
 		}
-		return fmt.Sprintf("\n%s%s", yml, e.Err.Error())
+		return fmt.Sprintf("%s\n%s", e.Err.Error(), yml)
 	}
 	if e.Path != "" {
 		return fmt.Sprintf("%s: %s", e.Path, e.Err.Error())
@@ -224,7 +233,7 @@ func (e *MultiPathError) Error() string {
 		Errors: nil,
 		ErrorFormat: func(es []error) string {
 			if len(es) == 1 {
-				return fmt.Sprintf("1 error occurred:%s\n\n", strings.TrimLeft(es[0].Error(), "\t"))
+				return fmt.Sprintf("1 error occurred: %s", strings.TrimLeft(es[0].Error(), "\t"))
 			}
 
 			points := make([]string, len(es))
@@ -233,7 +242,7 @@ func (e *MultiPathError) Error() string {
 			}
 
 			return fmt.Sprintf(
-				"%d errors occurred:%s\n\n",
+				"%d errors occurred: %s",
 				len(es), strings.Join(points, "\n"))
 		},
 	}

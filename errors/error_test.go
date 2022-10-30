@@ -8,6 +8,7 @@ import (
 	"github.com/goccy/go-yaml/parser"
 	"github.com/goccy/go-yaml/token"
 	"github.com/pkg/errors"
+	"github.com/sergi/go-diff/diffmatchpatch"
 	"github.com/zoncoen/query-go"
 )
 
@@ -260,15 +261,13 @@ path:
 	body := file.Docs[0].Body
 	t.Run("one error", func(t *testing.T) {
 		expected := `
-1 error occurred:
-   1 | ---
-   2 | path:
->  3 |   a: 1
-            ^
-   4 |   b: 2
-   5 |   c: 3
-invalid a
-
+1 error occurred: invalid a
+       1 | ---
+       2 | path:
+    >  3 |   a: 1
+                ^
+       4 |   b: 2
+       5 |   c: 3
 `
 		multiErr := WithNodeAndColored(
 			Errors(ErrorPath("a", "invalid a")),
@@ -285,25 +284,23 @@ invalid a
 	})
 	t.Run("with path", func(t *testing.T) {
 		expected := `
-3 errors occurred:
-   1 | ---
-   2 | path:
->  3 |   a: 1
-            ^
-   4 |   b: 2
-   5 |   c: 3
-invalid a
+3 errors occurred: invalid a
+       1 | ---
+       2 | path:
+    >  3 |   a: 1
+                ^
+       4 |   b: 2
+       5 |   c: 3
 
-   1 | ---
-   2 | path:
-   3 |   a: 1
->  4 |   b: 2
-            ^
-   5 |   c: 3
 invalid b
-invalid c
+       1 | ---
+       2 | path:
+       3 |   a: 1
+    >  4 |   b: 2
+                ^
+       5 |   c: 3
 
-`
+invalid c`
 		multiErr := WithNodeAndColored(
 			Errors(
 				ErrorPath("a", "invalid a"),
@@ -317,31 +314,31 @@ invalid c
 			t.Fatalf("expect %T instance. but %T", e, multiErr)
 		}
 		err := WithPath(multiErr, "path")
-		if "\n"+err.Error() != expected {
-			t.Fatal(err)
+		if got := "\n" + err.Error(); got != expected {
+			dmp := diffmatchpatch.New()
+			diffs := dmp.DiffMain(expected, got, false)
+			t.Errorf("stdout differs:\n%s", dmp.DiffPrettyText(diffs))
 		}
 	})
 	t.Run("wrap path", func(t *testing.T) {
 		expected := `
-3 errors occurred:
-   1 | ---
-   2 | path:
->  3 |   a: 1
-            ^
-   4 |   b: 2
-   5 |   c: 3
-unexpected error: invalid a
+3 errors occurred: unexpected error: invalid a
+       1 | ---
+       2 | path:
+    >  3 |   a: 1
+                ^
+       4 |   b: 2
+       5 |   c: 3
 
-   1 | ---
-   2 | path:
-   3 |   a: 1
->  4 |   b: 2
-            ^
-   5 |   c: 3
 unexpected error: invalid b
-.path: unexpected error: invalid c
+       1 | ---
+       2 | path:
+       3 |   a: 1
+    >  4 |   b: 2
+                ^
+       5 |   c: 3
 
-`
+.path: unexpected error: invalid c`
 		multiErr := WithNodeAndColored(
 			Errors(
 				ErrorPath("a", "invalid a"),
@@ -355,8 +352,10 @@ unexpected error: invalid b
 			t.Fatalf("expect %T instance. but %T", e, multiErr)
 		}
 		err := WrapPath(multiErr, "path", "unexpected error")
-		if "\n"+err.Error() != expected {
-			t.Fatal(err)
+		if got := "\n" + err.Error(); got != expected {
+			dmp := diffmatchpatch.New()
+			diffs := dmp.DiffMain(expected, got, false)
+			t.Errorf("stdout differs:\n%s", dmp.DiffPrettyText(diffs))
 		}
 	})
 }

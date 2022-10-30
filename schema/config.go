@@ -164,11 +164,7 @@ func LoadConfig(path string, colored bool) (*Config, error) {
 
 	var v string
 	if err := yaml.NodeToValue(vnode, &v); err != nil {
-		return nil, errors.WithNodeAndColored(
-			errors.ErrorPathf("schemaVersion", "invalid version: %s", err),
-			f.Docs[0].Body,
-			colored,
-		)
+		return nil, fmt.Errorf("invalid version: %w", err)
 	}
 
 	root, err := filepath.Abs(filepath.Dir(path))

@@ -82,42 +82,37 @@ func TestLoadConfig(t *testing.T) {
 			},
 			"unknown version": {
 				path: "testdata/config/unknown-version.yaml",
-				expect: `
->  1 | schemaVersion: config/unknown
-                      ^
-unknown version "config/unknown"`,
+				expect: `unknown version "config/unknown"
+    >  1 | schemaVersion: config/unknown
+                          ^
+`,
 			},
 			"invalid version": {
 				path: "testdata/config/invalid-version.yaml",
-				expect: `
-   1 | schemaVersion:
->  2 |   - config
-         ^
-   3 |   - v1
-invalid version: cannot unmarshal []interface {} into Go value of type string`,
+				expect: `invalid version: [2:3] cannot unmarshal []interface {} into Go value of type string
+       1 | schemaVersion:
+    >  2 |   - config
+             ^
+       3 |   - v1`,
 			},
 			"invalid scenarios": {
 				path: "testdata/config/invalid-scenarios.yaml",
-				expect: `1 error occurred:
-   1 | schemaVersion: config/v1
-   2 | scenarios:
->  3 |   - scenarios/invalid.yaml
-           ^
-scenarios/invalid.yaml: no such file or directory
-
+				expect: `1 error occurred: scenarios/invalid.yaml: no such file or directory
+       1 | schemaVersion: config/v1
+       2 | scenarios:
+    >  3 |   - scenarios/invalid.yaml
+               ^
 `,
 			},
 			"plugin src not found": {
 				path: "testdata/config/invalid-plugin-src-not-found.yaml",
-				expect: `1 error occurred:
-   1 | schemaVersion: config/v1
-   2 | plugins:
-   3 |   foo.so:
->  4 |     src: invalid
-                ^
-invalid: no such file or directory: malformed module path "invalid": missing dot in first path element
-
-`,
+				expect: `1 error occurred: invalid: no such file or directory
+       1 | schemaVersion: config/v1
+       2 | plugins:
+       3 |   foo.so:
+    >  4 |     src: invalid
+                    ^
+: malformed module path "invalid": missing dot in first path element`,
 			},
 		}
 		for name, test := range tests {

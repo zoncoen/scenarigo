@@ -11,15 +11,15 @@
                             User-Agent:
                             - scenarigo/v1.0.0
                         elapsed time: 0.000000 sec
-                           6 |     method: GET
-                           7 |     url: "http://{{env.TEST_HTTP_ADDR}}/echo"
-                           8 |   expect:
-                        >  9 |     code: OK
-                                         ^
-                          10 |     body:
-                          11 |       message: aaa
-                          12 |   bind:
                         expected OK but got Bad Request
+                               6 |     method: GET
+                               7 |     url: "http://{{env.TEST_HTTP_ADDR}}/echo"
+                               8 |   expect:
+                            >  9 |     code: OK
+                                             ^
+                              10 |     body:
+                              11 |       message: aaa
+                              12 |   bind:
 FAIL
 FAIL	testdata/testcases/scenarios/include/scenario.yaml	0.000s
 FAIL

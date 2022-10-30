@@ -9,12 +9,12 @@
                     User-Agent:
                     - scenarigo/v1.0.0
                 elapsed time: 0.000000 sec
-                   6 |     method: GET
-                   7 |     url: "http://{{env.TEST_HTTP_ADDR}}/echo"
-                   8 |   expect:
-                >  9 |     code: OK
-                                 ^
                 expected OK but got Internal Server Error
+                       6 |     method: GET
+                       7 |     url: "http://{{env.TEST_HTTP_ADDR}}/echo"
+                       8 |   expect:
+                    >  9 |     code: OK
+                                     ^
 FAIL
 FAIL	testdata/testcases/scenarios/retry/step-never.yaml	0.000s
 FAIL

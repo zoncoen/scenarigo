@@ -186,7 +186,11 @@ func (e *PathError) yml() string {
 	if e.Node == nil {
 		return ""
 	}
-	path, err := yaml.PathString(fmt.Sprintf("$%s", e.Path))
+	s := e.Path
+	if !strings.HasPrefix(s, "$") {
+		s = fmt.Sprintf("$%s", s)
+	}
+	path, err := yaml.PathString(s)
 	if path == nil || err != nil {
 		return ""
 	}

@@ -8,6 +8,8 @@ import (
 
 	"github.com/goccy/go-yaml"
 	"github.com/zoncoen/query-go"
+	yamlextractor "github.com/zoncoen/query-go/extractor/yaml"
+
 	"github.com/zoncoen/scenarigo/errors"
 	"github.com/zoncoen/scenarigo/internal/reflectutil"
 )
@@ -128,7 +130,10 @@ func execute(in reflect.Value, data interface{}) (reflect.Value, error) {
 				}
 				x, err := convert(e.Type())(execute(e, data))
 				if err != nil {
-					return reflect.Value{}, errors.WithQuery(err, query.New().Index(i))
+					return reflect.Value{}, errors.WithQuery(err, query.New(
+						query.ExtractByStructTag("yaml", "json"),
+						query.CustomExtractFunc(yamlextractor.MapSliceExtractFunc(false)),
+					).Index(i))
 				}
 				e.Set(x)
 			}

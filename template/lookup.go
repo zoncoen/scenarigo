@@ -1,19 +1,21 @@
 package template
 
 import (
-	"reflect"
 	"strconv"
-	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/zoncoen/query-go"
-	"github.com/zoncoen/scenarigo/query/extractor"
+	yamlextractor "github.com/zoncoen/query-go/extractor/yaml"
+
 	"github.com/zoncoen/scenarigo/template/ast"
 	"github.com/zoncoen/scenarigo/template/token"
 )
 
 func lookup(node ast.Node, data interface{}) (interface{}, error) {
-	q, err := buildQuery(newQuery(), node)
+	q, err := buildQuery(query.New(
+		query.ExtractByStructTag("yaml", "json"),
+		query.CustomExtractFunc(yamlextractor.MapSliceExtractFunc(false)),
+	), node)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create query from AST")
 	}
@@ -24,31 +26,17 @@ func lookup(node ast.Node, data interface{}) (interface{}, error) {
 	return Execute(v, data)
 }
 
-func newQuery() *query.Query {
-	return query.New(query.CustomStructFieldNameGetter(getFieldName))
-}
-
-// getFieldName returns "yaml" struct tag value of the field instead of the field name.
-func getFieldName(field reflect.StructField) string {
-	tag, ok := field.Tag.Lookup("yaml")
-	if ok {
-		strs := strings.Split(tag, ",")
-		return strs[0]
-	}
-	return field.Name
-}
-
 func buildQuery(q *query.Query, node ast.Node) (*query.Query, error) {
 	var err error
 	switch n := node.(type) {
 	case *ast.Ident:
-		return q.Append(extractor.Key(n.Name)), nil
+		return q.Key(n.Name), nil
 	case *ast.SelectorExpr:
 		q, err = buildQuery(q, n.X)
 		if err != nil {
 			return nil, err
 		}
-		return q.Append(extractor.Key(n.Sel.Name)), nil
+		return q.Key(n.Sel.Name), nil
 	case *ast.IndexExpr:
 		i, ok := n.Index.(*ast.BasicLit)
 		if !ok || i.Kind != token.INT {

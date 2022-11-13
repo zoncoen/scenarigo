@@ -2,7 +2,7 @@ package context
 
 import (
 	"github.com/zoncoen/query-go"
-	"github.com/zoncoen/scenarigo/query/extractor"
+	yamlextractor "github.com/zoncoen/query-go/extractor/yaml"
 )
 
 // Vars represents context variables.
@@ -19,8 +19,12 @@ func (vars Vars) Append(v interface{}) Vars {
 
 // ExtractByKey implements query.KeyExtractor interface.
 func (vars Vars) ExtractByKey(key string) (interface{}, bool) {
+	k := query.New(
+		query.ExtractByStructTag("yaml", "json"),
+		query.CustomExtractFunc(yamlextractor.MapSliceExtractFunc(false)),
+	).Key(key)
 	for i := len(vars) - 1; i >= 0; i-- {
-		if v, err := query.New().Append(extractor.Key(key)).Extract(vars[i]); err == nil {
+		if v, err := k.Extract(vars[i]); err == nil {
 			return v, true
 		}
 	}

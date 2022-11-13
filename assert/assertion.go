@@ -6,8 +6,9 @@ import (
 
 	"github.com/goccy/go-yaml"
 	"github.com/zoncoen/query-go"
+	yamlextractor "github.com/zoncoen/query-go/extractor/yaml"
+
 	"github.com/zoncoen/scenarigo/errors"
-	"github.com/zoncoen/scenarigo/query/extractor"
 )
 
 // Assertion implements value assertion.
@@ -27,7 +28,10 @@ func (f AssertionFunc) Assert(v interface{}) error {
 func Build(expect interface{}) Assertion {
 	var assertions []Assertion
 	if expect != nil {
-		assertions = build(query.New(), expect)
+		assertions = build(query.New(
+			query.ExtractByStructTag("yaml", "json"),
+			query.CustomExtractFunc(yamlextractor.MapSliceExtractFunc(false)),
+		), expect)
 	}
 	return AssertionFunc(func(v interface{}) error {
 		errs := []error{}
@@ -54,7 +58,7 @@ func build(q *query.Query, expect interface{}) []Assertion {
 		for _, item := range v {
 			item := item
 			key := fmt.Sprintf("%s", item.Key)
-			assertions = append(assertions, build(q.Append(extractor.Key(key)), item.Value)...)
+			assertions = append(assertions, build(q.Key(key), item.Value)...)
 		}
 	case []interface{}:
 		for i, elm := range v {

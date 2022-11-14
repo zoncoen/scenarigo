@@ -3,7 +3,6 @@ package config
 import (
 	"os"
 
-	"github.com/fatih/color"
 	"github.com/zoncoen/scenarigo/schema"
 )
 
@@ -13,9 +12,9 @@ var ConfigPath string
 // Load loads configuration from cfgpath.
 func Load(cfgpath string) (*schema.Config, error) {
 	if cfgpath != "" {
-		return schema.LoadConfig(cfgpath, !color.NoColor)
+		return schema.LoadConfig(cfgpath)
 	}
-	cfg, err := schema.LoadConfig(DefaultConfigFileName, !color.NoColor)
+	cfg, err := schema.LoadConfig(DefaultConfigFileName)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, nil //nolint:nilnil

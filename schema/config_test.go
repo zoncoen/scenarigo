@@ -16,7 +16,7 @@ func TestLoadConfig(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %s", err)
 		}
-		got, err := LoadConfig("testdata/config/valid.yaml", false)
+		got, err := LoadConfig("testdata/config/valid.yaml")
 		if err != nil {
 			t.Fatalf("unexpected error: %s", err)
 		}
@@ -62,7 +62,22 @@ func TestLoadConfig(t *testing.T) {
 		if diff := cmp.Diff(expect, got); diff != "" {
 			t.Errorf("differs (-want +got):\n%s", diff)
 		}
+
+		b, err := yaml.Marshal(got)
+		if err != nil {
+			t.Fatalf("failed to marshal: %s", err)
+		}
+		eb, err := os.ReadFile("testdata/config/valid.yaml")
+		if err != nil {
+			t.Fatalf("failed to read file: %s", err)
+		}
+		if got, expect := string(b), string(eb); got != expect {
+			dmp := diffmatchpatch.New()
+			diffs := dmp.DiffMain(expect, got, false)
+			t.Errorf("differs:\n%s", dmp.DiffPrettyText(diffs))
+		}
 	})
+
 	t.Run("failure", func(t *testing.T) {
 		tests := map[string]struct {
 			path   string
@@ -117,7 +132,7 @@ func TestLoadConfig(t *testing.T) {
 		}
 		for name, test := range tests {
 			t.Run(name, func(t *testing.T) {
-				_, err := LoadConfig(test.path, false)
+				_, err := LoadConfig(test.path)
 				if err == nil {
 					t.Fatal("no error")
 				}
@@ -262,6 +277,35 @@ func TestToYAMLString(t *testing.T) {
 			t.Fatalf("expect %q but got %q", expect, got)
 		}
 	})
+}
+
+func TestPluginConfigMap_MarshalYAML(t *testing.T) {
+	v := PluginConfigMap{
+		"plugin.so": PluginConfig{
+			Order: 2,
+			Name:  "plugin.so",
+			Src:   "src",
+		},
+		"-1": PluginConfig{
+			Order: 1,
+			Name:  "-1",
+			Src:   "3",
+		},
+	}
+	b, err := yaml.Marshal(v)
+	if err != nil {
+		t.Fatalf("failed to marshal: %s", err)
+	}
+	expect := `"-1":
+  src: "3"
+plugin.so:
+  src: src
+`
+	if got := string(b); got != expect {
+		dmp := diffmatchpatch.New()
+		diffs := dmp.DiffMain(expect, got, false)
+		t.Errorf("differs:\n%s", dmp.DiffPrettyText(diffs))
+	}
 }
 
 func TestPluginConfigMap_ToSlice(t *testing.T) {

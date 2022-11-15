@@ -93,6 +93,17 @@ func toYAMLString(in interface{}) (string, error) {
 	return "", errors.Errorf("value of type %T is not assignable to type string", in)
 }
 
+func (m PluginConfigMap) MarshalYAML() ([]byte, error) {
+	var s yaml.MapSlice
+	for _, c := range m.ToSlice() {
+		s = append(s, yaml.MapItem{
+			Key:   c.Name,
+			Value: c,
+		})
+	}
+	return yaml.Marshal(s)
+}
+
 // ToSlice returns m as a slice.
 func (m PluginConfigMap) ToSlice() []PluginConfig {
 	s := []PluginConfig{}
@@ -136,12 +147,23 @@ type JUnitReportConfig struct {
 }
 
 // LoadConfig loads a configuration from path.
-func LoadConfig(path string, colored bool) (*Config, error) {
+func LoadConfig(path string) (*Config, error) {
 	r, err := os.OpenFile(path, os.O_RDONLY, 0o400)
 	if err != nil {
 		return nil, err
 	}
 	defer r.Close()
+
+	root, err := filepath.Abs(filepath.Dir(path))
+	if err != nil {
+		return nil, fmt.Errorf("failed to get root directory: %w", err)
+	}
+
+	return LoadConfigFromReader(r, root)
+}
+
+// LoadConfigFromReader loads a configuration from r.
+func LoadConfigFromReader(r io.Reader, root string) (*Config, error) {
 	b, err := io.ReadAll(r)
 	if err != nil {
 		return nil, err
@@ -167,11 +189,6 @@ func LoadConfig(path string, colored bool) (*Config, error) {
 		return nil, fmt.Errorf("invalid version: %w", err)
 	}
 
-	root, err := filepath.Abs(filepath.Dir(path))
-	if err != nil {
-		return nil, fmt.Errorf("failed to get root directory: %w", err)
-	}
-
 	switch v {
 	case "config/v1":
 		var cfg Config
@@ -187,7 +204,7 @@ func LoadConfig(path string, colored bool) (*Config, error) {
 		return nil, errors.WithNodeAndColored(
 			errors.ErrorPathf("schemaVersion", "unknown version %q", v),
 			f.Docs[0].Body,
-			colored,
+			!color.NoColor,
 		)
 	}
 }

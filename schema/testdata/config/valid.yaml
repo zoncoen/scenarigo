@@ -1,7 +1,7 @@
 schemaVersion: config/v1
 scenarios:
-  - scenarios/a.yaml
-  - scenarios/b.yaml
+- scenarios/a.yaml
+- scenarios/b.yaml
 pluginDirectory: gen
 plugins:
   local.so:

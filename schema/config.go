@@ -12,22 +12,11 @@ import (
 	"github.com/fatih/color"
 	"github.com/goccy/go-yaml"
 	"github.com/goccy/go-yaml/ast"
-	"github.com/goccy/go-yaml/parser"
 	"golang.org/x/mod/module"
 
 	"github.com/zoncoen/scenarigo/errors"
 	"github.com/zoncoen/scenarigo/internal/filepathutil"
 )
-
-var scehamaVersionPath *yaml.Path
-
-func init() {
-	p, err := yaml.PathString("$.schemaVersion")
-	if err != nil {
-		panic(fmt.Sprintf("YAML parser error: %s", err))
-	}
-	scehamaVersionPath = p
-}
 
 // Config represents a configuration.
 type Config struct {
@@ -35,6 +24,7 @@ type Config struct {
 	Scenarios       []string        `yaml:"scenarios,omitempty"`
 	PluginDirectory string          `yaml:"pluginDirectory,omitempty"`
 	Plugins         PluginConfigMap `yaml:"plugins,omitempty"`
+	Input           InputConfig     `yaml:"input,omitempty"`
 	Output          OutputConfig    `yaml:"output,omitempty"`
 
 	// absolute path to the configuration file
@@ -124,7 +114,24 @@ type PluginConfig struct {
 	Src   string `yaml:"src,omitempty"`
 }
 
-// OutputConfig represents a output configuration.
+// InputConfig represents an input configuration.
+type InputConfig struct {
+	Excludes []Regexp        `yaml:"excludes,omitempty"`
+	YAML     YAMLInputConfig `yaml:"yaml,omitempty"`
+}
+
+// YAMLInputConfig represents a YAML file input configuration.
+type YAMLInputConfig struct {
+	YTT YTTConfig `yaml:"ytt,omitempty"`
+}
+
+// YTTConfig represents a YAML file input configuration.
+type YTTConfig struct {
+	Enabled      bool     `yaml:"enabled,omitempty"`
+	DefaultFiles []string `yaml:"defaultFiles,omitempty"`
+}
+
+// OutputConfig represents an output configuration.
 type OutputConfig struct {
 	Verbose bool         `yaml:"verbose,omitempty"`
 	Colored *bool        `yaml:"colored,omitempty"`
@@ -169,46 +176,40 @@ func LoadConfigFromReader(r io.Reader, root string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	f, err := parser.ParseBytes(b, 1)
+
+	docs, err := readDocsWithSchemaVersionFromBytes(b)
 	if err != nil {
 		return nil, err
 	}
-	if len(f.Docs) == 0 {
-		return nil, errors.New("schemaVersion not found")
-	}
 
-	vnode, err := scehamaVersionPath.FilterNode(f.Docs[0].Body)
-	if err != nil {
-		return nil, err
+	if l := len(docs); l == 0 {
+		return nil, errors.New("empty config")
+	} else if l != 1 {
+		return nil, errors.New("must be a config document but contains more than one document")
 	}
-	if vnode == nil {
-		return nil, errors.New("schemaVersion not found")
-	}
+	d := docs[0]
 
-	var v string
-	if err := yaml.NodeToValue(vnode, &v); err != nil {
-		return nil, fmt.Errorf("invalid version: %w", err)
-	}
-
-	switch v {
+	switch d.schemaVersion {
 	case "config/v1":
 		var cfg Config
 		cm := make(yaml.CommentMap)
-		if err := yaml.NodeToValue(f.Docs[0].Body, &cfg, yaml.Strict(), yaml.CommentToMap(cm)); err != nil {
+		if err := yaml.NodeToValue(d.doc.Body, &cfg, yaml.Strict(), yaml.CommentToMap(cm)); err != nil {
 			return nil, err
 		}
 		cfg.Root = root
 		if len(cm) > 0 {
 			cfg.Comments = cm
 		}
-		if err := validate(&cfg, f.Docs[0].Body); err != nil {
+		if err := validate(&cfg, d.doc.Body); err != nil {
 			return nil, err
 		}
 		return &cfg, nil
+	case "":
+		return nil, errors.New("schemaVersion not found")
 	default:
 		return nil, errors.WithNodeAndColored(
-			errors.ErrorPathf("schemaVersion", "unknown version %q", v),
-			f.Docs[0].Body,
+			errors.ErrorPathf("schemaVersion", "unknown version %q", d.schemaVersion),
+			d.doc.Body,
 			!color.NoColor,
 		)
 	}

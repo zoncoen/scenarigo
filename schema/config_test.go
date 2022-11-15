@@ -3,10 +3,12 @@ package schema
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"testing"
 
 	"github.com/goccy/go-yaml"
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/sergi/go-diff/diffmatchpatch"
 )
 
@@ -37,6 +39,7 @@ func TestLoadConfig(t *testing.T) {
 				},
 			},
 		}
+		re := regexp.MustCompile(".ytt.yaml$")
 		for name, test := range tests {
 			test := test
 			t.Run(name, func(t *testing.T) {
@@ -73,6 +76,22 @@ func TestLoadConfig(t *testing.T) {
 							Src:   "github.com/zoncoen/scenarigo@v1.0.0",
 						},
 					},
+					Input: InputConfig{
+						Excludes: []Regexp{
+							{
+								Regexp: re,
+								str:    ".ytt.yaml$",
+							},
+						},
+						YAML: YAMLInputConfig{
+							YTT: YTTConfig{
+								Enabled: true,
+								DefaultFiles: []string{
+									"default.yaml",
+								},
+							},
+						},
+					},
 					Output: OutputConfig{
 						Verbose: true,
 						Colored: &colored,
@@ -88,7 +107,7 @@ func TestLoadConfig(t *testing.T) {
 					Root:     filepath.Join(wd, "testdata/config"),
 					Comments: test.expectComments,
 				}
-				if diff := cmp.Diff(expect, got); diff != "" {
+				if diff := cmp.Diff(expect, got, cmp.AllowUnexported(Regexp{}), cmpopts.IgnoreUnexported(regexp.Regexp{})); diff != "" {
 					t.Errorf("differs (-want +got):\n%s", diff)
 				}
 
@@ -114,13 +133,13 @@ func TestLoadConfig(t *testing.T) {
 			path   string
 			expect string
 		}{
-			"not found": {
-				path:   "testdata/config/not-found.yaml",
-				expect: "open testdata/config/not-found.yaml: no such file or directory",
-			},
 			"empty": {
 				path:   "testdata/config/empty.yaml",
-				expect: "schemaVersion not found",
+				expect: "empty config",
+			},
+			"multi document": {
+				path:   "testdata/config/multi.yaml",
+				expect: "must be a config document but contains more than one document",
 			},
 			"no version": {
 				path:   "testdata/config/no-version.yaml",

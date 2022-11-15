@@ -11,7 +11,8 @@ import (
 const appName = "scenarigo"
 
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&config.ConfigPath, "config", "c", "", "specify configuration file path")
+	rootCmd.PersistentFlags().StringVarP(&config.ConfigPath, "config", "c", "", `specify configuration file path (read configuration from stdin if specified "-")`)
+	rootCmd.PersistentFlags().StringVarP(&config.Root, "root", "", "", `specify root directory (default value is the directory of configuration file)`)
 }
 
 var rootCmd = &cobra.Command{

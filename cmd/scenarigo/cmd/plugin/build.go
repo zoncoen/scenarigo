@@ -84,7 +84,7 @@ func (o *overrideModule) requireReplace() (*modfile.Require, string, *modfile.Re
 }
 
 func buildRun(cmd *cobra.Command, args []string) error {
-	cfg, err := config.Load(config.ConfigPath)
+	cfg, err := config.Load()
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}

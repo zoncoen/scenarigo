@@ -134,8 +134,9 @@ Available Commands:
   version     print scenarigo version
 
 Flags:
-  -c, --config string   specify configuration file path
+  -c, --config string   specify configuration file path (read configuration from stdin if specified "-")
   -h, --help            help for scenarigo
+      --root string     specify root directory (default value is the directory of configuration file)
 
 Use "scenarigo [command] --help" for more information about a command.
 ```

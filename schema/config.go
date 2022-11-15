@@ -153,6 +153,17 @@ func LoadConfig(path string) (*Config, error) {
 		return nil, err
 	}
 	defer r.Close()
+
+	root, err := filepath.Abs(filepath.Dir(path))
+	if err != nil {
+		return nil, fmt.Errorf("failed to get root directory: %w", err)
+	}
+
+	return LoadConfigFromReader(r, root)
+}
+
+// LoadConfigFromReader loads a configuration from r.
+func LoadConfigFromReader(r io.Reader, root string) (*Config, error) {
 	b, err := io.ReadAll(r)
 	if err != nil {
 		return nil, err
@@ -176,11 +187,6 @@ func LoadConfig(path string) (*Config, error) {
 	var v string
 	if err := yaml.NodeToValue(vnode, &v); err != nil {
 		return nil, fmt.Errorf("invalid version: %w", err)
-	}
-
-	root, err := filepath.Abs(filepath.Dir(path))
-	if err != nil {
-		return nil, fmt.Errorf("failed to get root directory: %w", err)
 	}
 
 	switch v {

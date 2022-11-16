@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -48,9 +49,10 @@ func TestRunnerWithOptionsFromEnv(t *testing.T) {
 
 func TestRunner(t *testing.T) {
 	tests := map[string]struct {
-		path  string
-		yaml  string
-		setup func(*context.Context) func(*context.Context)
+		path   string
+		yaml   string
+		config *schema.Config
+		setup  func(*context.Context) func(*context.Context)
 	}{
 		"run step with include": {
 			path: filepath.Join("testdata", "use_include.yaml"),
@@ -109,6 +111,20 @@ steps:
 				}
 			},
 		},
+		"exclude all files": {
+			config: &schema.Config{
+				Scenarios: []string{
+					filepath.Join("testdata", "use_include_error.yaml"),
+				},
+				Input: schema.InputConfig{
+					Excludes: []schema.Regexp{
+						{
+							Regexp: regexp.MustCompile(`\.yaml$`),
+						},
+					},
+				},
+			},
+		},
 	}
 	for _, test := range tests {
 		var opts []func(*Runner) error
@@ -117,6 +133,9 @@ steps:
 		}
 		if test.yaml != "" {
 			opts = append(opts, WithScenariosFromReader(strings.NewReader(test.yaml)))
+		}
+		if test.config != nil {
+			opts = append(opts, WithConfig(test.config))
 		}
 		runner, err := NewRunner(opts...)
 		if err != nil {
@@ -264,6 +283,30 @@ func TestWithConfig(t *testing.T) {
 				scenarioFiles: []string{},
 				pluginDir:     &pluginDirAbs,
 				rootDir:       wd,
+			},
+		},
+		"input ytt config": {
+			config: &schema.Config{
+				Input: schema.InputConfig{
+					YAML: schema.YAMLInputConfig{
+						YTT: schema.YTTConfig{
+							Enabled:      true,
+							DefaultFiles: []string{"_ytt_lib"},
+						},
+					},
+				},
+			},
+			expect: &Runner{
+				scenarioFiles: []string{},
+				rootDir:       wd,
+				inputConfig: schema.InputConfig{
+					YAML: schema.YAMLInputConfig{
+						YTT: schema.YTTConfig{
+							Enabled:      true,
+							DefaultFiles: []string{"_ytt_lib"},
+						},
+					},
+				},
 			},
 		},
 		"output colored": {

@@ -35,6 +35,7 @@ type Runner struct {
 	scenarioReaders []io.Reader
 	enabledColor    bool
 	rootDir         string
+	inputConfig     schema.InputConfig
 	reportConfig    schema.ReportConfig
 }
 
@@ -84,6 +85,7 @@ func WithConfig(config *schema.Config) func(*Runner) error {
 		if config.Output.Colored != nil {
 			r.enabledColor = *config.Output.Colored
 		}
+		r.inputConfig = config.Input
 		r.reportConfig = config.Output.Report
 		return nil
 	}
@@ -221,13 +223,23 @@ func (r *Runner) Run(ctx *context.Context) {
 		return
 	}
 
+	opts := []schema.LoadOption{
+		schema.WithInputConfig(r.rootDir, r.inputConfig),
+	}
+
+FILE_LOOP:
 	for _, f := range r.scenarioFiles {
 		testName, err := filepath.Rel(r.rootDir, f)
 		if err != nil {
 			testName = f
 		}
+		for _, exclude := range r.inputConfig.Excludes {
+			if exclude.MatchString(testName) {
+				continue FILE_LOOP
+			}
+		}
 		ctx.Run(testName, func(ctx *context.Context) {
-			scns, err := schema.LoadScenarios(f)
+			scns, err := schema.LoadScenarios(f, opts...)
 			if err != nil {
 				ctx.Reporter().Fatalf("failed to load scenarios: %s", err)
 			}

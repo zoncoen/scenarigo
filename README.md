@@ -129,6 +129,7 @@ Usage:
 Available Commands:
   completion  Generate the autocompletion script for the specified shell
   config      manage the scenarigo configuration file
+  dump        dump test scenario files
   help        Help about any command
   list        list the test scenario files
   plugin      provide operations for plugins
@@ -655,7 +656,7 @@ steps:
     code: 200
 ```
 
-## ytt Integration
+## ytt Integration (templating and overlays)
 
 Scenarigo integrates [ytt](https://carvel.dev/ytt/) to provide flexible templating and overlay features for test scenarios. You can use this experimental feature by enabling it in `scenarigo.yaml`.
 

@@ -2,6 +2,8 @@ package scenarigo
 
 import (
 	"bytes"
+	gocontext "context"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -12,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/sergi/go-diff/diffmatchpatch"
 
 	"github.com/zoncoen/scenarigo/context"
 	"github.com/zoncoen/scenarigo/reporter"
@@ -467,4 +470,159 @@ func TestWriteTestReport(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRunner_Dump(t *testing.T) {
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Run("success", func(t *testing.T) {
+		tests := map[string]struct {
+			config *schema.Config
+			expect string
+		}{
+			"empty scenarios": {
+				config: &schema.Config{
+					Input: schema.InputConfig{
+						YAML: schema.YAMLInputConfig{
+							YTT: schema.YTTConfig{
+								Enabled: true,
+							},
+						},
+					},
+				},
+			},
+			"disable ytt integration": {
+				config: &schema.Config{
+					Scenarios: []string{"testdata/ytt.yaml"},
+				},
+				expect: `schemaVersion: scenario/v1
+title: echo
+vars:
+  message: null
+steps:
+- title: POST /say
+  protocol: http
+  request:
+    body:
+      message: "{{vars.message}}"
+  expect:
+    body:
+      message: "{{request.message}}"
+`,
+			},
+			"enable ytt integration": {
+				config: &schema.Config{
+					Scenarios: []string{"testdata/ytt.yaml"},
+					Input: schema.InputConfig{
+						YAML: schema.YAMLInputConfig{
+							YTT: schema.YTTConfig{
+								Enabled: true,
+							},
+						},
+					},
+				},
+				expect: `schemaVersion: scenario/v1
+title: echo
+vars:
+  message: hello
+steps:
+- title: POST /say
+  protocol: http
+  request:
+    body:
+      message: "{{vars.message}}"
+  expect:
+    body:
+      message: "{{request.message}}"
+`,
+			},
+			"invalid but disable ytt integration": {
+				config: &schema.Config{
+					Scenarios: []string{"testdata/ytt_invalid.yaml"},
+				},
+				expect: `schemaVersion: scenario/v1
+title: echo
+vars:
+  message: null
+steps:
+- title: POST /say
+  protocol: http
+  request:
+    body:
+      message: "{{vars.message}}"
+  expect:
+    body:
+      message: "{{request.message}}"
+`,
+			},
+		}
+		for name, test := range tests {
+			test := test
+			t.Run(name, func(t *testing.T) {
+				r, err := NewRunner(WithConfig(test.config))
+				if err != nil {
+					t.Fatalf("failed to create a runner: %s", err)
+				}
+
+				var b bytes.Buffer
+				if err := r.Dump(gocontext.Background(), &b); err != nil {
+					t.Fatalf("failed to dump: %s", err)
+				}
+
+				if got, expect := b.String(), test.expect; got != expect {
+					dmp := diffmatchpatch.New()
+					diffs := dmp.DiffMain(expect, got, false)
+					t.Errorf("stdout differs:\n%s", dmp.DiffPrettyText(diffs))
+				}
+			})
+		}
+	})
+	t.Run("failure", func(t *testing.T) {
+		tests := map[string]struct {
+			config *schema.Config
+			expect string
+		}{
+			"invalid": {
+				config: &schema.Config{
+					Scenarios: []string{"testdata/ytt_invalid.yaml"},
+					Input: schema.InputConfig{
+						YAML: schema.YAMLInputConfig{
+							YTT: schema.YTTConfig{
+								Enabled: true,
+							},
+						},
+					},
+				},
+				expect: fmt.Sprintf(`failed to load scenarios: ytt failed:
+- undefined: msg
+    %s/testdata/ytt_invalid.yaml:4 |   message: #@ msg`, wd),
+			},
+		}
+		for name, test := range tests {
+			test := test
+			t.Run(name, func(t *testing.T) {
+				r, err := NewRunner(WithConfig(test.config))
+				if err != nil {
+					t.Fatalf("failed to create a runner: %s", err)
+				}
+
+				err = r.Dump(gocontext.Background(), io.Discard)
+				if err == nil {
+					t.Fatal("no error")
+				}
+
+				lines := strings.Split(err.Error(), "\n")
+				for i, l := range lines {
+					lines[i] = strings.TrimSuffix(l, " ")
+				}
+				if got, expect := strings.Join(lines, "\n"), test.expect; got != expect {
+					dmp := diffmatchpatch.New()
+					diffs := dmp.DiffMain(expect, got, false)
+					t.Errorf("error differs:\n%s", dmp.DiffPrettyText(diffs))
+				}
+			})
+		}
+	})
 }

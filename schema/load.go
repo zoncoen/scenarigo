@@ -36,7 +36,7 @@ func LoadScenariosFromReader(r io.Reader, opts ...LoadOption) ([]*Scenario, erro
 	}
 	b, err := io.ReadAll(r)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to read")
+		return nil, fmt.Errorf("failed to read: %w", err)
 	}
 	return loadScenarios(filepath.Join(wd, "reader.yaml"), b, opts...)
 }
@@ -59,7 +59,7 @@ func loadScenarios(path string, b []byte, opts ...LoadOption) ([]*Scenario, erro
 		files = append(files, f)
 		b, err = runYTT(opt.yttOpts, opt.yttUI, files...)
 		if err != nil {
-			return nil, errors.Wrap(err, "ytt failed")
+			return nil, fmt.Errorf("ytt failed: %w", err)
 		}
 
 		dir, err = filepath.Abs(filepath.Dir(path))
@@ -101,12 +101,12 @@ func loadScenarios(path string, b []byte, opts ...LoadOption) ([]*Scenario, erro
 
 			b, err := runYTT(opt.yttOpts, opt.yttUI, files...)
 			if err != nil {
-				return nil, errors.Wrap(err, "ytt failed")
+				return nil, fmt.Errorf("ytt failed: %w", err)
 			}
 
 			f, err := parser.ParseBytes(b, 0)
 			if err != nil {
-				return nil, errors.Wrap(err, "failed to parse YAML")
+				return nil, fmt.Errorf("failed to parse YAML: %w", err)
 			}
 			file.Docs = append(file.Docs, f.Docs...)
 		case "", "scenario/v1":
@@ -186,7 +186,7 @@ func loadScenariosFromFileAST(f *ast.File) ([]*Scenario, error) {
 	for _, doc := range f.Docs {
 		var s Scenario
 		if err := dec.DecodeFromNode(doc.Body, &s); err != nil {
-			return nil, errors.Wrap(err, "failed to decode YAML")
+			return nil, fmt.Errorf("failed to decode YAML: %w", err)
 		}
 		s.filepath = f.Name
 		s.Node = doc.Body

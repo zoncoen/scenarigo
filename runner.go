@@ -1,6 +1,7 @@
 package scenarigo
 
 import (
+	gocontext "context"
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
@@ -11,6 +12,7 @@ import (
 	"strconv"
 
 	"github.com/fatih/color"
+	"github.com/goccy/go-yaml"
 	"github.com/pkg/errors"
 
 	"github.com/zoncoen/scenarigo/context"
@@ -304,6 +306,37 @@ func (r *Runner) CreateTestReport(rptr reporter.Reporter) error {
 		enc.Indent("", "  ")
 		if err := enc.Encode(report); err != nil {
 			return fmt.Errorf("failed to write JUnit test report: %w", err)
+		}
+	}
+	return nil
+}
+
+// Dump dumps all test scenarios.
+func (r *Runner) Dump(ctx gocontext.Context, w io.Writer) error {
+	enc := yaml.NewEncoder(w)
+	defer enc.Close()
+	opts := []schema.LoadOption{
+		schema.WithInputConfig(r.rootDir, r.inputConfig),
+	}
+FILE_LOOP:
+	for _, f := range r.scenarioFiles {
+		testName, err := filepath.Rel(r.rootDir, f)
+		if err != nil {
+			testName = f
+		}
+		for _, exclude := range r.inputConfig.Excludes {
+			if exclude.MatchString(testName) {
+				continue FILE_LOOP
+			}
+		}
+		scns, err := schema.LoadScenarios(f, opts...)
+		if err != nil {
+			return fmt.Errorf("failed to load scenarios: %w", err)
+		}
+		for _, scn := range scns {
+			if err := enc.EncodeContext(ctx, scn); err != nil {
+				return fmt.Errorf("failed to encode scenarios: %w", err)
+			}
 		}
 	}
 	return nil

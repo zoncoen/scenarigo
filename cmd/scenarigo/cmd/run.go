@@ -66,12 +66,17 @@ func run(cmd *cobra.Command, args []string) error {
 		reporterOpts = append(reporterOpts, reporter.WithNoColor())
 	}
 
+	var reportErr error
 	success := reporter.Run(
 		func(rptr reporter.Reporter) {
 			r.Run(context.New(rptr))
+			reportErr = r.CreateTestReport(rptr)
 		},
 		reporterOpts...,
 	)
+	if reportErr != nil {
+		return fmt.Errorf("failed to create test reports: %w", reportErr)
+	}
 	if !success {
 		return ErrTestFailed
 	}

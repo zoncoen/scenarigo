@@ -14,6 +14,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/zoncoen/scenarigo/context"
+	"github.com/zoncoen/scenarigo/internal/filepathutil"
 	"github.com/zoncoen/scenarigo/plugin"
 	"github.com/zoncoen/scenarigo/protocol/grpc"
 	"github.com/zoncoen/scenarigo/protocol/http"
@@ -257,46 +258,41 @@ func (r *Runner) Run(ctx *context.Context) {
 		})
 	}
 	teardown(ctx)
-	r.writeTestReport(ctx)
 }
 
-func (r *Runner) writeTestReport(ctx *context.Context) {
-	var report *reporter.TestReport
+// CreateTestReport creates test reports.
+func (r *Runner) CreateTestReport(rptr reporter.Reporter) error {
+	if r.reportConfig.JSON.Filename == "" && r.reportConfig.JUnit.Filename == "" {
+		return nil
+	}
+
+	report, err := reporter.GenerateTestReport(rptr)
+	if err != nil {
+		return fmt.Errorf("failed to generate test report: %w", err)
+	}
 	if r.reportConfig.JSON.Filename != "" {
-		report = r.generateTestReport(ctx, report)
-		f, err := os.Create(filepath.Join(r.rootDir, r.reportConfig.JSON.Filename))
+		f, err := os.Create(filepathutil.From(r.rootDir, r.reportConfig.JSON.Filename))
 		if err != nil {
-			ctx.Reporter().Fatalf("failed to write JSON test report: %s", err)
+			return fmt.Errorf("failed to write JSON test report: %w", err)
 		}
 		defer f.Close()
 		enc := json.NewEncoder(f)
 		enc.SetIndent("", "  ")
 		if err := enc.Encode(report); err != nil {
-			ctx.Reporter().Fatalf("failed to write JSON test report: %s", err)
+			return fmt.Errorf("failed to write JSON test report: %w", err)
 		}
 	}
 	if r.reportConfig.JUnit.Filename != "" {
-		report = r.generateTestReport(ctx, report)
-		f, err := os.Create(filepath.Join(r.rootDir, r.reportConfig.JUnit.Filename))
+		f, err := os.Create(filepathutil.From(r.rootDir, r.reportConfig.JUnit.Filename))
 		if err != nil {
-			ctx.Reporter().Fatalf("failed to write JUnit test report: %s", err)
+			return fmt.Errorf("failed to write JUnit test report: %w", err)
 		}
 		defer f.Close()
 		enc := xml.NewEncoder(f)
 		enc.Indent("", "  ")
 		if err := enc.Encode(report); err != nil {
-			ctx.Reporter().Fatalf("failed to write JUnit test report: %s", err)
+			return fmt.Errorf("failed to write JUnit test report: %w", err)
 		}
 	}
-}
-
-func (r *Runner) generateTestReport(ctx *context.Context, report *reporter.TestReport) *reporter.TestReport {
-	if report != nil {
-		return report
-	}
-	report, err := reporter.GenerateTestReport(ctx.Reporter())
-	if err != nil {
-		ctx.Reporter().Fatalf("failed to generate test report: %s", err)
-	}
-	return report
+	return nil
 }

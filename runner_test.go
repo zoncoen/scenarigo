@@ -328,6 +328,7 @@ func TestWithConfig(t *testing.T) {
 }
 
 func TestWriteTestReport(t *testing.T) {
+	tmp := t.TempDir()
 	tests := map[string]struct {
 		config schema.ReportConfig
 		files  []string
@@ -360,6 +361,20 @@ func TestWriteTestReport(t *testing.T) {
 			},
 			files: []string{"report.json", "junit.xml"},
 		},
+		"abs file path": {
+			config: schema.ReportConfig{
+				JSON: schema.JSONReportConfig{
+					Filename: filepath.Join(tmp, "report.json"),
+				},
+				JUnit: schema.JUnitReportConfig{
+					Filename: filepath.Join(tmp, "junit.xml"),
+				},
+			},
+			files: []string{
+				filepath.Join(tmp, "report.json"),
+				filepath.Join(tmp, "junit.xml"),
+			},
+		},
 	}
 	for name, test := range tests {
 		test := test
@@ -375,10 +390,12 @@ func TestWriteTestReport(t *testing.T) {
 				t.Fatalf("failed to create a runner: %s", err)
 			}
 
-			if success := reporter.Run(func(rptr reporter.Reporter) {
-				r.writeTestReport(context.New(rptr))
-			}); !success {
-				t.Fatal("runner failed")
+			var reportErr error
+			reporter.Run(func(rptr reporter.Reporter) {
+				reportErr = r.CreateTestReport(rptr)
+			})
+			if reportErr != nil {
+				t.Fatalf("failed to create reports: %s", reportErr)
 			}
 
 			entries, err := os.ReadDir(dir)
@@ -390,6 +407,12 @@ func TestWriteTestReport(t *testing.T) {
 				filenames[e.Name()] = struct{}{}
 			}
 			for _, file := range test.files {
+				if filepath.IsAbs(file) {
+					if _, err := os.Stat(file); err != nil {
+						t.Error(err)
+					}
+					continue
+				}
 				if _, ok := filenames[file]; !ok {
 					t.Errorf("%q not found", file)
 				} else {

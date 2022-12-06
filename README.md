@@ -1,4 +1,8 @@
-# Scenarigo
+<a href="https://github.com/zoncoen/scenarigo">
+  <img alt="Scenarigo" src="https://user-images.githubusercontent.com/2238852/205980597-37eaaf03-fd35-4a04-93c4-884c95f48df3.png" width="485px">
+</a>
+
+A scenario-based API testing tool for HTTP/gRPC server.
 
 [![godoc](https://godoc.org/github.com/zoncoen/scenarigo?status.svg)](https://pkg.go.dev/github.com/zoncoen/scenarigo)
 ![test](https://github.com/zoncoen/scenarigo/workflows/test/badge.svg?branch=main)
@@ -6,8 +10,6 @@
 [![go report](https://goreportcard.com/badge/zoncoen/scenarigo)](https://goreportcard.com/report/github.com/zoncoen/scenarigo)
 [![codebeat](https://codebeat.co/badges/93ee2453-1a25-4db6-b98e-c430c994b4b8)](https://codebeat.co/projects/github-com-zoncoen-scenarigo-main)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-
-A scenario-based API testing tool for HTTP/gRPC server.
 
 ## Overview
 

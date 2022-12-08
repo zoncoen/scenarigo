@@ -27,8 +27,8 @@ jobs:
       run: |
         set -eu
         versions=$(make matrix)
-        echo "::echo::on"
-        echo "::set-output name=versions::$versions"
+        echo $versions
+        echo "versions=$versions" >> $GITHUB_OUTPUT
   build:
     needs: matrix
     runs-on: ubuntu-latest

@@ -1,5 +1,16 @@
 # CHANGELOG
 
+<a name="v0.13.0"></a>
+## [v0.13.0] - 2022-12-07
+### Bug Fixes
+- enable to specify report paths by absolute path
+- fix generate CREDITS workflow
+
+### Features
+- enable to read config from stdin
+- enable to marshal schema.Config to YAML
+- **errors:** change error message format
+
 <a name="v0.12.8"></a>
 ## [v0.12.8] - 2022-10-18
 ### Bug Fixes
@@ -275,6 +286,7 @@ change protocl.Protocol interface
 - first release
 
 
+[v0.13.0]: https://github.com/zoncoen/scenarigo/compare/v0.12.8...v0.13.0
 [v0.12.8]: https://github.com/zoncoen/scenarigo/compare/v0.12.7...v0.12.8
 [v0.12.7]: https://github.com/zoncoen/scenarigo/compare/v0.12.6...v0.12.7
 [v0.12.6]: https://github.com/zoncoen/scenarigo/compare/v0.12.5...v0.12.6

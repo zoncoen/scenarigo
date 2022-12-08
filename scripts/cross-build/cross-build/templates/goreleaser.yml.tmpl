@@ -16,8 +16,8 @@ builds:
 - id: darwin-arm64
   env:
     - CGO_ENABLED=1
-    - CC=aarch64-apple-darwin20.2-clang
-    - CXX=aarch64-apple-darwin20.2-clang++
+    - CC=<< .CC >>
+    - CXX=<< .CC >>++
   main: ./cmd/scenarigo
   ldflags:
   - -s -w

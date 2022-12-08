@@ -50,7 +50,7 @@ jobs:
       working-directory: ./go/src/github.com/${{ github.repository }}
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: RELEASE_VERSION=${{ github.ref_name }} GO_VERSION=${{ matrix.go-version }} make build/ci
+      run: GO_VERSION=${{ matrix.go-version }} make build/ci
     - name: Upload artifacts
       uses: actions/upload-artifact@v3
       with:

@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/Yamashou/gqlgenc/clientv2"
 
 	"github.com/zoncoen/scenarigo/scripts/cross-build/gen"
@@ -18,10 +19,10 @@ import (
 
 var (
 	token            = os.Getenv("GITHUB_TOKEN")
-	releaseVer       = os.Getenv("RELEASE_VERSION")
 	ver              = os.Getenv("GO_VERSION")
 	rootDir          = os.Getenv("PJ_ROOT")
 	errImageNotFound = errors.New("image not found")
+	go1_19_1         = semver.MustParse("1.19.1")
 )
 
 func main() {
@@ -40,17 +41,23 @@ func release() error {
 		}
 		return fmt.Errorf("failed to get image tag: %w", err)
 	}
-	if err := build(ver, tag); err != nil {
+
+	v, err := semver.NewVersion(ver)
+	if err != nil {
+		return fmt.Errorf("failed to parse version: %w", err)
+	}
+	cc := "aarch64-apple-darwin20.2-clang"
+	if v.GreaterThan(go1_19_1) || ver == "1.18.7" {
+		cc = "aarch64-apple-darwin21.4-clang"
+	}
+
+	if err := build(ver, tag, cc); err != nil {
 		return fmt.Errorf("failed to build: %w", err)
 	}
 	return nil
 }
 
 func imageTag(ver, token string) (string, error) {
-	// HACK: golang-cross:v1.17.5-4 does not work
-	if ver == "1.17.5" {
-		return "v1.17.5-0", nil
-	}
 	github := &gen.Client{
 		Client: clientv2.NewClient(http.DefaultClient, "https://api.github.com/graphql", func(ctx context.Context, req *http.Request, gqlInfo *clientv2.GQLRequestInfo, res interface{}, next clientv2.RequestInterceptorFunc) error {
 			req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token))
@@ -70,10 +77,7 @@ func imageTag(ver, token string) (string, error) {
 	v := fmt.Sprintf("v%s", ver)
 	prefix := fmt.Sprintf("%s-", v)
 	for _, node := range getTags.Repository.Refs.Nodes {
-		if node.Name == v {
-			return node.Name, nil
-		}
-		if strings.HasPrefix(node.Name, prefix) {
+		if node.Name == v || strings.HasPrefix(node.Name, prefix) {
 			return node.Name, nil
 		}
 	}
@@ -84,7 +88,7 @@ func imageTag(ver, token string) (string, error) {
 //go:embed templates/goreleaser.yml.tmpl
 var tmplBytes []byte
 
-func build(ver, tag string) error {
+func build(ver, tag, cc string) error {
 	if err := os.Mkdir(fmt.Sprintf("%s/assets", rootDir), 0o755); err != nil {
 		return fmt.Errorf("failed to create directory: %w", err)
 	}
@@ -102,6 +106,7 @@ func build(ver, tag string) error {
 	defer f.Close()
 	if err := tmpl.Execute(f, map[string]interface{}{
 		"GoVersion": ver,
+		"CC":        cc,
 	}); err != nil {
 		return fmt.Errorf("failed to create .goreleaser.yml: %w", err)
 	}

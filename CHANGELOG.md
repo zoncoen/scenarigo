@@ -1,7 +1,11 @@
 # CHANGELOG
 
+<a name="v0.13.1"></a>
+## [v0.13.1] - 2022-12-15
+- bump up the version of dependent modules
+
 <a name="v0.13.0"></a>
-## [v0.13.0] - 2022-12-07
+## [v0.13.0] - 2022-12-08
 ### Bug Fixes
 - enable to specify report paths by absolute path
 - fix generate CREDITS workflow
@@ -286,6 +290,7 @@ change protocl.Protocol interface
 - first release
 
 
+[v0.13.1]: https://github.com/zoncoen/scenarigo/compare/v0.13.0...v0.13.1
 [v0.13.0]: https://github.com/zoncoen/scenarigo/compare/v0.12.8...v0.13.0
 [v0.12.8]: https://github.com/zoncoen/scenarigo/compare/v0.12.7...v0.12.8
 [v0.12.7]: https://github.com/zoncoen/scenarigo/compare/v0.12.6...v0.12.7

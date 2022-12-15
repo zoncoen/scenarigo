@@ -4,6 +4,8 @@ info:
   title: CHANGELOG
   repository_url: https://github.com/zoncoen/scenarigo
 options:
+  tag_filter_pattern: '^v[0-9.]+$'
+  sort: "date"
   commits:
     filters:
       Type:

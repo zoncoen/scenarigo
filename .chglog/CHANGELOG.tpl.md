@@ -27,6 +27,9 @@
 {{ if eq .Tag.Name "v0.1.0" -}}
 - first release
 
+{{ else if eq .Tag.Name "v0.13.1" -}}
+- bump up the version of dependent modules
+
 {{ else if eq .Tag.Name "v0.6.0" -}}
 ### Bug Fixes
 - **template:** enable to set to pointer values

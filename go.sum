@@ -107,8 +107,8 @@ github.com/stretchr/testify v1.6.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/
 github.com/stretchr/testify v1.7.0 h1:nwc3DEeHmmLAfoZucVR881uASk0Mfjw8xYJ99tb5CcY=
 github.com/stretchr/testify v1.7.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/yuin/goldmark v1.3.5/go.mod h1:mwnBkeHKe2W/ZEtQ+71ViKU8L12m81fl3OWwC1Zlc8k=
-github.com/zoncoen/query-go v1.2.0 h1:62v4xEwOs2EgOewHo5MMZsP4yTZRvGdSnFFnF9B1sws=
-github.com/zoncoen/query-go v1.2.0/go.mod h1:4ZoOJb0AeccYENjjd5HrkJEsj1WyE6oHxSw3roqCj3M=
+github.com/zoncoen/query-go v1.2.1 h1:enpkODFhqsfHKK8QlwQfdMmdl0wLGLi4Qro31MsZ4Lo=
+github.com/zoncoen/query-go v1.2.1/go.mod h1:4ZoOJb0AeccYENjjd5HrkJEsj1WyE6oHxSw3roqCj3M=
 github.com/zoncoen/query-go/extractor/yaml v0.1.0 h1:z0bTl5daAy/8XSnRkH/xOuZN1WWtmAQzrBghNGgtMGY=
 github.com/zoncoen/query-go/extractor/yaml v0.1.0/go.mod h1:LWxy+rYjBfI9zizXwx782SdU8ZHjjDJbCFuwrwMB9zs=
 go.opentelemetry.io/proto/otlp v0.7.0/go.mod h1:PqfVotwruBrMGOCsRd/89rSnXhoiJIqeYNgFYFoEGnI=

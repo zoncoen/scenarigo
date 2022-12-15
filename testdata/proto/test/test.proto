@@ -10,6 +10,11 @@ enum UserType {
     STAFF = 2;
 }
 
+enum State {
+    STATE_UNSPECIFIED = 0;
+    ACTIVE = 1;
+}
+
 service Test {
     rpc Echo(EchoRequest) returns (EchoResponse) {
     };
@@ -25,6 +30,7 @@ message EchoResponse {
     string message_body = 2;
     int64 received_at = 3;
     UserType user_type = 4;
+    State state = 5;
     StringValue nullable_string = 11;
 }
 

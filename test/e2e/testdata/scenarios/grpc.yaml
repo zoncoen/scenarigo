@@ -24,6 +24,7 @@ steps:
     message:
       messageId: "{{request.messageId}}"
       messageBody: "{{request.messageBody}}"
+      state: ACTIVE
       nullableString: null
     header:
       content-type: '{{assert.notZero}}'

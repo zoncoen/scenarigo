@@ -13,6 +13,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/pkg/errors"
+	"golang.org/x/text/encoding/japanese"
 
 	"github.com/zoncoen/scenarigo/context"
 	"github.com/zoncoen/scenarigo/internal/testutil"
@@ -32,249 +33,319 @@ func roundTripper(f func(req *http.Request) (*http.Response, error)) http.RoundT
 }
 
 func TestRequest_Invoke(t *testing.T) {
-	t.Run("success", func(t *testing.T) {
-		auth := "Bearer xxxxx"
-		m := http.NewServeMux()
-		m.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {})
-		m.HandleFunc("/echo", func(w http.ResponseWriter, req *http.Request) {
-			if req.Method != http.MethodPost {
-				w.WriteHeader(http.StatusMethodNotAllowed)
-				return
-			}
-			if req.Header.Get("Authorization") != auth {
-				w.WriteHeader(http.StatusForbidden)
-				return
-			}
-			d := json.NewDecoder(req.Body)
-			defer req.Body.Close()
-			body := map[string]string{}
-			if err := d.Decode(&body); err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				_, _ = w.Write([]byte(err.Error()))
-				return
-			}
-			w.Header().Set("Content-Type", "application/json")
-			_, _ = w.Write([]byte(fmt.Sprintf(`{"message": "%s", "id": "%s"}`, body["message"], req.URL.Query().Get("id"))))
-		})
-		m.HandleFunc("/echo/gzipped", func(w http.ResponseWriter, req *http.Request) {
-			if req.Method != http.MethodPost {
-				w.WriteHeader(http.StatusMethodNotAllowed)
-				return
-			}
-			if req.Header.Get("Authorization") != auth {
-				w.WriteHeader(http.StatusForbidden)
-				return
-			}
-			if req.Header.Get("Accept-Encoding") != "gzip" {
-				w.WriteHeader(http.StatusBadRequest)
-				return
-			}
-			d := json.NewDecoder(req.Body)
-			defer req.Body.Close()
-			body := map[string]string{}
-			if err := d.Decode(&body); err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				_, _ = w.Write([]byte(err.Error()))
-				return
-			}
-			res := []byte(fmt.Sprintf(`{"message": "%s", "id": "%s"}`, body["message"], req.URL.Query().Get("id")))
-			gz := new(bytes.Buffer)
-			ww := gzip.NewWriter(gz)
-			if _, err := ww.Write(res); err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				return
-			}
-			if err := ww.Close(); err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				return
-			}
-			w.Header().Set("Content-Encoding", "gzip")
-			w.Header().Set("Content-Type", "application/json")
-			if _, err := gz.WriteTo(w); err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				return
-			}
-		})
-		srv := httptest.NewServer(m)
-		defer srv.Close()
-
-		tests := map[string]struct {
-			vars     interface{}
-			request  *Request
-			response response
-		}{
-			"default": {
-				request: &Request{
-					URL: srv.URL,
-				},
-				response: response{
-					status: "200 OK",
-				},
-			},
-			"POST": {
-				request: &Request{
-					Method: http.MethodPost,
-					URL:    srv.URL + "/echo",
-					Query:  url.Values{"id": []string{"123"}},
-					Header: map[string][]string{"Authorization": {auth}},
-					Body:   map[string]string{"message": "hey"},
-				},
-				response: response{
-					status: "200 OK",
-					Body:   map[string]interface{}{"message": "hey", "id": "123"},
-				},
-			},
-			"lower case method": {
-				request: &Request{
-					Method: "post",
-					URL:    srv.URL + "/echo",
-					Query:  url.Values{"id": []string{"123"}},
-					Header: map[string][]string{"Authorization": {auth}},
-					Body:   map[string]string{"message": "hey"},
-				},
-				response: response{
-					status: "200 OK",
-					Body:   map[string]interface{}{"message": "hey", "id": "123"},
-				},
-			},
-			"POST (gzipped)": {
-				request: &Request{
-					Method: http.MethodPost,
-					URL:    srv.URL + "/echo/gzipped",
-					Query:  url.Values{"id": []string{"123"}},
-					Header: map[string][]string{
-						"Authorization":   {auth},
-						"Accept-Encoding": {"gzip"},
-					},
-					Body: map[string]string{"message": "hey"},
-				},
-				response: response{
-					status: "200 OK",
-					Body:   map[string]interface{}{"message": "hey", "id": "123"},
-				},
-			},
-			"with vars": {
-				vars: map[string]string{
-					"url":     srv.URL + "/echo",
-					"auth":    auth,
-					"message": "hey",
-					"id":      "123",
-				},
-				request: &Request{
-					Method: http.MethodPost,
-					URL:    "{{vars.url}}",
-					Query:  map[string]string{"id": "{{vars.id}}"},
-					Header: map[string][]string{"Authorization": {"{{vars.auth}}"}},
-					Body:   map[string]string{"message": "{{vars.message}}"},
-				},
-				response: response{
-					status: "200 OK",
-					Body:   map[string]interface{}{"message": "hey", "id": "123"},
-				},
-			},
-			"custom client": {
-				vars: map[string]interface{}{
-					"client": &http.Client{
-						Transport: roundTripper(func(req *http.Request) (*http.Response, error) {
-							req.Header.Set("Authorization", auth)
-							return http.DefaultTransport.RoundTrip(req)
-						}),
-					},
-				},
-				request: &Request{
-					Client: "{{vars.client}}",
-					Method: http.MethodPost,
-					URL:    srv.URL + "/echo",
-					Query:  url.Values{"id": []string{"123"}},
-					Body:   map[string]string{"message": "hey"},
-				},
-				response: response{
-					status: "200 OK",
-					Body:   map[string]interface{}{"message": "hey", "id": "123"},
-				},
-			},
+	auth := "Bearer xxxxx"
+	m := http.NewServeMux()
+	m.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {})
+	m.HandleFunc("/echo", func(w http.ResponseWriter, req *http.Request) {
+		if req.Method != http.MethodPost {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
 		}
-		for name, test := range tests {
-			test := test
-			t.Run(name, func(t *testing.T) {
-				ctx := context.FromT(t)
-				if test.vars != nil {
-					ctx = ctx.WithVars(test.vars)
-				}
-
-				ctx, res, err := test.request.Invoke(ctx)
-				if err != nil {
-					t.Fatalf("failed to invoke: %s", err)
-				}
-				actualRes, ok := res.(response)
-				if !ok {
-					t.Fatalf("failed to convert from %T to response", res)
-				}
-				if diff := cmp.Diff(test.response.Body, actualRes.Body,
-					cmp.AllowUnexported(
-						response{},
-					),
-				); diff != "" {
-					t.Fatalf("differs: (-want +got)\n%s", diff)
-				}
-
-				// ensure that ctx.WithRequest and ctx.WithResponse are called
-				if diff := cmp.Diff(test.request.Body, ctx.Request()); diff != "" {
-					t.Errorf("differs: (-want +got)\n%s", diff)
-				}
-				if diff := cmp.Diff(test.response.Body, ctx.Response()); diff != "" {
-					t.Errorf("differs: (-want +got)\n%s", diff)
-				}
-			})
+		if req.Header.Get("Authorization") != auth {
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
+		d := json.NewDecoder(req.Body)
+		defer req.Body.Close()
+		body := map[string]string{}
+		if err := d.Decode(&body); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = w.Write([]byte(err.Error()))
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(fmt.Sprintf(`{"message": "%s", "id": "%s"}`, body["message"], req.URL.Query().Get("id"))))
+	})
+	m.HandleFunc("/echo/gzipped", func(w http.ResponseWriter, req *http.Request) {
+		if req.Method != http.MethodPost {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		if req.Header.Get("Authorization") != auth {
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
+		if req.Header.Get("Accept-Encoding") != "gzip" {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		d := json.NewDecoder(req.Body)
+		defer req.Body.Close()
+		body := map[string]string{}
+		if err := d.Decode(&body); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = w.Write([]byte(err.Error()))
+			return
+		}
+		res := []byte(fmt.Sprintf(`{"message": "%s", "id": "%s"}`, body["message"], req.URL.Query().Get("id")))
+		gz := new(bytes.Buffer)
+		ww := gzip.NewWriter(gz)
+		if _, err := ww.Write(res); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		if err := ww.Close(); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Encoding", "gzip")
+		w.Header().Set("Content-Type", "application/json")
+		if _, err := gz.WriteTo(w); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 	})
-	t.Run("failure", func(t *testing.T) {
-		tests := map[string]struct {
-			vars    interface{}
-			request *Request
-		}{
-			"URL is required": {
-				request: &Request{},
-			},
-			"failed to send request": {
-				vars: map[string]interface{}{
-					"client": &http.Client{
-						Transport: roundTripper(func(req *http.Request) (*http.Response, error) {
-							return nil, errors.New("error occurred")
-						}),
-					},
-				},
-				request: &Request{
-					Client: "{{vars.client}}",
-					URL:    "http://localhost",
-				},
-			},
-			"failed to execute template": {
-				request: &Request{
-					URL: "{{vars.url}}",
-				},
-			},
-			"failed to buildClient": {
-				request: &Request{Client: "{{}}"},
-			},
-			"failed to buildClient ( invalid template )": {
-				request: &Request{Client: "{{invalid}}"},
-			},
+	m.HandleFunc("/echo/shift_jis", func(w http.ResponseWriter, req *http.Request) {
+		if req.Method != http.MethodPost {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
 		}
-		for name, test := range tests {
-			test := test
-			t.Run(name, func(t *testing.T) {
-				ctx := context.FromT(t)
-				if test.vars != nil {
-					ctx = ctx.WithVars(test.vars)
-				}
-				_, _, err := test.request.Invoke(ctx)
-				if err == nil {
-					t.Fatal("no error")
-				}
-			})
+		if req.Header.Get("Authorization") != auth {
+			w.WriteHeader(http.StatusForbidden)
+			return
 		}
+		d := json.NewDecoder(req.Body)
+		defer req.Body.Close()
+		body := map[string]string{}
+		if err := d.Decode(&body); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = w.Write([]byte(err.Error()))
+			return
+		}
+		b, err := japanese.ShiftJIS.NewEncoder().Bytes([]byte(fmt.Sprintf(`{"message": "%s", "id": "%s"}`, body["message"], req.URL.Query().Get("id"))))
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json; charset=Shift_JIS")
+		_, _ = w.Write(b)
 	})
+	srv := httptest.NewServer(m)
+	defer srv.Close()
+
+	tests := map[string]struct {
+		vars     interface{}
+		request  *Request
+		response response
+	}{
+		"default": {
+			request: &Request{
+				URL: srv.URL,
+			},
+			response: response{
+				status: "200 OK",
+			},
+		},
+		"POST": {
+			request: &Request{
+				Method: http.MethodPost,
+				URL:    srv.URL + "/echo",
+				Query:  url.Values{"id": []string{"123"}},
+				Header: map[string][]string{"Authorization": {auth}},
+				Body:   map[string]string{"message": "hey"},
+			},
+			response: response{
+				status: "200 OK",
+				Body:   map[string]interface{}{"message": "hey", "id": "123"},
+			},
+		},
+		"lower case method": {
+			request: &Request{
+				Method: "post",
+				URL:    srv.URL + "/echo",
+				Query:  url.Values{"id": []string{"123"}},
+				Header: map[string][]string{"Authorization": {auth}},
+				Body:   map[string]string{"message": "hey"},
+			},
+			response: response{
+				status: "200 OK",
+				Body:   map[string]interface{}{"message": "hey", "id": "123"},
+			},
+		},
+		"POST (gzipped)": {
+			request: &Request{
+				Method: http.MethodPost,
+				URL:    srv.URL + "/echo/gzipped",
+				Query:  url.Values{"id": []string{"123"}},
+				Header: map[string][]string{
+					"Authorization":   {auth},
+					"Accept-Encoding": {"gzip"},
+				},
+				Body: map[string]string{"message": "hey"},
+			},
+			response: response{
+				status: "200 OK",
+				Body:   map[string]interface{}{"message": "hey", "id": "123"},
+			},
+		},
+		"POST (Shift_JIS)": {
+			request: &Request{
+				Method: http.MethodPost,
+				URL:    srv.URL + "/echo/shift_jis",
+				Query:  url.Values{"id": []string{"123"}},
+				Header: map[string][]string{
+					"Authorization": {auth},
+				},
+				Body: map[string]string{"message": "hey"},
+			},
+			response: response{
+				status: "200 OK",
+				Body:   map[string]interface{}{"message": "hey", "id": "123"},
+			},
+		},
+		"with vars": {
+			vars: map[string]string{
+				"url":     srv.URL + "/echo",
+				"auth":    auth,
+				"message": "hey",
+				"id":      "123",
+			},
+			request: &Request{
+				Method: http.MethodPost,
+				URL:    "{{vars.url}}",
+				Query:  map[string]string{"id": "{{vars.id}}"},
+				Header: map[string][]string{"Authorization": {"{{vars.auth}}"}},
+				Body:   map[string]string{"message": "{{vars.message}}"},
+			},
+			response: response{
+				status: "200 OK",
+				Body:   map[string]interface{}{"message": "hey", "id": "123"},
+			},
+		},
+		"custom client": {
+			vars: map[string]interface{}{
+				"client": &http.Client{
+					Transport: roundTripper(func(req *http.Request) (*http.Response, error) {
+						req.Header.Set("Authorization", auth)
+						return http.DefaultTransport.RoundTrip(req)
+					}),
+				},
+			},
+			request: &Request{
+				Client: "{{vars.client}}",
+				Method: http.MethodPost,
+				URL:    srv.URL + "/echo",
+				Query:  url.Values{"id": []string{"123"}},
+				Body:   map[string]string{"message": "hey"},
+			},
+			response: response{
+				status: "200 OK",
+				Body:   map[string]interface{}{"message": "hey", "id": "123"},
+			},
+		},
+	}
+	for name, test := range tests {
+		test := test
+		t.Run(name, func(t *testing.T) {
+			ctx := context.FromT(t)
+			if test.vars != nil {
+				ctx = ctx.WithVars(test.vars)
+			}
+
+			ctx, res, err := test.request.Invoke(ctx)
+			if err != nil {
+				t.Fatalf("failed to invoke: %s", err)
+			}
+			actualRes, ok := res.(response)
+			if !ok {
+				t.Fatalf("failed to convert from %T to response", res)
+			}
+			if diff := cmp.Diff(test.response.Body, actualRes.Body,
+				cmp.AllowUnexported(
+					response{},
+				),
+			); diff != "" {
+				t.Fatalf("differs: (-want +got)\n%s", diff)
+			}
+
+			// ensure that ctx.WithRequest and ctx.WithResponse are called
+			if diff := cmp.Diff(test.request.Body, ctx.Request()); diff != "" {
+				t.Errorf("differs: (-want +got)\n%s", diff)
+			}
+			if diff := cmp.Diff(test.response.Body, ctx.Response()); diff != "" {
+				t.Errorf("differs: (-want +got)\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestRequest_Invoke_Error(t *testing.T) {
+	m := http.NewServeMux()
+	m.HandleFunc("/unknown_charset", func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Add("Content-Type", "text/plain; charset=unknown")
+	})
+	m.HandleFunc("/invalid_content_type", func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Add("Content-Type", ";")
+	})
+	srv := httptest.NewServer(m)
+	t.Cleanup(srv.Close)
+
+	tests := map[string]struct {
+		vars    interface{}
+		request *Request
+		expect  string
+	}{
+		"URL is required": {
+			request: &Request{},
+			expect:  `failed to send request: Get "": unsupported protocol scheme ""`,
+		},
+		"failed to send request": {
+			vars: map[string]interface{}{
+				"client": &http.Client{
+					Transport: roundTripper(func(req *http.Request) (*http.Response, error) {
+						return nil, errors.New("error occurred")
+					}),
+				},
+			},
+			request: &Request{
+				Client: "{{vars.client}}",
+				URL:    "http://localhost",
+			},
+			expect: `failed to send request: Get "http://localhost": error occurred`,
+		},
+		"failed to execute template": {
+			request: &Request{
+				URL: "{{vars.url}}",
+			},
+			expect: `.url: failed to get URL: failed to execute: {{vars.url}}: ".vars.url" not found`,
+		},
+		"failed to buildClient": {
+			request: &Request{Client: "{{}}"},
+			expect:  `.client: client must be "*http.Client" but got "string"`,
+		},
+		"failed to buildClient ( invalid template )": {
+			request: &Request{Client: "{{invalid}}"},
+			expect:  `.client: failed to get client: failed to execute: {{invalid}}: ".invalid" not found`,
+		},
+		"failed to parse Content-Type": {
+			request: &Request{
+				URL: fmt.Sprintf("%s/invalid_content_type", srv.URL),
+			},
+			expect: `failed to parse Content-Type response header ";": mime: no media type`,
+		},
+		"unknown caharset": {
+			request: &Request{
+				URL: fmt.Sprintf("%s/unknown_charset", srv.URL),
+			},
+			expect: `failed to decode response body: unknown cahrset "unknown"`,
+		},
+	}
+	for name, test := range tests {
+		test := test
+		t.Run(name, func(t *testing.T) {
+			ctx := context.FromT(t)
+			if test.vars != nil {
+				ctx = ctx.WithVars(test.vars)
+			}
+			_, _, err := test.request.Invoke(ctx)
+			if err == nil {
+				t.Fatal("no error")
+			}
+			if got := err.Error(); !strings.Contains(got, test.expect) {
+				t.Errorf("%q doesn't contain %q", got, test.expect)
+			}
+		})
+	}
 }
 
 func TestRequest_Invoke_Log(t *testing.T) {

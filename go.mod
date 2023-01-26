@@ -10,6 +10,7 @@ require (
 	github.com/google/go-cmp v0.5.9
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/lestrrat-go/backoff v1.0.1
+	github.com/mattn/go-encoding v0.0.2
 	github.com/pkg/errors v0.9.1
 	github.com/sergi/go-diff v1.3.1
 	github.com/sosedoff/gitkit v0.3.0
@@ -18,6 +19,7 @@ require (
 	github.com/zoncoen/query-go/extractor/yaml v0.1.1
 	golang.org/x/mod v0.7.0
 	golang.org/x/sync v0.1.0
+	golang.org/x/text v0.6.0
 	google.golang.org/genproto v0.0.0-20230119192704-9d59e20e5cd1
 	google.golang.org/grpc v1.52.1
 	google.golang.org/protobuf v1.28.1
@@ -33,6 +35,5 @@ require (
 	golang.org/x/crypto v0.1.0 // indirect
 	golang.org/x/net v0.5.0 // indirect
 	golang.org/x/sys v0.4.0 // indirect
-	golang.org/x/text v0.6.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 )

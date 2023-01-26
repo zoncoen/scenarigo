@@ -5,12 +5,14 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
+	"mime"
 	"net/http"
 	"net/url"
 	"reflect"
 	"strings"
 
 	"github.com/goccy/go-yaml"
+	"github.com/mattn/go-encoding"
 	"github.com/zoncoen/scenarigo/context"
 	"github.com/zoncoen/scenarigo/errors"
 	"github.com/zoncoen/scenarigo/internal/reflectutil"
@@ -87,7 +89,6 @@ func (r *Request) Invoke(ctx *context.Context) (*context.Context, interface{}, e
 	var reader io.ReadCloser
 	switch resp.Header.Get("Content-Encoding") {
 	case "gzip":
-		var err error
 		reader, err = gzip.NewReader(resp.Body)
 		if err != nil {
 			return ctx, nil, errors.Errorf("failed to read response body: %s", err)
@@ -125,7 +126,11 @@ func (r *Request) Invoke(ctx *context.Context) (*context.Context, interface{}, e
 }
 
 func (r *Request) buildClient(ctx *context.Context) (*http.Client, error) {
-	client := &http.Client{}
+	client := &http.Client{
+		Transport: &charsetRoundTripper{
+			base: http.DefaultTransport,
+		},
+	}
 	if r.Client != "" {
 		x, err := ctx.ExecuteTemplate(r.Client)
 		if err != nil {
@@ -137,6 +142,39 @@ func (r *Request) buildClient(ctx *context.Context) (*http.Client, error) {
 		}
 	}
 	return client, nil
+}
+
+type charsetRoundTripper struct {
+	base http.RoundTripper
+}
+
+func (rt *charsetRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	resp, err := rt.base.RoundTrip(req)
+	if err != nil {
+		return resp, err
+	}
+	if ct := resp.Header.Get("Content-Type"); ct != "" {
+		_, params, err := mime.ParseMediaType(strings.Trim(ct, " "))
+		if err != nil {
+			return nil, errors.Errorf("failed to parse Content-Type response header %q: %s", ct, err)
+		}
+		if name, ok := params["charset"]; ok {
+			enc := encoding.GetEncoding(name)
+			if enc == nil {
+				return nil, errors.Errorf("failed to decode response body: unknown cahrset %q", name)
+			}
+			resp.Body = &readCloser{
+				Reader: enc.NewDecoder().Reader(resp.Body),
+				Closer: resp.Body,
+			}
+		}
+	}
+	return resp, err
+}
+
+type readCloser struct {
+	io.Reader
+	io.Closer
 }
 
 func (r *Request) buildRequest(ctx *context.Context) (*http.Request, interface{}, error) {

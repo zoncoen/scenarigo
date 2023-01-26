@@ -168,8 +168,7 @@ func TestRequest_Invoke(t *testing.T) {
 				URL:    srv.URL + "/echo/gzipped",
 				Query:  url.Values{"id": []string{"123"}},
 				Header: map[string][]string{
-					"Authorization":   {auth},
-					"Accept-Encoding": {"gzip"},
+					"Authorization": {auth},
 				},
 				Body: map[string]string{"message": "hey"},
 			},

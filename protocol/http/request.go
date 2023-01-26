@@ -86,19 +86,7 @@ func (r *Request) Invoke(ctx *context.Context) (*context.Context, interface{}, e
 	}
 	defer resp.Body.Close()
 
-	var reader io.ReadCloser
-	switch resp.Header.Get("Content-Encoding") {
-	case "gzip":
-		reader, err = gzip.NewReader(resp.Body)
-		if err != nil {
-			return ctx, nil, errors.Errorf("failed to read response body: %s", err)
-		}
-		defer reader.Close()
-	default:
-		reader = resp.Body
-	}
-
-	b, err := io.ReadAll(reader)
+	b, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return ctx, nil, errors.Errorf("failed to read response body: %s", err)
 	}
@@ -128,7 +116,9 @@ func (r *Request) Invoke(ctx *context.Context) (*context.Context, interface{}, e
 func (r *Request) buildClient(ctx *context.Context) (*http.Client, error) {
 	client := &http.Client{
 		Transport: &charsetRoundTripper{
-			base: http.DefaultTransport,
+			base: &encodingRoundTripper{
+				base: http.DefaultTransport,
+			},
 		},
 	}
 	if r.Client != "" {
@@ -175,6 +165,28 @@ func (rt *charsetRoundTripper) RoundTrip(req *http.Request) (*http.Response, err
 type readCloser struct {
 	io.Reader
 	io.Closer
+}
+
+type encodingRoundTripper struct {
+	base http.RoundTripper
+}
+
+func (rt *encodingRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	if req.Header.Get("Accept-Encoding") == "" {
+		req.Header.Add("Accept-Encoding", "gzip")
+	}
+	resp, err := rt.base.RoundTrip(req)
+	if err != nil {
+		return resp, err
+	}
+	if resp.Header.Get("Content-Encoding") == "gzip" {
+		r, err := gzip.NewReader(resp.Body)
+		if err != nil {
+			return nil, errors.Errorf("failed to read response body: %s", err)
+		}
+		resp.Body = r
+	}
+	return resp, err
 }
 
 func (r *Request) buildRequest(ctx *context.Context) (*http.Request, interface{}, error) {

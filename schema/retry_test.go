@@ -2,11 +2,12 @@ package schema
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
-	"github.com/lestrrat-go/backoff/v2"
+	"github.com/cenkalti/backoff/v4"
+
+	"github.com/zoncoen/scenarigo/errors"
 )
 
 func TestRetryPolicyConstant(t *testing.T) {
@@ -17,7 +18,7 @@ func TestRetryPolicyConstant(t *testing.T) {
 				MaxElapsedTime: (*Duration)(&maxElapsedTime),
 			},
 		}
-		ctxFunc, policy, err := p.Build()
+		ctxFunc, b, err := p.Build()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -25,10 +26,11 @@ func TestRetryPolicyConstant(t *testing.T) {
 		defer cancel()
 
 		var i int
-		b := policy.Start(ctx)
-		for backoff.Continue(b) {
+		b = backoff.WithContext(b, ctx)
+		_ = backoff.Retry(func() error {
 			i++
-		}
+			return errors.New("retry")
+		}, b)
 		if got, expect := i, 1; got != expect {
 			t.Errorf("expect %d but got %d", expect, got)
 		}
@@ -40,10 +42,10 @@ func TestRetryPolicyConstant(t *testing.T) {
 			Constant: &RetryPolicyConstant{
 				MaxElapsedTime: (*Duration)(&maxElapsedTime),
 				Interval:       (*Duration)(&interval),
-				// MaxRetries: &maxRetries, // default value is 10
+				// MaxRetries: &maxRetries, // default value is 5
 			},
 		}
-		ctxFunc, policy, err := p.Build()
+		ctxFunc, b, err := p.Build()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -51,11 +53,12 @@ func TestRetryPolicyConstant(t *testing.T) {
 		defer cancel()
 
 		var i int
-		b := policy.Start(ctx)
-		for backoff.Continue(b) {
+		b = backoff.WithContext(b, ctx)
+		_ = backoff.Retry(func() error {
 			i++
-		}
-		if got, expect := i, 11; got != expect {
+			return errors.New("retry")
+		}, b)
+		if got, expect := i, 6; got != expect {
 			t.Errorf("expect %d but got %d", expect, got)
 		}
 	})
@@ -70,7 +73,7 @@ func TestRetryPolicyConstant(t *testing.T) {
 				MaxRetries:     &maxRetries,
 			},
 		}
-		ctxFunc, policy, err := p.Build()
+		ctxFunc, b, err := p.Build()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -78,10 +81,11 @@ func TestRetryPolicyConstant(t *testing.T) {
 		defer cancel()
 
 		var i int
-		b := policy.Start(ctx)
-		for backoff.Continue(b) {
+		b = backoff.WithContext(b, ctx)
+		_ = backoff.Retry(func() error {
 			i++
-		}
+			return errors.New("retry")
+		}, b)
 		if got, expect := i, 2; got != expect {
 			t.Errorf("expect %d but got %d", expect, got)
 		}
@@ -96,7 +100,7 @@ func TestRetryPolicyExponential(t *testing.T) {
 				MaxElapsedTime: (*Duration)(&maxElapsedTime),
 			},
 		}
-		ctxFunc, policy, err := p.Build()
+		ctxFunc, b, err := p.Build()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -104,10 +108,11 @@ func TestRetryPolicyExponential(t *testing.T) {
 		defer cancel()
 
 		var i int
-		b := policy.Start(ctx)
-		for backoff.Continue(b) {
+		b = backoff.WithContext(b, ctx)
+		_ = backoff.Retry(func() error {
 			i++
-		}
+			return errors.New("retry")
+		}, b)
 		if got, expect := i, 1; got != expect {
 			t.Errorf("expect %d but got %d", expect, got)
 		}
@@ -125,7 +130,7 @@ func TestRetryPolicyExponential(t *testing.T) {
 				MaxInterval:     (*Duration)(&maxInterval),
 			},
 		}
-		ctxFunc, policy, err := p.Build()
+		ctxFunc, b, err := p.Build()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -133,10 +138,11 @@ func TestRetryPolicyExponential(t *testing.T) {
 		defer cancel()
 
 		var i int
-		b := policy.Start(ctx)
-		for backoff.Continue(b) {
+		b = backoff.WithContext(b, ctx)
+		_ = backoff.Retry(func() error {
 			i++
-		}
+			return errors.New("retry")
+		}, b)
 		if got, expect := i, 5; got != expect {
 			t.Errorf("expect %d but got %d", expect, got)
 		}
@@ -156,7 +162,7 @@ func TestRetryPolicyExponential(t *testing.T) {
 				MaxRetries:      &maxRetries,
 			},
 		}
-		ctxFunc, policy, err := p.Build()
+		ctxFunc, b, err := p.Build()
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -164,59 +170,20 @@ func TestRetryPolicyExponential(t *testing.T) {
 		defer cancel()
 
 		var i int
-		b := policy.Start(ctx)
-		for backoff.Continue(b) {
+		b = backoff.WithContext(b, ctx)
+		_ = backoff.Retry(func() error {
 			i++
-		}
+			return errors.New("retry")
+		}, b)
 		if got, expect := i, 3; got != expect {
 			t.Errorf("expect %d but got %d", expect, got)
 		}
 	})
-	t.Run("jitter factor", func(t *testing.T) {
-		tests := []struct {
-			jitterFactor float64
-			expectErr    bool
-		}{
-			{
-				jitterFactor: 0.0,
-				expectErr:    true,
-			},
-			{
-				jitterFactor: 0.01,
-				expectErr:    false,
-			},
-			{
-				jitterFactor: 0.99,
-				expectErr:    false,
-			},
-			{
-				jitterFactor: 1.0,
-				expectErr:    true,
-			},
-		}
-		for _, test := range tests {
-			test := test
-			t.Run(fmt.Sprint(test.jitterFactor), func(t *testing.T) {
-				p := &RetryPolicy{
-					Exponential: &RetryPolicyExponential{
-						JitterFactor: &test.jitterFactor,
-					},
-				}
-				_, _, err := p.Build()
-				if test.expectErr && err == nil {
-					t.Fatal("no error")
-				}
-				if !test.expectErr && err != nil {
-					t.Fatalf("unexpected error: %s", err)
-				}
-			})
-		}
-	})
 }
 
-func TestRetryPolicyNull(t *testing.T) {
+func TestRetryNoPolicy(t *testing.T) {
 	p := &RetryPolicy{}
-	ctxFunc, policy, err := p.Build()
+	ctxFunc, b, err := p.Build()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -224,10 +191,11 @@ func TestRetryPolicyNull(t *testing.T) {
 	defer cancel()
 
 	var i int
-	b := policy.Start(ctx)
-	for backoff.Continue(b) {
+	b = backoff.WithContext(b, ctx)
+	_ = backoff.Retry(func() error {
 		i++
-	}
+		return errors.New("retry")
+	}, b)
 	if got, expect := i, 1; got != expect {
 		t.Errorf("expect %d but got %d", expect, got)
 	}

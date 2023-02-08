@@ -118,16 +118,16 @@ func TestGenerateTestReport(t *testing.T) {
 		for name, test := range tests {
 			test := test
 			t.Run(name, func(t *testing.T) {
-				t.Run("reporter", func(t *testing.T) {
+				t.Run("Run", func(t *testing.T) {
 					r := run(func(r Reporter) {
 						r.(*reporter).durationMeasurer = &fixedDurationMeasurer{}
 						test.f(r)
 					}, WithWriter(&nopWriter{}))
 					checkReport(t, r, test.expect)
 				})
-				t.Run("testReporter", func(t *testing.T) {
-					r := FromT(t)
-					r.(*testReporter).durationMeasurer = &fixedDurationMeasurer{}
+				t.Run("FromT", func(t *testing.T) {
+					r := FromT(t, WithWriter(&nopWriter{}))
+					r.(*reporter).durationMeasurer = &fixedDurationMeasurer{}
 					test.f(r)
 					test.expect.Name = t.Name()
 					checkReport(t, r, test.expect)

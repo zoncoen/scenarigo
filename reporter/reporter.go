@@ -75,6 +75,8 @@ type reporter struct {
 	durationMeasurer testDurationMeasurer
 	children         []*reporter
 
+	testing bool
+
 	barrier chan bool // To signal parallel subtests they may start.
 	done    chan bool // To signal a test is done.
 }
@@ -245,6 +247,7 @@ func (r *reporter) Run(name string, f func(t Reporter)) bool {
 	child.goTestName = goTestName
 	child.depth = r.depth + 1
 	child.durationMeasurer = r.durationMeasurer.spawn()
+	child.testing = r.testing
 	if r.context.verbose {
 		r.context.printf("=== RUN   %s\n", child.goTestName)
 	}
@@ -259,12 +262,29 @@ func (r *reporter) Run(name string, f func(t Reporter)) bool {
 
 func (r *reporter) run(f func(r Reporter)) {
 	var finished bool
+	stop := r.start()
+	defer stop()
 	defer func() {
-		r.durationMeasurer.stop()
 		err := recover()
 		if !finished && err == nil {
 			err = errors.New("test executed panic(nil) or runtime.Goexit")
 		}
+		if err != nil {
+			if !r.Failed() && !r.Skipped() {
+				r.Error(err)
+				r.Error(string(debug.Stack()))
+			}
+		}
+	}()
+	f(r)
+	finished = true
+}
+
+func (r *reporter) start() func() {
+	r.durationMeasurer.start()
+	return func() {
+		r.durationMeasurer.stop()
+		err := recover()
 		if err != nil {
 			if !r.Failed() && !r.Skipped() {
 				r.Error(err)
@@ -300,17 +320,13 @@ func (r *reporter) run(f func(r Reporter)) {
 		}
 
 		r.done <- true
-	}()
-
-	r.durationMeasurer.start()
-	f(r)
-	finished = true
+	}
 }
 
 func printReport(r *reporter) {
 	results := collectOutput(r)
 	r.context.printf("%s\n", strings.Join(results, "\n"))
-	if r.Failed() {
+	if r.Failed() && !r.testing {
 		r.context.printf(r.failColor().Sprintln("FAIL"))
 	}
 }
@@ -339,7 +355,7 @@ func collectOutput(r *reporter) []string {
 	for _, child := range r.children {
 		results = append(results, collectOutput(child)...)
 	}
-	if r.depth == 1 {
+	if r.depth == 1 && !r.testing {
 		if r.Failed() {
 			results = append(results,
 				r.failColor().Sprintf("FAIL\nFAIL\t%s\t%.3fs", r.goTestName, r.durationMeasurer.getDuration().Seconds()),

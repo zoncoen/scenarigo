@@ -452,18 +452,18 @@ func TestReporter_PrivateMethods(t *testing.T) {
 		run      func(t *testing.T, f func(Reporter))
 		rootName string
 	}{
-		"reporter": {
+		"Run": {
 			run: func(t *testing.T, f func(Reporter)) {
 				t.Helper()
 				Run(f)
 			},
 		},
-		"testReporter": {
+		"FromT": {
 			run: func(t *testing.T, f func(Reporter)) {
 				t.Helper()
 				f(FromT(t))
 			},
-			rootName: "TestReporter_PrivateMethods/testReporter",
+			rootName: "TestReporter_PrivateMethods/FromT",
 		},
 	}
 	for name, test := range tests {

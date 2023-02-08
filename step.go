@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/lestrrat-go/backoff/v2"
+	"github.com/cenkalti/backoff/v4"
 
 	"github.com/zoncoen/scenarigo/assert"
 	"github.com/zoncoen/scenarigo/context"
@@ -99,28 +99,30 @@ func runStep(ctx *context.Context, scenario *schema.Scenario, s *schema.Step, st
 }
 
 func invokeAndAssert(ctx *context.Context, s *schema.Step, stepIdx int) *context.Context {
-	ctxFunc, policy, err := s.Retry.Build()
+	ctxFunc, b, err := s.Retry.Build()
 	if err != nil {
 		ctx.Reporter().Fatal(fmt.Errorf("invalid retry policy: %w", err))
 	}
 
 	retryCtx, cancel := ctxFunc(ctx.RequestContext())
 	defer cancel()
-	b := policy.Start(retryCtx)
+	b = backoff.WithContext(b, retryCtx)
+
 	var i int
-	for backoff.Continue(b) {
+	newCtx, err := backoff.RetryWithData(func() (*context.Context, error) {
 		ctx.Reporter().Logf("[%d] send request", i)
 		i++
 
 		newCtx, ok := attempt(ctx, s, stepIdx)
 		if !ok {
-			continue
+			return nil, errors.New("fail")
 		}
-		return newCtx
+		return newCtx, nil
+	}, b)
+	if err != nil {
+		ctx.Reporter().FailNow()
 	}
-
-	ctx.Reporter().FailNow()
-	return ctx
+	return newCtx
 }
 
 func attempt(ctx *context.Context, s *schema.Step, stepIdx int) (*context.Context, bool) {

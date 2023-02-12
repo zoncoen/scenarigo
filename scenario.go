@@ -1,8 +1,10 @@
 package scenarigo
 
 import (
+	gocontext "context"
 	"fmt"
 	"path/filepath"
+	"time"
 
 	"github.com/zoncoen/scenarigo/context"
 	"github.com/zoncoen/scenarigo/errors"
@@ -53,13 +55,19 @@ func RunScenario(ctx *context.Context, s *schema.Scenario) *context.Context {
 	var failed bool
 	for idx, step := range s.Steps {
 		step := step
-		ok := scnCtx.Run(step.Title, func(ctx *context.Context) {
+		ok := context.RunWithRetry(ctx, step.Title, func(ctx *context.Context) {
 			// following steps are skipped if the previous step failed
 			if failed {
 				ctx.Reporter().SkipNow()
 			}
 
-			ctx = runStep(ctx, s, step, idx)
+			if step.Timeout != nil && *step.Timeout > 0 {
+				reqCtx, cancel := gocontext.WithTimeout(ctx.RequestContext(), time.Duration(*step.Timeout))
+				defer cancel()
+				ctx = ctx.WithRequestContext(reqCtx)
+			}
+
+			ctx = runStepWithTimeout(ctx, s, step, idx)
 
 			// bind values to the scenario context for enable to access from following steps
 			if step.Bind.Vars != nil {
@@ -79,7 +87,7 @@ func RunScenario(ctx *context.Context, s *schema.Scenario) *context.Context {
 				}
 				scnCtx = scnCtx.WithVars(vars)
 			}
-		})
+		}, step.Retry)
 		if !failed {
 			failed = !ok
 		}
@@ -90,4 +98,47 @@ func RunScenario(ctx *context.Context, s *schema.Scenario) *context.Context {
 	}
 
 	return scnCtx
+}
+
+func runStepWithTimeout(ctx *context.Context, scenario *schema.Scenario, step *schema.Step, idx int) *context.Context {
+	done := make(chan *context.Context)
+	go func() {
+		var finished bool
+		defer func() {
+			if !finished {
+				done <- ctx
+			}
+		}()
+		done <- runStep(ctx, scenario, step, idx)
+		finished = true
+	}()
+	select {
+	case ctx = <-done:
+	case <-ctx.RequestContext().Done():
+		ctx.Reporter().Error(
+			errors.WithNodeAndColored(
+				errors.ErrorPath(
+					fmt.Sprintf("steps[%d].timeout", idx),
+					"timeout exceeded",
+				),
+				ctx.Node(),
+				ctx.EnabledColor(),
+			),
+		)
+		// wait for the result context for a little
+		limit := 10 * time.Second
+		if step.PostTimeoutWaitingLimit != nil {
+			limit = time.Duration(*step.PostTimeoutWaitingLimit)
+		}
+		select {
+		case ctx = <-done:
+		case <-time.After(limit):
+			go func() { <-done }()
+			ctx.Reporter().Fatalf("step hasn't finished in %s despite the context canceled", limit)
+		}
+	}
+	if ctx.Reporter().Failed() {
+		ctx.Reporter().FailNow()
+	}
+	return ctx
 }

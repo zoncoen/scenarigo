@@ -32,17 +32,18 @@ func (s *Scenario) Filepath() string {
 
 // Step represents a step of scenario.
 type Step struct {
-	Title       string                    `yaml:"title,omitempty"`
-	Description string                    `yaml:"description,omitempty"`
-	Vars        map[string]interface{}    `yaml:"vars,omitempty"`
-	Protocol    string                    `yaml:"protocol,omitempty"`
-	Request     protocol.Invoker          `yaml:"request,omitempty"`
-	Expect      protocol.AssertionBuilder `yaml:"expect,omitempty"`
-	Include     string                    `yaml:"include,omitempty"`
-	Ref         interface{}               `yaml:"ref,omitempty"`
-	Bind        Bind                      `yaml:"bind,omitempty"`
-	Retry       *RetryPolicy              `yaml:"retry,omitempty"`
-	Timeout     *Duration                 `yaml:"timeout,omitempty"`
+	Title                   string                    `yaml:"title,omitempty"`
+	Description             string                    `yaml:"description,omitempty"`
+	Vars                    map[string]interface{}    `yaml:"vars,omitempty"`
+	Protocol                string                    `yaml:"protocol,omitempty"`
+	Request                 protocol.Invoker          `yaml:"request,omitempty"`
+	Expect                  protocol.AssertionBuilder `yaml:"expect,omitempty"`
+	Include                 string                    `yaml:"include,omitempty"`
+	Ref                     interface{}               `yaml:"ref,omitempty"`
+	Bind                    Bind                      `yaml:"bind,omitempty"`
+	Timeout                 *Duration                 `yaml:"timeout,omitempty"`
+	PostTimeoutWaitingLimit *Duration                 `yaml:"postTimeoutWaitingLimit,omitempty"`
+	Retry                   *RetryPolicy              `yaml:"retry,omitempty"`
 }
 
 type rawMessage []byte
@@ -54,15 +55,16 @@ func (r *rawMessage) UnmarshalYAML(b []byte) error {
 }
 
 type stepUnmarshaller struct {
-	Title       string                 `yaml:"title,omitempty"`
-	Description string                 `yaml:"description,omitempty"`
-	Vars        map[string]interface{} `yaml:"vars,omitempty"`
-	Protocol    string                 `yaml:"protocol,omitempty"`
-	Include     string                 `yaml:"include,omitempty"`
-	Ref         interface{}            `yaml:"ref,omitempty"`
-	Bind        Bind                   `yaml:"bind,omitempty"`
-	Retry       *RetryPolicy           `yaml:"retry,omitempty"`
-	Timeout     *Duration              `yaml:"timeout,omitempty"`
+	Title                   string                 `yaml:"title,omitempty"`
+	Description             string                 `yaml:"description,omitempty"`
+	Vars                    map[string]interface{} `yaml:"vars,omitempty"`
+	Protocol                string                 `yaml:"protocol,omitempty"`
+	Include                 string                 `yaml:"include,omitempty"`
+	Ref                     interface{}            `yaml:"ref,omitempty"`
+	Bind                    Bind                   `yaml:"bind,omitempty"`
+	Timeout                 *Duration              `yaml:"timeout,omitempty"`
+	PostTimeoutWaitingLimit *Duration              `yaml:"postTimeoutWaitingLimit,omitempty"`
+	Retry                   *RetryPolicy           `yaml:"retry,omitempty"`
 
 	Request rawMessage `yaml:"request,omitempty"`
 	Expect  rawMessage `yaml:"expect,omitempty"`
@@ -83,8 +85,9 @@ func (s *Step) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	s.Include = unmarshaled.Include
 	s.Ref = unmarshaled.Ref
 	s.Bind = unmarshaled.Bind
-	s.Retry = unmarshaled.Retry
 	s.Timeout = unmarshaled.Timeout
+	s.PostTimeoutWaitingLimit = unmarshaled.PostTimeoutWaitingLimit
+	s.Retry = unmarshaled.Retry
 
 	p := protocol.Get(s.Protocol)
 	if p == nil {

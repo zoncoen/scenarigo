@@ -1,7 +1,12 @@
 --- FAIL: testdata/testcases/scenarios/timeout/failure.yaml (0.00s)
     --- FAIL: testdata/testcases/scenarios/timeout/failure.yaml/step_timeout (0.00s)
         --- FAIL: testdata/testcases/scenarios/timeout/failure.yaml/step_timeout/ (0.00s)
-                [0] send request
+                timeout exceeded
+                       7 |     url: "http://{{env.TEST_HTTP_ADDR}}/echo"
+                       8 |   expect:
+                       9 |     code: OK
+                    > 10 |   timeout: 1ns
+                                      ^
                 request:
                   method: GET
                   url: http://[::]:12345/echo

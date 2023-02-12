@@ -1,12 +1,9 @@
 package scenarigo
 
 import (
-	gocontext "context"
 	"fmt"
 	"path/filepath"
 	"time"
-
-	"github.com/cenkalti/backoff/v4"
 
 	"github.com/zoncoen/scenarigo/assert"
 	"github.com/zoncoen/scenarigo/context"
@@ -99,62 +96,28 @@ func runStep(ctx *context.Context, scenario *schema.Scenario, s *schema.Step, st
 }
 
 func invokeAndAssert(ctx *context.Context, s *schema.Step, stepIdx int) *context.Context {
-	ctxFunc, b, err := s.Retry.Build()
-	if err != nil {
-		ctx.Reporter().Fatal(fmt.Errorf("invalid retry policy: %w", err))
-	}
-
-	retryCtx, cancel := ctxFunc(ctx.RequestContext())
-	defer cancel()
-	b = backoff.WithContext(b, retryCtx)
-
-	var i int
-	newCtx, err := backoff.RetryWithData(func() (*context.Context, error) {
-		ctx.Reporter().Logf("[%d] send request", i)
-		i++
-
-		newCtx, ok := attempt(ctx, s, stepIdx)
-		if !ok {
-			return nil, errors.New("fail")
-		}
-		return newCtx, nil
-	}, b)
-	if err != nil {
-		ctx.Reporter().FailNow()
-	}
-	return newCtx
-}
-
-func attempt(ctx *context.Context, s *schema.Step, stepIdx int) (*context.Context, bool) {
 	reqTime := time.Now()
-	if s.Timeout != nil && *s.Timeout > 0 {
-		reqCtx, cancel := gocontext.WithTimeout(ctx.RequestContext(), time.Duration(*s.Timeout))
-		defer cancel()
-		ctx = ctx.WithRequestContext(reqCtx)
-	}
 	newCtx, resp, err := s.Request.Invoke(ctx)
 	ctx.Reporter().Logf("elapsed time: %f sec", time.Since(reqTime).Seconds())
 
 	if err != nil {
-		ctx.Reporter().Log(
+		ctx.Reporter().Fatal(
 			errors.WithNodeAndColored(
 				errors.WithPath(err, fmt.Sprintf("steps[%d].request", stepIdx)),
 				ctx.Node(),
 				ctx.EnabledColor(),
 			),
 		)
-		return nil, false
 	}
 	assertion, err := s.Expect.Build(newCtx)
 	if err != nil {
-		ctx.Reporter().Log(
+		ctx.Reporter().Fatal(
 			errors.WithNodeAndColored(
 				errors.WithPath(err, fmt.Sprintf("steps[%d].expect", stepIdx)),
 				ctx.Node(),
 				ctx.EnabledColor(),
 			),
 		)
-		return nil, false
 	}
 	if err := assertion.Assert(resp); err != nil {
 		err = errors.WithNodeAndColored(
@@ -165,12 +128,12 @@ func attempt(ctx *context.Context, s *schema.Step, stepIdx int) (*context.Contex
 		var assertErr *assert.Error
 		if errors.As(err, &assertErr) {
 			for _, err := range assertErr.Errors {
-				ctx.Reporter().Log(err)
+				ctx.Reporter().Error(err)
 			}
 		} else {
-			ctx.Reporter().Log(err)
+			ctx.Reporter().Error(err)
 		}
-		return nil, false
+		ctx.Reporter().FailNow()
 	}
-	return newCtx, true
+	return newCtx
 }

@@ -59,7 +59,6 @@ ok  	testdata/scenarios/pass.yaml	0.000s
 --- FAIL: scenarios/fail.yaml (0.00s)
     --- FAIL: scenarios/fail.yaml//echo (0.00s)
         --- FAIL: scenarios/fail.yaml//echo/POST_/echo (0.00s)
-                [0] send request
                 request:
                   method: POST
                   url: http://127.0.0.1:12345/echo
@@ -119,7 +118,6 @@ FAIL
 --- FAIL: scenarios/fail.yaml (0.00s)
     --- FAIL: scenarios/fail.yaml//echo (0.00s)
         --- FAIL: scenarios/fail.yaml//echo/POST_/echo (0.00s)
-                [0] send request
                 request:
                   method: POST
                   url: http://127.0.0.1:12345/echo

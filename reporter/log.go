@@ -1,6 +1,9 @@
 package reporter
 
-import "sync"
+import (
+	"sort"
+	"sync"
+)
 
 type logRecorder struct {
 	m         sync.Mutex
@@ -83,4 +86,28 @@ func (r *logRecorder) skipLog() *string {
 		return nil
 	}
 	return &r.strs[*r.skipIdx]
+}
+
+func (r *logRecorder) append(s *logRecorder) {
+	r.m.Lock()
+	defer r.m.Unlock()
+	s.m.Lock()
+	defer s.m.Unlock()
+	cc := len(r.strs)
+	r.strs = append(r.strs, s.strs...)
+	for _, idx := range s.infoIdxs {
+		r.infoIdxs = append(r.infoIdxs, idx+cc)
+	}
+	for _, idx := range s.errorIdxs {
+		r.errorIdxs = append(r.errorIdxs, idx+cc)
+	}
+	if s.skipIdx != nil {
+		if r.skipIdx == nil {
+			idx := *s.skipIdx + cc
+			r.skipIdx = &idx
+		} else {
+			r.infoIdxs = append(r.infoIdxs, *s.skipIdx+cc)
+			sort.Ints(r.infoIdxs)
+		}
+	}
 }

@@ -234,3 +234,10 @@ func (c *Context) EnabledColor() bool {
 func (c *Context) Run(name string, f func(*Context)) bool {
 	return c.Reporter().Run(name, func(r reporter.Reporter) { f(c.WithReporter(r)) })
 }
+
+// RunWithRetry runs f as a subtest of c called name with retry.
+func RunWithRetry(c *Context, name string, f func(*Context), policy reporter.RetryPolicy) bool {
+	return reporter.RunWithRetry(c.RequestContext(), c.Reporter(), name, func(r reporter.Reporter) {
+		f(c.WithReporter(r))
+	}, policy)
+}

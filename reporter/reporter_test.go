@@ -2,6 +2,7 @@ package reporter
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -274,6 +275,11 @@ func TestPrint(t *testing.T) {
 		}
 		return rptr
 	}
+	ctx := context.Background()
+	retryPolicy := &constantRetryPolicy{
+		interval:   time.Microsecond,
+		maxRetries: 1,
+	}
 
 	tests := map[string]struct {
 		f      func(*testing.T, *reporter)
@@ -327,6 +333,21 @@ FAIL
 ok  	a	0.000s
 `,
 		},
+		"ok nest (retry)": {
+			f: func(t *testing.T, r *reporter) {
+				t.Helper()
+				RunWithRetry(ctx, r, "a", func(r Reporter) {
+					RunWithRetry(ctx, r, "b", func(r Reporter) {
+						RunWithRetry(ctx, r, "c", func(r Reporter) {
+							r.Log("ok!")
+						}, retryPolicy)
+					}, retryPolicy)
+				}, retryPolicy)
+			},
+			expect: `
+ok  	a	0.000s
+`,
+		},
 		"FAIL nest": {
 			f: func(t *testing.T, r *reporter) {
 				t.Helper()
@@ -346,6 +367,33 @@ ok  	a	0.000s
 --- FAIL: a (0.00s)
     --- FAIL: a/b (0.00s)
         --- FAIL: a/b/c (1.23s)
+                error!
+FAIL
+FAIL	a	0.000s
+FAIL
+`,
+		},
+		"FAIL nest (retry)": {
+			f: func(t *testing.T, r *reporter) {
+				t.Helper()
+				RunWithRetry(ctx, r, "a", func(r Reporter) {
+					RunWithRetry(ctx, r, "b", func(r Reporter) {
+						RunWithRetry(ctx, r, "c", func(r Reporter) {
+							r.Error("error!")
+						}, retryPolicy)
+					}, retryPolicy)
+				}, retryPolicy)
+			},
+			expect: `
+--- FAIL: a (0.00s)
+        retry after 1µs
+        retry limit exceeded
+    --- FAIL: a/b (0.00s)
+            retry after 1µs
+            retry limit exceeded
+        --- FAIL: a/b/c (0.00s)
+                retry after 1µs
+                retry limit exceeded
                 error!
 FAIL
 FAIL	a	0.000s
@@ -452,18 +500,18 @@ func TestReporter_PrivateMethods(t *testing.T) {
 		run      func(t *testing.T, f func(Reporter))
 		rootName string
 	}{
-		"reporter": {
+		"Run": {
 			run: func(t *testing.T, f func(Reporter)) {
 				t.Helper()
 				Run(f)
 			},
 		},
-		"testReporter": {
+		"FromT": {
 			run: func(t *testing.T, f func(Reporter)) {
 				t.Helper()
 				f(FromT(t))
 			},
-			rootName: "TestReporter_PrivateMethods/testReporter",
+			rootName: "TestReporter_PrivateMethods/FromT",
 		},
 	}
 	for name, test := range tests {

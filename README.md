@@ -235,6 +235,72 @@ steps:
       message: hello
 ```
 
+### Timeout/Retry
+
+You can set timeout and retry policy for each step.
+Duration strings are parsed by [`time.ParseDuration`](https://pkg.go.dev/time#ParseDuration).
+Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
+
+```yaml
+steps:
+- protocol: http
+  request:
+    method: GET
+    url: http://example.com
+  expect:
+    code: OK
+  timeout: 30s           # default values is 0, 0 means no timeout
+  retry:                 # default policy is never retry
+    constant:
+      interval: 5s       # default value is 1s
+      maxRetries: 1      # default value is 5, 0 means forever
+      maxElapsedTime: 1m # default value is 0, 0 means forever
+```
+
+Scenarigo also provides the retry feature with an exponential backoff algorithm.
+
+```yaml
+steps:
+- protocol: http
+  request:
+    method: GET
+    url: http://example.com
+  expect:
+    code: OK
+  timeout: 30s             # default values is 0, 0 means no timeout
+  retry:                   # default policy is never retry
+    exponential:
+      initialInterval: 1s  # default value is 500ms
+      factor: 2            # default value is 1.5
+      jitterFactor: 0.5    # default value is 0.5
+      maxInterval: 180s    # default value is 60s
+      maxRetries: 10       # default value is 5, 0 means forever
+      maxElapsedTime: 10m  # default value is 0, 0 means forever
+```
+
+The actual interval is calculated using the following formula.
+
+```
+initialInterval * factor ^ (retry count - 1) * (random value in range [1 - jitterFactor, 1 + jitterFactor])
+```
+
+For example, the retry intervals will be like the following table with the above retry policy.
+
+Note: `maxInterval` caps the retry interval, not the randomized interval.
+
+|retry #|retry interval|randomized interval range|
+|---|---|---|
+|1 |  1s|[0.5s, 1.5s]|
+|2 |  2s|[  1s,   3s]|
+|3 |  4s|[  2s,   6s]|
+|4 |  8s|[  4s,  12s]|
+|5 | 16s|[  8s,  24s]|
+|6 | 32s|[ 16s,  48s]|
+|7 | 64s|[ 32s,  96s]|
+|8 |128s|[ 64s, 192s]|
+|9 |180s|[ 90s, 270s]|
+|10|180s|[ 90s, 270s]|
+
 ### Template string
 
 Scenarigo provides the original template string feature. It enables to store and reuse values in test scenarios.

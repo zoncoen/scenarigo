@@ -9,9 +9,24 @@ scenarios:
   mocks: retry/step.yaml
   success: true
   output:
-    stdout: retry/step-constant.txt
+    stdout: retry/step-constant-success.txt
+- filename: retry/step-constant.yaml
+  mocks: retry/step-failure.yaml
+  success: false
+  output:
+    stdout: retry/step-constant-failure.txt
 - filename: retry/step-exponential.yaml
   mocks: retry/step.yaml
   success: true
   output:
     stdout: retry/step-exponential.txt
+- filename: retry/step-include.yaml
+  mocks: retry/step.yaml
+  success: true
+  output:
+    stdout: retry/step-include-success.txt
+- filename: retry/step-include.yaml
+  mocks: retry/step-failure.yaml
+  success: false
+  output:
+    stdout: retry/step-include-failure.txt

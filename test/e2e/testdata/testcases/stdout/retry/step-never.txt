@@ -1,7 +1,6 @@
 --- FAIL: testdata/testcases/scenarios/retry/step-never.yaml (0.00s)
     --- FAIL: testdata/testcases/scenarios/retry/step-never.yaml/never_retry_step (0.00s)
         --- FAIL: testdata/testcases/scenarios/retry/step-never.yaml/never_retry_step/ (0.00s)
-                [0] send request
                 request:
                   method: GET
                   url: http://[::]:12345/echo

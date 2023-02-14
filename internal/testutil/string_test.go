@@ -12,7 +12,6 @@ func TestReplaceOutput(t *testing.T) {
 	str := fmt.Sprintf(`
 === RUN   test.yaml
 --- FAIL: test.yaml (1.23s)
-    [0] send request
     request:
       method: GET
       url: http://[::]:35233/echo
@@ -35,7 +34,6 @@ FAIL
 	expect := `
 === RUN   test.yaml
 --- FAIL: test.yaml (0.00s)
-    [0] send request
     request:
       method: GET
       url: http://[::]:12345/echo

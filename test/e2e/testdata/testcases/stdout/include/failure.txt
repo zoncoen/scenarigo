@@ -3,7 +3,6 @@
         --- FAIL: testdata/testcases/scenarios/include/scenario.yaml/included_scenario_fails/include (0.00s)
             --- FAIL: testdata/testcases/scenarios/include/scenario.yaml/included_scenario_fails/include/included.yaml (0.00s)
                 --- FAIL: testdata/testcases/scenarios/include/scenario.yaml/included_scenario_fails/include/included.yaml/ (0.00s)
-                        [0] send request
                         request:
                           method: GET
                           url: http://[::]:12345/echo

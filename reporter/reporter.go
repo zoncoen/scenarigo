@@ -3,6 +3,7 @@
 package reporter
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"runtime"
@@ -14,6 +15,7 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/cenkalti/backoff/v4"
 	"github.com/fatih/color"
 )
 
@@ -35,6 +37,8 @@ type Reporter interface {
 	Skipped() bool
 	Parallel()
 	Run(name string, f func(r Reporter)) bool
+
+	runWithRetry(string, func(t Reporter), RetryPolicy) bool
 
 	// for test reports
 	getName() string
@@ -77,6 +81,10 @@ type reporter struct {
 
 	barrier chan bool // To signal parallel subtests they may start.
 	done    chan bool // To signal a test is done.
+
+	testing     bool
+	retryPolicy RetryPolicy
+	retryable   bool
 }
 
 func newReporter() *reporter {
@@ -95,7 +103,7 @@ func (r *reporter) Name() string {
 
 // Fail marks the function as having failed but continues execution.
 func (r *reporter) Fail() {
-	if r.parent != nil {
+	if r.parent != nil && !r.retryable {
 		r.parent.Fail()
 	}
 	atomic.StoreInt32(&r.failed, 1)
@@ -181,11 +189,22 @@ func (r *reporter) SkipNow() {
 func (r *reporter) Parallel() {
 	r.m.Lock()
 	if r.isParallel {
+		if r.retryPolicy != nil {
+			r.m.Unlock()
+			return
+		}
 		panic("reporter: Reporter.Parallel called multiple times")
 	}
 	r.isParallel = true
 	r.durationMeasurer.stop()
+	defer r.durationMeasurer.start()
 	r.m.Unlock()
+
+	// Retry attempts can not be executed in parallel.
+	if r.retryable {
+		r.parent.Parallel()
+		return
+	}
 
 	if r.context.verbose {
 		r.context.printf("=== PAUSE %s\n", r.goTestName)
@@ -197,12 +216,11 @@ func (r *reporter) Parallel() {
 	if r.context.verbose {
 		r.context.printf("=== CONT  %s\n", r.goTestName)
 	}
-	r.durationMeasurer.start()
 }
 
-func (r *reporter) appendChild(child *reporter) {
+func (r *reporter) appendChildren(children ...*reporter) {
 	r.m.Lock()
-	r.children = append(r.children, child)
+	r.children = append(r.children, children...)
 	r.m.Unlock()
 }
 
@@ -234,6 +252,25 @@ func (r *reporter) isRoot() bool {
 // Run may be called simultaneously from multiple goroutines,
 // but all such calls must return before the outer test function for r returns.
 func (r *reporter) Run(name string, f func(t Reporter)) bool {
+	return r.runWithRetry(name, f, nil)
+}
+
+func (r *reporter) runWithRetry(name string, f func(t Reporter), policy RetryPolicy) bool {
+	child := r.spawn(name)
+	child.retryPolicy = policy
+	if r.context.verbose {
+		r.context.printf("=== RUN   %s\n", child.goTestName)
+	}
+	go child.run(f)
+	<-child.done
+	r.appendChildren(child)
+	if r.isRoot() {
+		printReport(child)
+	}
+	return !child.Failed()
+}
+
+func (r *reporter) spawn(name string) *reporter {
 	goTestName := rewrite(name)
 	if r.goTestName != "" {
 		goTestName = fmt.Sprintf("%s/%s", r.goTestName, goTestName)
@@ -245,22 +282,60 @@ func (r *reporter) Run(name string, f func(t Reporter)) bool {
 	child.goTestName = goTestName
 	child.depth = r.depth + 1
 	child.durationMeasurer = r.durationMeasurer.spawn()
-	if r.context.verbose {
-		r.context.printf("=== RUN   %s\n", child.goTestName)
-	}
-	go child.run(f)
-	<-child.done
-	r.appendChild(child)
-	if r.isRoot() {
-		printReport(child)
-	}
-	return !child.Failed()
+	child.testing = r.testing
+	return child
 }
 
 func (r *reporter) run(f func(r Reporter)) {
+	stop := r.start()
+	defer stop()
+
+	if r.retryPolicy == nil {
+		r.runFunc(f)
+	} else {
+		_, cancel, b, err := r.retryPolicy.Build(context.Background())
+		if err != nil {
+			r.Fatalf("invalid retry policy: %s", err)
+		}
+		defer cancel()
+		var retried bool
+		child, err := backoff.RetryNotifyWithData(func() (*reporter, error) {
+			child := r.spawn("retryable")
+			child.name = r.name
+			child.goTestName = r.goTestName
+			child.depth = r.depth
+			child.retryable = true
+			// Children never run in parallel.
+			// See Parallel().
+			go child.run(f)
+			<-child.done
+			if child.Failed() {
+				return child, errors.New("failed")
+			}
+			return child, nil
+		}, b, func(err error, d time.Duration) {
+			retried = true
+			r.Logf("retry after %s", d)
+		})
+		if retried && err != nil {
+			r.Error("retry limit exceeded")
+		}
+		r.logs.append(child.logs)
+		r.appendChildren(child.children...)
+		if err != nil {
+			if child.Failed() {
+				r.FailNow()
+			}
+		}
+		if child.Skipped() {
+			r.SkipNow()
+		}
+	}
+}
+
+func (r *reporter) runFunc(f func(Reporter)) {
 	var finished bool
 	defer func() {
-		r.durationMeasurer.stop()
 		err := recover()
 		if !finished && err == nil {
 			err = errors.New("test executed panic(nil) or runtime.Goexit")
@@ -271,12 +346,32 @@ func (r *reporter) run(f func(r Reporter)) {
 				r.Error(string(debug.Stack()))
 			}
 		}
+	}()
+	f(r)
+	finished = true
+}
+
+func (r *reporter) start() func() {
+	r.durationMeasurer.start()
+	return func() {
+		r.durationMeasurer.stop()
+		err := recover()
+		if err != nil {
+			if !r.Failed() && !r.Skipped() {
+				r.Error(err)
+				r.Error(string(debug.Stack()))
+			}
+		}
 
 		// Collect subtests which are running parallel.
 		subtests := make([]<-chan bool, 0, len(r.children))
-		for _, child := range r.children {
-			if child.isParallel {
-				subtests = append(subtests, child.done)
+		// No need to wait for retry attempts.
+		// They never run in parallel.
+		if r.retryPolicy == nil {
+			for _, child := range r.children {
+				if child.isParallel {
+					subtests = append(subtests, child.done)
+				}
 			}
 		}
 
@@ -300,17 +395,13 @@ func (r *reporter) run(f func(r Reporter)) {
 		}
 
 		r.done <- true
-	}()
-
-	r.durationMeasurer.start()
-	f(r)
-	finished = true
+	}
 }
 
 func printReport(r *reporter) {
 	results := collectOutput(r)
 	r.context.printf("%s\n", strings.Join(results, "\n"))
-	if r.Failed() {
+	if r.Failed() && !r.testing {
 		r.context.printf(r.failColor().Sprintln("FAIL"))
 	}
 }
@@ -339,7 +430,7 @@ func collectOutput(r *reporter) []string {
 	for _, child := range r.children {
 		results = append(results, collectOutput(child)...)
 	}
-	if r.depth == 1 {
+	if r.depth == 1 && !r.testing {
 		if r.Failed() {
 			results = append(results,
 				r.failColor().Sprintf("FAIL\nFAIL\t%s\t%.3fs", r.goTestName, r.durationMeasurer.getDuration().Seconds()),

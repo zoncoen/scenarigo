@@ -7,14 +7,16 @@ jobs:
     steps:
     - name: Check out code into the Go module directory
       uses: actions/checkout@v3
+    - name: Install Go
+      uses: actions/setup-go@v3
+      with:
+        # TODO
+        # go-version: 1.20.x
+        go-version: 1.19.x
     - name: golangci-lint
       uses: reviewdog/action-golangci-lint@v2
       with:
         golangci_lint_version: v1.48.0
         fail_on_error: true
-    - name: Install Go
-      uses: actions/setup-go@v3
-      with:
-        go-version: 1.19.x
     - name: looppointer
       run: make lint/looppointer

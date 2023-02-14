@@ -87,7 +87,7 @@ $(GOLANGCI_LINT): | $(BIN_DIR)
 
 LOOPPOINTER := $(BIN_DIR)/looppointer
 $(LOOPPOINTER): | $(BIN_DIR)
-	@$(GO) install github.com/kyoh86/looppointer/cmd/looppointer@v0.1.7
+	@$(GO) install github.com/kyoh86/looppointer/cmd/looppointer@v0.2.1
 
 .PHONY: test
 CMD_DIR := cmd
@@ -201,6 +201,18 @@ credits: $(GO_LICENSES) $(GOCREDITS) ## generate CREDITS
 .PHONY: matrix
 matrix:
 	@cd scripts/cross-build && $(GO) run ./build-matrix/main.go
+
+.PHONY: crossbuild
+crossbuild:
+	@rm -rf ./tmp
+	@mkdir  ./tmp
+	@for ver in $$(cd scripts/cross-build && $(GO) run ./build-matrix/main.go | jq -r '.[]'); do \
+	  GO_VERSION=$${ver} make build/ci; \
+	  cat ./dist/*_checksums.txt > ./tmp/checksums.txt; \
+	  mv ./dist/*.tar.gz ./tmp/; \
+	done
+	@rm -rf ./dist ./assets
+	@ls ./tmp/
 
 .PHONY: build/ci
 build/ci:

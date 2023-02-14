@@ -8,3 +8,4 @@ coverage-module.out
 /.goreleaser.yml
 dist
 assets
+tmp

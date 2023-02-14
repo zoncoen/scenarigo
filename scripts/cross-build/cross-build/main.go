@@ -47,7 +47,7 @@ func release() error {
 		return fmt.Errorf("failed to parse version: %w", err)
 	}
 	cc := "aarch64-apple-darwin20.2-clang"
-	if v.GreaterThan(go1_19_1) || ver == "1.18.7" {
+	if v.GreaterThan(go1_19_1) {
 		cc = "aarch64-apple-darwin21.4-clang"
 	}
 
@@ -79,6 +79,15 @@ func imageTag(ver, token string) (string, error) {
 	for _, node := range getTags.Repository.Refs.Nodes {
 		if node.Name == v || strings.HasPrefix(node.Name, prefix) {
 			return node.Name, nil
+		}
+	}
+	if strings.Count(v, ".") == 1 {
+		v := fmt.Sprintf("v%s.0", ver)
+		prefix := fmt.Sprintf("%s-", v)
+		for _, node := range getTags.Repository.Refs.Nodes {
+			if node.Name == v || strings.HasPrefix(node.Name, prefix) {
+				return node.Name, nil
+			}
 		}
 	}
 

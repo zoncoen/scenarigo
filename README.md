@@ -290,16 +290,16 @@ Note: `maxInterval` caps the retry interval, not the randomized interval.
 
 |retry #|retry interval|randomized interval range|
 |---|---|---|
-|1 |  1s|[0.5s, 1.5s]|
-|2 |  2s|[  1s,   3s]|
-|3 |  4s|[  2s,   6s]|
-|4 |  8s|[  4s,  12s]|
-|5 | 16s|[  8s,  24s]|
-|6 | 32s|[ 16s,  48s]|
-|7 | 64s|[ 32s,  96s]|
-|8 |128s|[ 64s, 192s]|
-|9 |180s|[ 90s, 270s]|
-|10|180s|[ 90s, 270s]|
+|1|1s|[0.5s, 1.5s]|
+|2|2s|[1s, 3s]|
+|3|4s|[2s, 6s]|
+|4|8s|[4s, 12s]|
+|5|16s|[8s, 24s]|
+|6|32s|[16s, 48s]|
+|7|64s|[32s, 96s]|
+|8|128s|[64s, 192s]|
+|9|180s|[90s, 270s]|
+|10|180s|[90s, 270s]|
 
 ### Template string
 

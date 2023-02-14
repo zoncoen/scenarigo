@@ -202,6 +202,18 @@ credits: $(GO_LICENSES) $(GOCREDITS) ## generate CREDITS
 matrix:
 	@cd scripts/cross-build && $(GO) run ./build-matrix/main.go
 
+.PHONY: crossbuild
+crossbuild:
+	@rm -rf ./tmp
+	@mkdir  ./tmp
+	@for ver in $$(cd scripts/cross-build && $(GO) run ./build-matrix/main.go | jq -r '.[]'); do \
+	  GO_VERSION=$${ver} make build/ci; \
+	  cat ./dist/*_checksums.txt > ./tmp/checksums.txt; \
+	  mv ./dist/*.tar.gz ./tmp/; \
+	done
+	@rm -rf ./dist ./assets
+	@ls ./tmp/
+
 .PHONY: build/ci
 build/ci:
 	@rm -rf assets

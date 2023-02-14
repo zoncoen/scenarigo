@@ -87,7 +87,7 @@ $(GOLANGCI_LINT): | $(BIN_DIR)
 
 LOOPPOINTER := $(BIN_DIR)/looppointer
 $(LOOPPOINTER): | $(BIN_DIR)
-	@$(GO) install github.com/kyoh86/looppointer/cmd/looppointer@v0.1.7
+	@$(GO) install github.com/kyoh86/looppointer/cmd/looppointer@v0.2.1
 
 .PHONY: test
 CMD_DIR := cmd

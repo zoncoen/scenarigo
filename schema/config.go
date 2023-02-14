@@ -217,6 +217,7 @@ func validate(c *Config, node ast.Node) error {
 		}
 	}
 	for name, p := range c.Plugins {
+		p := p
 		if err := stat(c, p.Src, (&yaml.PathBuilder{}).Root().Child("plugins").Child(name).Child("src").Build(), node); err != nil {
 			var neErr notExist
 			if errors.As(err, &neErr) {

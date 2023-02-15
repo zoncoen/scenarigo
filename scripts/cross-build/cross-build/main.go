@@ -133,7 +133,7 @@ func goreleaser(ver, tag string) error {
 		"-v", "/var/run/docker.sock:/var/run/docker.sock",
 		"-w", "/scenarigo",
 		fmt.Sprintf("ghcr.io/gythialy/golang-cross:%s", tag),
-		"--skip-publish", "--rm-dist",
+		"--skip-publish", "--clean",
 	).CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("%s:\n%s", err, out)

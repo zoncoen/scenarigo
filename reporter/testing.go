@@ -21,7 +21,7 @@ func FromT(t *testing.T, opts ...Option) Reporter {
 	for _, arg := range os.Args {
 		if strings.HasPrefix(arg, "-test.run=") {
 			var err error
-			m, err = newMatcher(t.Name(), strings.TrimPrefix(arg, "-test.run="))
+			m, err = newMatcher(strings.TrimPrefix(arg, "-test.run="))
 			if err != nil {
 				t.Fatalf("failed to parse -run flag: %s", err)
 			}

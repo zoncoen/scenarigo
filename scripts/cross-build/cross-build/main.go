@@ -132,8 +132,10 @@ func goreleaser(ver, tag string) error {
 		"-v", fmt.Sprintf("%s:/scenarigo", rootDir),
 		"-v", "/var/run/docker.sock:/var/run/docker.sock",
 		"-w", "/scenarigo",
+		"-e", fmt.Sprintf("SNAPSHOT=%s", os.Getenv("SNAPSHOT")),
+		"--entrypoint", "bash",
 		fmt.Sprintf("ghcr.io/gythialy/golang-cross:%s", tag),
-		"--skip-publish", "--clean",
+		"/scenarigo/scripts/cross-build.sh",
 	).CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("%s:\n%s", err, out)

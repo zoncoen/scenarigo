@@ -61,6 +61,9 @@ type testContext struct {
 	verbose bool
 
 	noColor bool
+
+	// for FromT
+	matcher *matcher
 }
 
 func newTestContext(opts ...Option) *testContext {

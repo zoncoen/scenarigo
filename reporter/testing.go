@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"reflect"
+	"strings"
 	"sync"
 	"testing"
 	"unsafe"
@@ -13,10 +14,18 @@ import (
 func FromT(t *testing.T, opts ...Option) Reporter {
 	t.Helper()
 
+	var m *matcher
 	defaultOpts := []Option{
 		WithWriter(&testingWriter{t: t}),
 	}
 	for _, arg := range os.Args {
+		if strings.HasPrefix(arg, "-test.run=") {
+			var err error
+			m, err = newMatcher(t.Name(), strings.TrimPrefix(arg, "-test.run="))
+			if err != nil {
+				t.Fatalf("failed to parse -run flag: %s", err)
+			}
+		}
 		if arg == "-test.v=true" {
 			defaultOpts = append(defaultOpts, WithVerboseLog())
 		}
@@ -24,6 +33,7 @@ func FromT(t *testing.T, opts ...Option) Reporter {
 
 	r := newReporter()
 	r.context = newTestContext(append(defaultOpts, opts...)...)
+	r.context.matcher = m
 	r.name = t.Name()
 	r.goTestName = t.Name()
 	r.testing = true

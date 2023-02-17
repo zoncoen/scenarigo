@@ -60,3 +60,9 @@ func Sleep(s string) (plugin.Step, error) {
 		return ctx
 	}), nil
 }
+
+func SetVar(k string, v interface{}) (plugin.Step, error) {
+	return plugin.StepFunc(func(ctx *context.Context, step *schema.Step) *context.Context {
+		return ctx.WithVars(map[string]interface{}{k: v})
+	}), nil
+}

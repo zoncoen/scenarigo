@@ -55,7 +55,7 @@ func RunScenario(ctx *context.Context, s *schema.Scenario) *context.Context {
 	var failed bool
 	for idx, step := range s.Steps {
 		step := step
-		ok := context.RunWithRetry(ctx, step.Title, func(ctx *context.Context) {
+		ok := context.RunWithRetry(scnCtx, step.Title, func(ctx *context.Context) {
 			// following steps are skipped if the previous step failed
 			if failed {
 				ctx.Reporter().SkipNow()

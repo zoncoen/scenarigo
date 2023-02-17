@@ -9,18 +9,12 @@ type matcher struct {
 	patterns []*regexp.Regexp
 }
 
-func newMatcher(name, run string) (*matcher, error) {
+func newMatcher(run string) (*matcher, error) {
 	if run == "" {
 		return nil, nil //nolint: nilnil
 	}
 
 	exprs := strings.Split(run, "/")
-	c := len(strings.Split(name, "/"))
-	if c >= len(exprs) {
-		return nil, nil //nolint: nilnil
-	}
-	exprs = exprs[c:]
-
 	m := &matcher{}
 	for _, e := range exprs {
 		p, err := regexp.Compile(e)
@@ -32,12 +26,19 @@ func newMatcher(name, run string) (*matcher, error) {
 	return m, nil
 }
 
-func (m *matcher) match(s string, depth int) bool {
-	if m == nil || depth == 0 {
+func (m *matcher) match(parent, name string) bool {
+	if m == nil {
 		return true
 	}
-	if depth > len(m.patterns) {
-		return true
+	depth := strings.Count(parent, "/") + 1
+	for _, s := range strings.Split(name, "/") {
+		if depth >= len(m.patterns) {
+			return true
+		}
+		if !m.patterns[depth].MatchString(s) {
+			return false
+		}
+		depth++
 	}
-	return m.patterns[depth-1].MatchString(s)
+	return true
 }

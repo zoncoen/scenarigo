@@ -256,7 +256,7 @@ func (r *reporter) Run(name string, f func(t Reporter)) bool {
 }
 
 func (r *reporter) runWithRetry(name string, f func(t Reporter), policy RetryPolicy) bool {
-	if !r.context.matcher.match(rewrite(name), r.depth+1) {
+	if !r.context.matcher.match(r.goTestName, rewrite(name)) {
 		return true
 	}
 	child := r.spawn(name)

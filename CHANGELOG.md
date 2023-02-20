@@ -1,5 +1,22 @@
 # CHANGELOG
 
+<a name="v0.14.0"></a>
+## [v0.14.0] - 2023-02-18
+### Bug Fixes
+- pass bound variables to the next step
+- fix to filter correctly even if / is included in subtest names
+- filter test by -run flag of go test
+- **plugin:** make RegisterSetup() not cause an error if called in tests
+
+### Code Refactoring
+- **reporter:** change FromT implementation
+
+### Features
+- change retry unit from request to entire step
+- **http:** add Accept-Encoding header by default
+- **http:** enable decoding of response bodies with character encodings other than utf-8
+- **http:** add text/html unmarshaler
+
 <a name="v0.13.2"></a>
 ## [v0.13.2] - 2022-12-16
 - bump up the version of dependent modules
@@ -294,6 +311,7 @@ change protocl.Protocol interface
 - first release
 
 
+[v0.14.0]: https://github.com/zoncoen/scenarigo/compare/v0.13.2...v0.14.0
 [v0.13.2]: https://github.com/zoncoen/scenarigo/compare/v0.13.1...v0.13.2
 [v0.13.1]: https://github.com/zoncoen/scenarigo/compare/v0.13.0...v0.13.1
 [v0.13.0]: https://github.com/zoncoen/scenarigo/compare/v0.12.8...v0.13.0

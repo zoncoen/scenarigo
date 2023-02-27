@@ -38,7 +38,8 @@ type Config struct {
 	Output          OutputConfig    `yaml:"output,omitempty"`
 
 	// absolute path to the configuration file
-	Root string `yaml:"-"`
+	Root     string          `yaml:"-"`
+	Comments yaml.CommentMap `yaml:"-"`
 }
 
 // PluginConfigMap represents a plugin configurations.
@@ -168,7 +169,7 @@ func LoadConfigFromReader(r io.Reader, root string) (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	f, err := parser.ParseBytes(b, 0)
+	f, err := parser.ParseBytes(b, 1)
 	if err != nil {
 		return nil, err
 	}
@@ -192,10 +193,14 @@ func LoadConfigFromReader(r io.Reader, root string) (*Config, error) {
 	switch v {
 	case "config/v1":
 		var cfg Config
-		if err := yaml.NodeToValue(f.Docs[0].Body, &cfg, yaml.Strict()); err != nil {
+		cm := make(yaml.CommentMap)
+		if err := yaml.NodeToValue(f.Docs[0].Body, &cfg, yaml.Strict(), yaml.CommentToMap(cm)); err != nil {
 			return nil, err
 		}
 		cfg.Root = root
+		if len(cm) > 0 {
+			cfg.Comments = cm
+		}
 		if err := validate(&cfg, f.Docs[0].Body); err != nil {
 			return nil, err
 		}

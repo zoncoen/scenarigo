@@ -12,69 +12,95 @@ import (
 
 func TestLoadConfig(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		wd, err := os.Getwd()
-		if err != nil {
-			t.Fatalf("unexpected error: %s", err)
-		}
-		got, err := LoadConfig("testdata/config/valid.yaml")
-		if err != nil {
-			t.Fatalf("unexpected error: %s", err)
-		}
-		colored := true
-		expect := &Config{
-			SchemaVersion: "config/v1",
-			Scenarios: []string{
-				"scenarios/a.yaml",
-				"scenarios/b.yaml",
+		tests := map[string]struct {
+			path           string
+			expectComments yaml.CommentMap
+		}{
+			"without comment": {
+				path: "testdata/config/valid.yaml",
 			},
-			PluginDirectory: "gen",
-			Plugins: PluginConfigMap{
-				"local.so": {
-					Order: 1,
-					Name:  "local.so",
-					Src:   "./plugin",
-				},
-				"remote.so": {
-					Order: 2,
-					Name:  "remote.so",
-					Src:   "github.com/zoncoen/scenarigo",
-				},
-				"remote-with-version.so": {
-					Order: 3,
-					Name:  "remote-with-version.so",
-					Src:   "github.com/zoncoen/scenarigo@v1.0.0",
-				},
-			},
-			Output: OutputConfig{
-				Verbose: true,
-				Colored: &colored,
-				Report: ReportConfig{
-					JSON: JSONReportConfig{
-						Filename: "report.json",
+			"with comment": {
+				path: "testdata/config/valid-with-comment.yaml",
+				expectComments: yaml.CommentMap{
+					"$.schemaVersion": &yaml.Comment{
+						Texts:    []string{" comment1", " comment2"},
+						Position: yaml.CommentHeadPosition,
 					},
-					JUnit: JUnitReportConfig{
-						Filename: "junit.xml",
+					"$.plugins.'remote-with-version.so'.src": &yaml.Comment{
+						Texts: []string{" comment3"},
 					},
 				},
 			},
-			Root: filepath.Join(wd, "testdata/config"),
 		}
-		if diff := cmp.Diff(expect, got); diff != "" {
-			t.Errorf("differs (-want +got):\n%s", diff)
-		}
+		for name, test := range tests {
+			test := test
+			t.Run(name, func(t *testing.T) {
+				wd, err := os.Getwd()
+				if err != nil {
+					t.Fatalf("unexpected error: %s", err)
+				}
+				got, err := LoadConfig(test.path)
+				if err != nil {
+					t.Fatalf("unexpected error: %s", err)
+				}
+				colored := true
+				expect := &Config{
+					SchemaVersion: "config/v1",
+					Scenarios: []string{
+						"scenarios/a.yaml",
+						"scenarios/b.yaml",
+					},
+					PluginDirectory: "gen",
+					Plugins: PluginConfigMap{
+						"local.so": {
+							Order: 1,
+							Name:  "local.so",
+							Src:   "./plugin",
+						},
+						"remote.so": {
+							Order: 2,
+							Name:  "remote.so",
+							Src:   "github.com/zoncoen/scenarigo",
+						},
+						"remote-with-version.so": {
+							Order: 3,
+							Name:  "remote-with-version.so",
+							Src:   "github.com/zoncoen/scenarigo@v1.0.0",
+						},
+					},
+					Output: OutputConfig{
+						Verbose: true,
+						Colored: &colored,
+						Report: ReportConfig{
+							JSON: JSONReportConfig{
+								Filename: "report.json",
+							},
+							JUnit: JUnitReportConfig{
+								Filename: "junit.xml",
+							},
+						},
+					},
+					Root:     filepath.Join(wd, "testdata/config"),
+					Comments: test.expectComments,
+				}
+				if diff := cmp.Diff(expect, got); diff != "" {
+					t.Errorf("differs (-want +got):\n%s", diff)
+				}
 
-		b, err := yaml.Marshal(got)
-		if err != nil {
-			t.Fatalf("failed to marshal: %s", err)
-		}
-		eb, err := os.ReadFile("testdata/config/valid.yaml")
-		if err != nil {
-			t.Fatalf("failed to read file: %s", err)
-		}
-		if got, expect := string(b), string(eb); got != expect {
-			dmp := diffmatchpatch.New()
-			diffs := dmp.DiffMain(expect, got, false)
-			t.Errorf("differs:\n%s", dmp.DiffPrettyText(diffs))
+				b, err := yaml.MarshalWithOptions(got, yaml.WithComment(got.Comments))
+				if err != nil {
+					t.Fatalf("failed to marshal: %s", err)
+				}
+				eb, err := os.ReadFile(test.path)
+				if err != nil {
+					t.Fatalf("failed to read file: %s", err)
+				}
+				if got, expect := string(b), string(eb); got != expect {
+					dmp := diffmatchpatch.New()
+					diffs := dmp.DiffMain(expect, got, false)
+					t.Errorf("differs:\n%s", dmp.DiffPrettyText(diffs))
+				}
+			})
 		}
 	})
 

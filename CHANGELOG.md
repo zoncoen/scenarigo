@@ -1,7 +1,12 @@
 # CHANGELOG
 
+<a name="v0.14.1"></a>
+## [v0.14.1] - 2023-02-27
+### Features
+- **schema:** add Comments field
+
 <a name="v0.14.0"></a>
-## [v0.14.0] - 2023-02-18
+## [v0.14.0] - 2023-02-20
 ### Bug Fixes
 - pass bound variables to the next step
 - fix to filter correctly even if / is included in subtest names
@@ -311,6 +316,7 @@ change protocl.Protocol interface
 - first release
 
 
+[v0.14.1]: https://github.com/zoncoen/scenarigo/compare/v0.14.0...v0.14.1
 [v0.14.0]: https://github.com/zoncoen/scenarigo/compare/v0.13.2...v0.14.0
 [v0.13.2]: https://github.com/zoncoen/scenarigo/compare/v0.13.1...v0.13.2
 [v0.13.1]: https://github.com/zoncoen/scenarigo/compare/v0.13.0...v0.13.1

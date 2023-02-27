@@ -1,0 +1,22 @@
+# comment1
+# comment2
+schemaVersion: config/v1
+scenarios:
+- scenarios/a.yaml
+- scenarios/b.yaml
+pluginDirectory: gen
+plugins:
+  local.so:
+    src: ./plugin
+  remote.so:
+    src: github.com/zoncoen/scenarigo
+  remote-with-version.so:
+    src: github.com/zoncoen/scenarigo@v1.0.0 # comment3
+output:
+  verbose: true
+  colored: true
+  report:
+    json:
+      filename: report.json
+    junit:
+      filename: junit.xml

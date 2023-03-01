@@ -22,12 +22,17 @@ func TestLoadConfig(t *testing.T) {
 			"with comment": {
 				path: "testdata/config/valid-with-comment.yaml",
 				expectComments: yaml.CommentMap{
-					"$.schemaVersion": &yaml.Comment{
-						Texts:    []string{" comment1", " comment2"},
-						Position: yaml.CommentHeadPosition,
+					"$.schemaVersion": []*yaml.Comment{
+						{
+							Texts:    []string{" comment1", " comment2"},
+							Position: yaml.CommentHeadPosition,
+						},
 					},
-					"$.plugins.'remote-with-version.so'.src": &yaml.Comment{
-						Texts: []string{" comment3"},
+					"$.plugins.'remote-with-version.so'.src": []*yaml.Comment{
+						{
+							Texts:    []string{" comment3"},
+							Position: yaml.CommentLinePosition,
+						},
 					},
 				},
 			},

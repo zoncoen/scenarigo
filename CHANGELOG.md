@@ -1,5 +1,9 @@
 # CHANGELOG
 
+<a name="v0.14.2"></a>
+## [v0.14.2] - 2023-03-03
+- bump up the version of dependent modules
+
 <a name="v0.14.1"></a>
 ## [v0.14.1] - 2023-02-27
 ### Features
@@ -316,6 +320,7 @@ change protocl.Protocol interface
 - first release
 
 
+[v0.14.2]: https://github.com/zoncoen/scenarigo/compare/v0.14.1...v0.14.2
 [v0.14.1]: https://github.com/zoncoen/scenarigo/compare/v0.14.0...v0.14.1
 [v0.14.0]: https://github.com/zoncoen/scenarigo/compare/v0.13.2...v0.14.0
 [v0.13.2]: https://github.com/zoncoen/scenarigo/compare/v0.13.1...v0.13.2

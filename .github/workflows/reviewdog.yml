@@ -16,7 +16,7 @@ jobs:
     - name: golangci-lint
       uses: reviewdog/action-golangci-lint@v2
       with:
-        golangci_lint_version: v1.48.0
+        golangci_lint_version: v1.51.0
         fail_on_error: true
     - name: looppointer
       run: make lint/looppointer

@@ -76,7 +76,7 @@ $(GOCREDITS): | $(BIN_DIR)
 	@$(GO) install github.com/Songmu/gocredits/cmd/gocredits@v0.3.0
 
 GOLANGCI_LINT := $(BIN_DIR)/golangci-lint
-GOLANGCI_LINT_VERSION := 1.48.0
+GOLANGCI_LINT_VERSION := 1.51.0
 GOLANGCI_LINT_OS_ARCH := $(shell echo golangci-lint-$(GOLANGCI_LINT_VERSION)-$(GOOS)-$(GOARCH))
 GOLANGCI_LINT_GZIP := $(GOLANGCI_LINT_OS_ARCH).tar.gz
 $(GOLANGCI_LINT): | $(BIN_DIR)
@@ -124,6 +124,11 @@ lint: $(GOLANGCI_LINT) $(LOOPPOINTER) ## run lint
 .PHONY: lint/looppointer
 lint/looppointer: $(LOOPPOINTER)
 	@go vet -vettool=$(LOOPPOINTER) ./...
+
+.PHONY: lint/fix
+lint/fix: $(GOLANGCI_LINT) $(LOOPPOINTER) ## fix lint errors
+	@$(GOLANGCI_LINT) run --fix
+	@$(LOOPPOINTER) -fix ./...
 
 .PHONY: lint/ci
 lint/ci:

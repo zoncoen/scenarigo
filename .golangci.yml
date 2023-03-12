@@ -31,11 +31,18 @@ linters:
     - wsl
 
     # deplicated
+    - deadcode
     - exhaustivestruct
     - golint
     - interfacer
     - maligned
     - scopelint
+    - structcheck
+    - varcheck
+
+    # disabled because of generics
+    - rowserrcheck
+    - wastedassign
 
   skip-dirs:
     - gen
@@ -44,11 +51,15 @@ issues:
   exclude-rules:
     - path: _test.go
       linters:
+        - dupword
         - exhaustruct
         - forcetypeassert
         - goconst
         - maintidx
         - noctx
+    - linters:
+        - staticcheck
+      text: 'SA1019: "github.com/golang/protobuf' # TODO
 
 linters-settings:
   cyclop:

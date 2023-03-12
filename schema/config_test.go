@@ -158,7 +158,7 @@ func TestLoadConfig(t *testing.T) {
        3 |   foo.so:
     >  4 |     src: invalid
                     ^
-: malformed module path "invalid": missing dot in first path element`,
+`,
 			},
 		}
 		for name, test := range tests {

@@ -124,7 +124,21 @@ func compareByType(result int, expValue string, typ compareType) error {
 	}
 }
 
-func convert(v interface{}, t reflect.Type) (interface{}, error) {
+func convert[T any](v interface{}, t T) (T, error) {
+	vv, err := convertToType(v, reflect.TypeOf(t))
+	if err != nil {
+		var zero T
+		return zero, err
+	}
+	vvv, ok := vv.(T)
+	if !ok {
+		var zero T
+		return zero, errors.Errorf("%T is not convertible to %T", v, t)
+	}
+	return vvv, nil
+}
+
+func convertToType(v interface{}, t reflect.Type) (interface{}, error) {
 	rv := reflect.ValueOf(v)
 	if !rv.IsValid() {
 		return nil, errors.Errorf("value is invalid")
@@ -136,27 +150,27 @@ func convert(v interface{}, t reflect.Type) (interface{}, error) {
 }
 
 func convertToInt64(v interface{}) (int64, error) {
-	vv, err := convert(v, reflect.TypeOf(int64(0)))
+	vv, err := convert(v, int64(0))
 	if err != nil {
 		return 0, err
 	}
-	return vv.(int64), nil //nolint:forcetypeassert
+	return vv, nil
 }
 
 func convertToUint64(v interface{}) (uint64, error) {
-	vv, err := convert(v, reflect.TypeOf(uint64(0)))
+	vv, err := convert(v, uint64(0))
 	if err != nil {
 		return 0, err
 	}
-	return vv.(uint64), nil //nolint:forcetypeassert
+	return vv, nil
 }
 
 func convertToFloat64(v interface{}) (float64, error) {
-	vv, err := convert(v, reflect.TypeOf(float64(0)))
+	vv, err := convert(v, float64(0))
 	if err != nil {
 		return 0, err
 	}
-	return vv.(float64), nil //nolint:forcetypeassert
+	return vv, nil
 }
 
 func convertToBigInt(v interface{}) (*big.Int, error) {

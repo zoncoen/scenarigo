@@ -78,7 +78,7 @@ func Equal(expected interface{}) Assertion {
 
 		if t := reflect.TypeOf(v); t != reflect.TypeOf(expected) {
 			// try type conversion
-			converted, err := convert(expected, t)
+			converted, err := convertToType(expected, t)
 			if err == nil {
 				if reflect.DeepEqual(v, converted) {
 					return nil

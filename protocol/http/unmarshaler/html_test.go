@@ -15,7 +15,7 @@ func TestHTMLUnUnmarshaler_MediaType(t *testing.T) {
 }
 
 func TestHTMLUnUnmarshaler_Unmarshal(t *testing.T) {
-	var r rune = utf8.RuneError
+	r := utf8.RuneError
 	tests := map[string]struct {
 		data   []byte
 		expect interface{}

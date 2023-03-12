@@ -436,6 +436,7 @@ func collectOutput(r *reporter) []string {
 	if r.depth == 1 && !r.testing {
 		if r.Failed() {
 			results = append(results,
+				//nolint:dupword
 				r.failColor().Sprintf("FAIL\nFAIL\t%s\t%.3fs", r.goTestName, r.durationMeasurer.getDuration().Seconds()),
 			)
 		} else {

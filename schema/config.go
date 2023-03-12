@@ -230,9 +230,8 @@ func validate(c *Config, node ast.Node) error {
 				if i := strings.Index(m, "@"); i >= 0 { // trim version query
 					m = p.Src[:i]
 				}
-				if merr := module.CheckPath(m); merr != nil {
-					err = fmt.Errorf("%s: %w", err, merr)
-				} else {
+				// may be a Go module path, not local files
+				if merr := module.CheckPath(m); merr == nil {
 					err = nil
 				}
 			}

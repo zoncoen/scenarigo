@@ -89,6 +89,10 @@ LOOPPOINTER := $(BIN_DIR)/looppointer
 $(LOOPPOINTER): | $(BIN_DIR)
 	@$(GO) install github.com/kyoh86/looppointer/cmd/looppointer@v0.2.1
 
+.PHONY: build
+build: | $(BIN_DIR)
+	@$(GO) install ./cmd/scenarigo
+
 .PHONY: test
 CMD_DIR := cmd
 TEST_TARGETS := $(shell $(GO) list ./... | grep -v $(CMD_DIR))
@@ -115,6 +119,27 @@ test/norace:
 .PHONY: test/race
 test/race:
 	@$(GO) test -race ./...
+
+.PHONY: test/examples
+test/examples:
+	@failure=false; \
+	for dir in $(sort $(wildcard examples/*)); do \
+		echo "=== $$dir ==="; \
+		if [ -d $(CURDIR)/$${dir}/plugin/src ]; then \
+			cd $(CURDIR)/$${dir}/plugin/src; \
+			rm -f go.work go.work.sum; \
+			go work init . ../../../..; \
+		fi; \
+		cd $(CURDIR)/$$dir; \
+		scenarigo plugin build && scenarigo run; \
+		if [ $$? -ne 0 ]; then \
+			failure=true; \
+		fi; \
+		echo ""; \
+	done; \
+	if "$${failure}"; then \
+		exit 1; \
+	fi
 
 .PHONY: lint
 lint: $(GOLANGCI_LINT) $(LOOPPOINTER) ## run lint

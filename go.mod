@@ -7,7 +7,7 @@ require (
 	github.com/fatih/color v1.14.1
 	github.com/goccy/go-yaml v1.10.0
 	github.com/golang/mock v1.6.0
-	github.com/golang/protobuf v1.5.2
+	github.com/golang/protobuf v1.5.3
 	github.com/google/go-cmp v0.5.9
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/mattn/go-encoding v0.0.2

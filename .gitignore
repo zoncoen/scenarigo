@@ -1,7 +1,7 @@
 vendor
 .envrc
 .bin
-/test/e2e/testdata/gen
+gen
 coverage-cmd.out
 coverage-module.out
 .CHANGELOG.md
@@ -9,3 +9,5 @@ coverage-module.out
 dist
 assets
 tmp
+go.work
+go.work.sum

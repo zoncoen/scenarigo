@@ -10,11 +10,12 @@ import (
 
 // Scenario represents a test scenario.
 type Scenario struct {
-	Title       string                 `yaml:"title,omitempty"`
-	Description string                 `yaml:"description,omitempty"`
-	Plugins     map[string]string      `yaml:"plugins,omitempty"`
-	Vars        map[string]interface{} `yaml:"vars,omitempty"`
-	Steps       []*Step                `yaml:"steps,omitempty"`
+	SchemaVersion string                 `yaml:"schemaVersion,omitempty"`
+	Title         string                 `yaml:"title,omitempty"`
+	Description   string                 `yaml:"description,omitempty"`
+	Plugins       map[string]string      `yaml:"plugins,omitempty"`
+	Vars          map[string]interface{} `yaml:"vars,omitempty"`
+	Steps         []*Step                `yaml:"steps,omitempty"`
 
 	// The strict YAML decoder fails to decode if finds an unknown field.
 	// Anchors is the field for enabling to define YAML anchors by avoiding the error.

@@ -15,7 +15,7 @@ require (
 	github.com/sergi/go-diff v1.3.1
 	github.com/sosedoff/gitkit v0.3.0
 	github.com/spf13/cobra v1.6.1
-	github.com/vmware-tanzu/carvel-ytt v0.43.0
+	github.com/vmware-tanzu/carvel-ytt v0.45.0
 	github.com/zoncoen/query-go v1.2.1
 	github.com/zoncoen/query-go/extractor/yaml v0.1.1
 	golang.org/x/mod v0.9.0
@@ -29,7 +29,7 @@ require (
 require (
 	github.com/gofrs/uuid v4.0.0+incompatible // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
-	github.com/hashicorp/go-version v1.4.0 // indirect
+	github.com/hashicorp/go-version v1.6.0 // indirect
 	github.com/inconshreveable/mousetrap v1.0.1 // indirect
 	github.com/k14s/starlark-go v0.0.0-20200720175618-3a5c849cc368 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect

@@ -84,7 +84,7 @@ func TestConvert(t *testing.T) {
 		v      reflect.Value
 		expect interface{}
 		ok     bool
-		error  error
+		error  string
 	}{
 		"convert string to string": {
 			target: reflect.TypeOf(""),
@@ -104,6 +104,18 @@ func TestConvert(t *testing.T) {
 			expect: &str,
 			ok:     true,
 		},
+		"convert (*string)(nil) to *string": {
+			target: reflect.PtrTo(reflect.TypeOf("")),
+			v:      reflect.ValueOf((*string)(nil)),
+			expect: (*string)(nil),
+			ok:     true,
+		},
+		"convert untyped nil to *string": {
+			target: reflect.PtrTo(reflect.TypeOf("")),
+			v:      reflect.ValueOf(nil),
+			expect: (*string)(nil),
+			ok:     true,
+		},
 		"convert string to Stringer": {
 			target: reflect.TypeOf(stringer("")),
 			v:      reflect.ValueOf(str),
@@ -116,14 +128,25 @@ func TestConvert(t *testing.T) {
 			expect: (*stringer)(&str),
 			ok:     true,
 		},
-		"can't convert": {
+		"failed to convert to untyped nil": {
+			target: reflect.TypeOf(nil),
+			v:      reflect.ValueOf(0),
+			error:  "failed to convert to untyped nil",
+		},
+		"failed to convert string to int": {
 			target: reflect.TypeOf(0),
 			v:      reflect.ValueOf(str),
 			expect: str,
 		},
-		"invalid value": {
-			target: reflect.TypeOf(0),
-			v:      reflect.Value{},
+		"failed to convert (*string)(nil) to string": {
+			target: reflect.TypeOf(""),
+			v:      reflect.ValueOf((*string)(nil)),
+			expect: (*string)(nil),
+		},
+		"failed to convert untyped nil to string": {
+			target: reflect.TypeOf(""),
+			v:      reflect.ValueOf(nil),
+			expect: nil,
 		},
 	}
 	for name, test := range tests {
@@ -131,13 +154,13 @@ func TestConvert(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			got, ok, err := Convert(test.target, test.v)
 			if err != nil {
-				if test.error == nil {
+				if test.error == "" {
 					t.Fatalf("unexpected error: %s", err)
-				} else if got, expect := err.Error(), test.error.Error(); got != expect {
+				} else if got, expect := err.Error(), test.error; got != expect {
 					t.Fatalf("expect %q but got %q", expect, got)
 				}
 			} else {
-				if test.error != nil {
+				if test.error != "" {
 					t.Fatal("no error")
 				}
 				if ok != test.ok {

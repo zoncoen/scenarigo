@@ -354,11 +354,12 @@ func (t *Template) executeArgs(fnName string, fnType reflect.Type, vs []reflect.
 		}
 		requiredType := t.requiredFuncArgType(fnType, len(vs))
 		v := reflect.ValueOf(a)
-		if v.IsValid() {
-			vv, ok, _ := reflectutil.Convert(requiredType, v)
-			if ok {
-				v = vv
-			}
+		vv, ok, _ := reflectutil.Convert(requiredType, v)
+		if ok {
+			v = vv
+		}
+		if !v.IsValid() {
+			return nil, errors.Errorf("can't use nil as %s in arguments[%d] to %s", requiredType, i, fnName)
 		}
 		if typ := v.Type(); typ != requiredType {
 			return nil, errors.Errorf("can't use %s as %s in arguments[%d] to %s", typ, requiredType, i, fnName)

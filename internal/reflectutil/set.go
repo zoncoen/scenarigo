@@ -38,21 +38,34 @@ func Set(target, v reflect.Value) (retErr error) {
 
 // Convert returns the value v converted to type t.
 func Convert(t reflect.Type, v reflect.Value) (_ reflect.Value, _ bool, retErr error) {
-	if !v.IsValid() {
-		return v, false, nil
-	}
 	defer func() {
 		if err := recover(); err != nil {
 			retErr = errors.Errorf("failed to convert %T to %s: %s", v.Interface(), t.Name(), err)
 		}
 	}()
 
+	if t == nil {
+		return v, false, errors.New("failed to convert to untyped nil")
+	}
+
+	if !v.IsValid() {
+		switch t.Kind() {
+		case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Pointer, reflect.Slice:
+			zero := reflect.New(t).Elem()
+			return zero, true, nil
+		default:
+			return v, false, nil
+		}
+	}
+
 	if v.Type().ConvertibleTo(t) {
 		return v.Convert(t), true, nil
 	}
 	if v.Type().Kind() == reflect.Ptr {
-		if v.Elem().Type().ConvertibleTo(t) {
-			return v.Elem().Convert(t), true, nil
+		if e := v.Elem(); e.IsValid() {
+			if e.Type().ConvertibleTo(t) {
+				return v.Elem().Convert(t), true, nil
+			}
 		}
 	} else {
 		ptr := reflect.New(v.Type())

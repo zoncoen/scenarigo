@@ -260,6 +260,14 @@ func (s *scanner) scanToken() (int, token.Token, string) {
 			return s.pos - 2, token.LARROW, "<-"
 		}
 		s.unread(next)
+	case '-':
+		next := s.read()
+		if !isDigit(next) {
+			s.unread(next)
+			return s.pos - 1, token.ILLEGAL, "-"
+		}
+		pos, tk, str := s.scanInt(next)
+		return pos - 1, tk, "-" + str
 	default:
 		if ch == '"' {
 			return s.scanString()

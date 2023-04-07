@@ -40,12 +40,7 @@ func TestNew(t *testing.T) {
 }
 
 func TestTemplate_Execute(t *testing.T) {
-	tests := map[string]struct {
-		str         string
-		data        interface{}
-		expect      interface{}
-		expectError string
-	}{
+	tests := map[string]executeTestCase{
 		"no parameter": {
 			str:    "1",
 			expect: "1",
@@ -69,6 +64,10 @@ func TestTemplate_Execute(t *testing.T) {
 		"integer": {
 			str:    "{{1}}",
 			expect: 1,
+		},
+		"negative integer": {
+			str:    "{{-1}}",
+			expect: -1,
 		},
 		"float": {
 			str:    "{{1.23}}",
@@ -297,6 +296,18 @@ func TestTemplate_Execute(t *testing.T) {
 			expectError: "omg",
 		},
 	}
+	runExecute(t, tests)
+}
+
+type executeTestCase struct {
+	str         string
+	data        interface{}
+	expect      interface{}
+	expectError string
+}
+
+func runExecute(t *testing.T, tests map[string]executeTestCase) {
+	t.Helper()
 	for name, test := range tests {
 		test := test
 		t.Run(name, func(t *testing.T) {

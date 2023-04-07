@@ -205,6 +205,26 @@ func TestScanner_Scan(t *testing.T) {
 					},
 				},
 			},
+			"just a negative INT": {
+				src: `{{-123}}`,
+				expected: []result{
+					{
+						pos: 1,
+						tok: token.LDBRACE,
+						lit: "{{",
+					},
+					{
+						pos: 3,
+						tok: token.INT,
+						lit: "-123",
+					},
+					{
+						pos: 7,
+						tok: token.RDBRACE,
+						lit: "}}",
+					},
+				},
+			},
 			"just a FLOAT": {
 				src: `{{1.23}}`,
 				expected: []result{

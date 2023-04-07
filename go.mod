@@ -20,7 +20,7 @@ require (
 	github.com/zoncoen/query-go/extractor/yaml v0.1.1
 	golang.org/x/mod v0.10.0
 	golang.org/x/sync v0.1.0
-	golang.org/x/text v0.8.0
+	golang.org/x/text v0.9.0
 	google.golang.org/genproto v0.0.0-20230209215440-0dfe4f8abfcc
 	google.golang.org/grpc v1.54.0
 	google.golang.org/protobuf v1.30.0

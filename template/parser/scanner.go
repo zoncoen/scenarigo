@@ -127,19 +127,38 @@ scan:
 func (s *scanner) scanInt(head rune) (int, token.Token, string) {
 	var b strings.Builder
 	b.WriteRune(head)
+	tk := token.INT
 scan:
 	for {
 		ch := s.read()
 		if !isDigit(ch) {
-			s.unread(ch)
-			break scan
+			if ch != '.' {
+				s.unread(ch)
+				break scan
+			}
+			if tk == token.INT {
+				tk = token.FLOAT
+			} else {
+				tk = token.ILLEGAL
+			}
 		}
 		b.WriteRune(ch)
 	}
-	if head == '0' && b.Len() != 1 {
-		return s.pos - b.Len(), token.ILLEGAL, b.String()
+	switch tk {
+	case token.INT:
+		if head == '0' && b.Len() != 1 {
+			return s.pos - b.Len(), token.ILLEGAL, b.String()
+		}
+	case token.FLOAT:
+		runes := []rune(b.String())
+		if head == '0' && runes[1] != '.' {
+			return s.pos - b.Len(), token.ILLEGAL, b.String()
+		}
+		if runes[len(runes)-1] == '.' {
+			return s.pos - b.Len(), token.ILLEGAL, b.String()
+		}
 	}
-	return s.pos - b.Len(), token.INT, b.String()
+	return s.pos - b.Len(), tk, b.String()
 }
 
 func (s *scanner) scanIdent(head rune) (int, token.Token, string) {

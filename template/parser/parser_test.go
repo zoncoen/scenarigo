@@ -43,6 +43,30 @@ func TestParser_Parse(t *testing.T) {
 					Rdbrace: 9,
 				},
 			},
+			"just an integer": {
+				src: `{{123}}`,
+				expected: &ast.ParameterExpr{
+					Ldbrace: 1,
+					X: &ast.BasicLit{
+						ValuePos: 3,
+						Kind:     token.INT,
+						Value:    "123",
+					},
+					Rdbrace: 6,
+				},
+			},
+			"just a float": {
+				src: `{{1.23}}`,
+				expected: &ast.ParameterExpr{
+					Ldbrace: 1,
+					X: &ast.BasicLit{
+						ValuePos: 3,
+						Kind:     token.FLOAT,
+						Value:    "1.23",
+					},
+					Rdbrace: 7,
+				},
+			},
 			"just a bool": {
 				src: `{{true}}`,
 				expected: &ast.ParameterExpr{

@@ -134,7 +134,7 @@ func (p *Parser) parseIdent() *ast.Ident {
 func (p *Parser) parseOperand() ast.Expr {
 	var e ast.Expr
 	switch p.tok {
-	case token.STRING, token.INT, token.BOOL:
+	case token.STRING, token.INT, token.FLOAT, token.BOOL:
 		e = &ast.BasicLit{
 			ValuePos: p.pos,
 			Kind:     p.tok,

@@ -185,6 +185,66 @@ func TestScanner_Scan(t *testing.T) {
 					},
 				},
 			},
+			"just an INT": {
+				src: `{{123}}`,
+				expected: []result{
+					{
+						pos: 1,
+						tok: token.LDBRACE,
+						lit: "{{",
+					},
+					{
+						pos: 3,
+						tok: token.INT,
+						lit: "123",
+					},
+					{
+						pos: 6,
+						tok: token.RDBRACE,
+						lit: "}}",
+					},
+				},
+			},
+			"just a FLOAT": {
+				src: `{{1.23}}`,
+				expected: []result{
+					{
+						pos: 1,
+						tok: token.LDBRACE,
+						lit: "{{",
+					},
+					{
+						pos: 3,
+						tok: token.FLOAT,
+						lit: "1.23",
+					},
+					{
+						pos: 7,
+						tok: token.RDBRACE,
+						lit: "}}",
+					},
+				},
+			},
+			"just a FLOAT (first disit is 0)": {
+				src: `{{0.123}}`,
+				expected: []result{
+					{
+						pos: 1,
+						tok: token.LDBRACE,
+						lit: "{{",
+					},
+					{
+						pos: 3,
+						tok: token.FLOAT,
+						lit: "0.123",
+					},
+					{
+						pos: 8,
+						tok: token.RDBRACE,
+						lit: "}}",
+					},
+				},
+			},
 			"just a BOOL": {
 				src: `{{true}}`,
 				expected: []result{
@@ -694,6 +754,21 @@ func TestScanner_Scan(t *testing.T) {
 				src: "{{01}}",
 				pos: 3,
 				lit: "01",
+			},
+			"invalid float": {
+				src: "{{01.2.3}}",
+				pos: 3,
+				lit: "01.2.3",
+			},
+			"invalid float (trailing period)": {
+				src: "{{1.}}",
+				pos: 3,
+				lit: "1.",
+			},
+			"invalid float (too many period)": {
+				src: "{{1.2.3}}",
+				pos: 3,
+				lit: "1.2.3",
 			},
 		}
 		for name, test := range tests {

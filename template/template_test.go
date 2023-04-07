@@ -70,6 +70,10 @@ func TestTemplate_Execute(t *testing.T) {
 			str:    "{{1}}",
 			expect: 1,
 		},
+		"float": {
+			str:    "{{1.23}}",
+			expect: 1.23,
+		},
 		"true": {
 			str:    "{{true}}",
 			expect: true,

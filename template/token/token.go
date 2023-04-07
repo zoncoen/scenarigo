@@ -9,6 +9,7 @@ const (
 
 	STRING // "text"
 	INT    // 123
+	FLOAT  // 1.23
 	BOOL   // true
 	IDENT  // vars
 
@@ -38,6 +39,8 @@ func (t Token) String() string {
 		return "string"
 	case INT:
 		return "int"
+	case FLOAT:
+		return "float"
 	case BOOL:
 		return "bool"
 	case IDENT:

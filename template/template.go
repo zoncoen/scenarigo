@@ -89,9 +89,15 @@ func (t *Template) executeBasicLit(lit *ast.BasicLit) (interface{}, error) {
 	case token.INT:
 		i, err := strconv.Atoi(lit.Value)
 		if err != nil {
-			return nil, errors.Wrapf(err, `invalid AST: "%s" is not a integer`, lit.Value)
+			return nil, errors.Wrapf(err, `invalid AST: "%s" is not an integer`, lit.Value)
 		}
 		return i, nil
+	case token.FLOAT:
+		f, err := strconv.ParseFloat(lit.Value, 64)
+		if err != nil {
+			return nil, errors.Wrapf(err, `invalid AST: "%s" is not a float`, lit.Value)
+		}
+		return f, nil
 	case token.BOOL:
 		switch lit.Value {
 		case "true":

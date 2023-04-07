@@ -253,6 +253,14 @@ func (s *scanner) scanToken() (int, token.Token, string) {
 		return s.pos - 1, token.PERIOD, "."
 	case '+':
 		return s.pos - 1, token.ADD, "+"
+	case '-':
+		return s.pos - 1, token.SUB, "-"
+	case '*':
+		return s.pos - 1, token.MUL, "*"
+	case '/':
+		return s.pos - 1, token.QUO, "/"
+	case '%':
+		return s.pos - 1, token.REM, "%"
 	case '<':
 		next := s.read()
 		if next == '-' {
@@ -260,14 +268,6 @@ func (s *scanner) scanToken() (int, token.Token, string) {
 			return s.pos - 2, token.LARROW, "<-"
 		}
 		s.unread(next)
-	case '-':
-		next := s.read()
-		if !isDigit(next) {
-			s.unread(next)
-			return s.pos - 1, token.ILLEGAL, "-"
-		}
-		pos, tk, str := s.scanInt(next)
-		return pos - 1, tk, "-" + str
 	default:
 		if ch == '"' {
 			return s.scanString()

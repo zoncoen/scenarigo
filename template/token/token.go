@@ -14,6 +14,10 @@ const (
 	IDENT  // vars
 
 	ADD  // +
+	SUB  // -
+	MUL  // *
+	QUO  // /
+	REM  // %
 	CALL // }}:\n
 
 	LPAREN    // (
@@ -46,7 +50,15 @@ func (t Token) String() string {
 	case IDENT:
 		return "ident"
 	case ADD:
-		return "add"
+		return "+"
+	case SUB:
+		return "-"
+	case MUL:
+		return "*"
+	case QUO:
+		return "/"
+	case REM:
+		return "%"
 	case LPAREN:
 		return "lparen"
 	case RPAREN:
@@ -84,8 +96,10 @@ const (
 // is LowestPrecedence.
 func (t Token) Precedence() int {
 	switch t {
-	case ADD, LARROW, LDBRACE, STRING:
+	case ADD, SUB, LARROW, LDBRACE, STRING:
 		return 1
+	case MUL, QUO, REM:
+		return 2
 	default:
 		return LowestPrec
 	}

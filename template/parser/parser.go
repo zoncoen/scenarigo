@@ -50,7 +50,7 @@ func (p *Parser) parseExpr() ast.Expr {
 }
 
 func (p *Parser) parseBinaryExpr(prec int) ast.Expr {
-	x := p.parseOperand()
+	x := p.parseUnaryExpr()
 L:
 	for {
 		if p.tok == token.LINEBREAK {
@@ -63,14 +63,15 @@ L:
 		}
 
 		switch p.tok {
-		case token.ADD:
+		case token.ADD, token.SUB, token.MUL, token.QUO, token.REM:
 			pos := p.pos
+			tok := p.tok
 			p.next()
 			y := p.parseBinaryExpr(oprec + 1)
 			x = &ast.BinaryExpr{
 				X:     x,
 				OpPos: pos,
-				Op:    token.ADD,
+				Op:    tok,
 				Y:     y,
 			}
 		case token.CALL:
@@ -131,7 +132,7 @@ func (p *Parser) parseIdent() *ast.Ident {
 	return &ast.Ident{NamePos: pos, Name: name}
 }
 
-func (p *Parser) parseOperand() ast.Expr {
+func (p *Parser) parseUnaryExpr() ast.Expr {
 	var e ast.Expr
 	switch p.tok {
 	case token.STRING, token.INT, token.FLOAT, token.BOOL:
@@ -177,6 +178,14 @@ func (p *Parser) parseOperand() ast.Expr {
 		}
 	case token.LDBRACE:
 		e = p.parseParameter()
+	case token.SUB:
+		pos := p.pos
+		p.next()
+		e = &ast.UnaryExpr{
+			OpPos: pos,
+			Op:    token.SUB,
+			X:     p.parseUnaryExpr(),
+		}
 	default:
 		return nil
 	}

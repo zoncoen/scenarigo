@@ -215,8 +215,13 @@ func TestScanner_Scan(t *testing.T) {
 					},
 					{
 						pos: 3,
+						tok: token.SUB,
+						lit: "-",
+					},
+					{
+						pos: 4,
 						tok: token.INT,
-						lit: "-123",
+						lit: "123",
 					},
 					{
 						pos: 7,
@@ -724,6 +729,126 @@ func TestScanner_Scan(t *testing.T) {
 					},
 					{
 						pos: 13,
+						tok: token.RDBRACE,
+						lit: "}}",
+					},
+				},
+			},
+			"sub": {
+				src: `{{1-2}}`,
+				expected: []result{
+					{
+						pos: 1,
+						tok: token.LDBRACE,
+						lit: "{{",
+					},
+					{
+						pos: 3,
+						tok: token.INT,
+						lit: "1",
+					},
+					{
+						pos: 4,
+						tok: token.SUB,
+						lit: "-",
+					},
+					{
+						pos: 5,
+						tok: token.INT,
+						lit: "2",
+					},
+					{
+						pos: 6,
+						tok: token.RDBRACE,
+						lit: "}}",
+					},
+				},
+			},
+			"mul": {
+				src: `{{1*2}}`,
+				expected: []result{
+					{
+						pos: 1,
+						tok: token.LDBRACE,
+						lit: "{{",
+					},
+					{
+						pos: 3,
+						tok: token.INT,
+						lit: "1",
+					},
+					{
+						pos: 4,
+						tok: token.MUL,
+						lit: "*",
+					},
+					{
+						pos: 5,
+						tok: token.INT,
+						lit: "2",
+					},
+					{
+						pos: 6,
+						tok: token.RDBRACE,
+						lit: "}}",
+					},
+				},
+			},
+			"quo": {
+				src: `{{2/1}}`,
+				expected: []result{
+					{
+						pos: 1,
+						tok: token.LDBRACE,
+						lit: "{{",
+					},
+					{
+						pos: 3,
+						tok: token.INT,
+						lit: "2",
+					},
+					{
+						pos: 4,
+						tok: token.QUO,
+						lit: "/",
+					},
+					{
+						pos: 5,
+						tok: token.INT,
+						lit: "1",
+					},
+					{
+						pos: 6,
+						tok: token.RDBRACE,
+						lit: "}}",
+					},
+				},
+			},
+			"rem": {
+				src: `{{1%2}}`,
+				expected: []result{
+					{
+						pos: 1,
+						tok: token.LDBRACE,
+						lit: "{{",
+					},
+					{
+						pos: 3,
+						tok: token.INT,
+						lit: "1",
+					},
+					{
+						pos: 4,
+						tok: token.REM,
+						lit: "%",
+					},
+					{
+						pos: 5,
+						tok: token.INT,
+						lit: "2",
+					},
+					{
+						pos: 6,
 						tok: token.RDBRACE,
 						lit: "}}",
 					},

@@ -200,9 +200,9 @@ func TestTypeConversion(t *testing.T) {
 				str:    "{{bool(true)}}",
 				expect: true,
 			},
-			"failed to convert int to bool": {
+			"failed to convert int64 to bool": {
 				str:         `{{bool(1)}}`,
-				expectError: "failed to execute: {{bool(1)}}: can't convert int to bool",
+				expectError: "failed to execute: {{bool(1)}}: can't convert int64 to bool",
 			},
 			"convert *bool to bool": {
 				str: "{{bool(v)}}",

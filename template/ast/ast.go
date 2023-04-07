@@ -24,6 +24,13 @@ type (
 		Value    string
 	}
 
+	// UnaryExpr node represents a unary expression.
+	UnaryExpr struct {
+		OpPos int
+		Op    token.Token
+		X     Expr
+	}
+
 	// BinaryExpr node represents a binary expression.
 	BinaryExpr struct {
 		X     Expr
@@ -86,6 +93,7 @@ type (
 
 // Pos implements Node.
 func (e *BadExpr) Pos() int       { return e.ValuePos }
+func (e *UnaryExpr) Pos() int     { return e.OpPos }
 func (e *BinaryExpr) Pos() int    { return e.OpPos }
 func (e *BasicLit) Pos() int      { return e.ValuePos }
 func (e *ParameterExpr) Pos() int { return e.Ldbrace }
@@ -97,6 +105,7 @@ func (e *LeftArrowExpr) Pos() int { return e.Larrow }
 
 // exprNode implements Expr.
 func (e *BadExpr) exprNode()       {}
+func (e *UnaryExpr) exprNode()     {}
 func (e *BinaryExpr) exprNode()    {}
 func (e *BasicLit) exprNode()      {}
 func (e *ParameterExpr) exprNode() {}

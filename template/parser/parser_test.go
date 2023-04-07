@@ -55,6 +55,22 @@ func TestParser_Parse(t *testing.T) {
 					Rdbrace: 6,
 				},
 			},
+			"just a negative integer": {
+				src: `{{-123}}`,
+				expected: &ast.ParameterExpr{
+					Ldbrace: 1,
+					X: &ast.UnaryExpr{
+						OpPos: 3,
+						Op:    token.SUB,
+						X: &ast.BasicLit{
+							ValuePos: 4,
+							Kind:     token.INT,
+							Value:    "123",
+						},
+					},
+					Rdbrace: 7,
+				},
+			},
 			"just a float": {
 				src: `{{1.23}}`,
 				expected: &ast.ParameterExpr{
@@ -409,6 +425,27 @@ func TestParser_Parse(t *testing.T) {
 						},
 					},
 					Rdbrace: 16,
+				},
+			},
+			"sub": {
+				src: `{{1-2}}`,
+				expected: &ast.ParameterExpr{
+					Ldbrace: 1,
+					X: &ast.BinaryExpr{
+						X: &ast.BasicLit{
+							ValuePos: 3,
+							Kind:     token.INT,
+							Value:    "1",
+						},
+						OpPos: 4,
+						Op:    token.SUB,
+						Y: &ast.BasicLit{
+							ValuePos: 5,
+							Kind:     token.INT,
+							Value:    "2",
+						},
+					},
+					Rdbrace: 6,
 				},
 			},
 		}

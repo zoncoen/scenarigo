@@ -3,6 +3,7 @@ package template
 
 import (
 	"fmt"
+	"math"
 	"reflect"
 	"strconv"
 	"strings"
@@ -65,8 +66,16 @@ func (t *Template) executeExpr(expr ast.Expr, data interface{}) (interface{}, er
 		return t.executeBasicLit(e)
 	case *ast.ParameterExpr:
 		return t.executeParameterExpr(e, data)
+	case *ast.ParenExpr:
+		return t.executeExpr(e.X, data)
+	case *ast.UnaryExpr:
+		return t.executeUnaryExpr(e, data)
 	case *ast.BinaryExpr:
-		return t.executeBinaryExpr(e, data)
+		v, err := t.executeBinaryExpr(e, data)
+		if err != nil {
+			return nil, fmt.Errorf("invalid operation: %w", err)
+		}
+		return v, nil
 	case *ast.Ident:
 		return lookup(e, data)
 	case *ast.SelectorExpr:
@@ -87,11 +96,17 @@ func (t *Template) executeBasicLit(lit *ast.BasicLit) (interface{}, error) {
 	case token.STRING:
 		return lit.Value, nil
 	case token.INT:
-		i, err := strconv.Atoi(lit.Value)
+		i, err := strconv.ParseInt(lit.Value, 0, 64)
 		if err != nil {
-			return nil, errors.Wrapf(err, `invalid AST: "%s" is not a integer`, lit.Value)
+			return nil, errors.Wrapf(err, `invalid AST: "%s" is not an integer`, lit.Value)
 		}
 		return i, nil
+	case token.FLOAT:
+		f, err := strconv.ParseFloat(lit.Value, 64)
+		if err != nil {
+			return nil, errors.Wrapf(err, `invalid AST: "%s" is not a float`, lit.Value)
+		}
+		return f, nil
 	case token.BOOL:
 		switch lit.Value {
 		case "true":
@@ -136,6 +151,72 @@ func (t *Template) executeParameterExpr(e *ast.ParameterExpr, data interface{}) 
 	return v, nil
 }
 
+func (t *Template) executeUnaryExpr(e *ast.UnaryExpr, data interface{}) (interface{}, error) {
+	x, err := t.executeExpr(e.X, data)
+	if err != nil {
+		return nil, err
+	}
+	if e.Op == token.SUB {
+		v := reflectutil.Elem(reflect.ValueOf(x))
+		if v.IsValid() {
+			if v.CanInterface() {
+				switch n := v.Interface().(type) {
+				case int:
+					if n == math.MinInt {
+						return 0, fmt.Errorf("-(%d) overflows int", n)
+					}
+					return -n, nil
+				case int8:
+					if n == math.MinInt8 {
+						return 0, fmt.Errorf("-(%d) overflows int8", n)
+					}
+					return -n, nil
+				case int16:
+					if n == math.MinInt16 {
+						return 0, fmt.Errorf("-(%d) overflows int16", n)
+					}
+					return -n, nil
+				case int32:
+					if n == math.MinInt32 {
+						return 0, fmt.Errorf("-(%d) overflows int32", n)
+					}
+					return -n, nil
+				case int64:
+					if n == math.MinInt64 {
+						return 0, fmt.Errorf("-(%d) overflows int64", n)
+					}
+					return -n, nil
+				case uint:
+					if n > -math.MinInt {
+						return 0, fmt.Errorf("-%d overflows int", n)
+					}
+					return -int(n), nil
+				case uint8:
+					return -int(n), nil
+				case uint16:
+					return -int(n), nil
+				case uint32:
+					if uint64(n) > uint64(-math.MinInt) {
+						return 0, fmt.Errorf("-%d overflows int", n)
+					}
+					return -int(n), nil
+				case uint64:
+					if n > uint64(-math.MinInt) {
+						return 0, fmt.Errorf("-%d overflows int", n)
+					}
+					return -int(n), nil
+				case float32:
+					return -n, nil
+				case float64:
+					return -n, nil
+				}
+			}
+		}
+	}
+	return nil, errors.Errorf(`unknown operation: operator %s not defined on %T`, e.Op, x)
+}
+
+//nolint:gocyclo,cyclop,maintidx
 func (t *Template) executeBinaryExpr(e *ast.BinaryExpr, data interface{}) (interface{}, error) {
 	x, err := t.executeExpr(e.X, data)
 	if err != nil {
@@ -145,36 +226,128 @@ func (t *Template) executeBinaryExpr(e *ast.BinaryExpr, data interface{}) (inter
 	if err != nil {
 		return nil, err
 	}
-	var withIndent bool
-	if t.executingLeftArrowExprArg {
-		if _, ok := (e.Y).(*ast.ParameterExpr); ok {
-			withIndent = true
-		}
-	}
-	switch e.Op {
-	case token.ADD:
-		return t.add(x, y, withIndent)
-	default:
-		return nil, errors.Errorf(`unknown operation "%s"`, e.Op.String())
-	}
-}
 
-func (t *Template) add(x, y interface{}, withIndent bool) (interface{}, error) {
-	strX, err := t.stringize(x)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to concat strings")
+	xv := reflect.ValueOf(x)
+	yv := reflect.ValueOf(y)
+	if xv.Kind() != yv.Kind() {
+		return nil, fmt.Errorf("%#v %s %#v: mismatched types %T and %T", x, e.Op, y, x, y)
 	}
-	strY, err := t.stringize(y)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to concat strings")
-	}
-	if withIndent {
-		strY, err = t.addIndent(strY, strX)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to concat strings")
+	switch xv.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		xi, ok := xv.Convert(typeInt64).Interface().(int64)
+		if ok {
+			yi, ok := yv.Convert(typeInt64).Interface().(int64)
+			if ok {
+				switch e.Op {
+				case token.ADD:
+					if (yi > 0 && xi > math.MaxInt64-yi) || (yi < 0 && xi < math.MinInt64-yi) {
+						return nil, fmt.Errorf("%d + %d overflows int", xi, yi)
+					}
+					return xi + yi, nil
+				case token.SUB:
+					if (yi < 0 && xi > math.MaxInt64+yi) || (yi > 0 && xi < math.MinInt64+yi) {
+						return nil, fmt.Errorf("%d - %d overflows int", xi, yi)
+					}
+					return xi - yi, nil
+				case token.MUL:
+					if (xi > 0 && yi > 0 && xi > math.MaxInt64/yi) ||
+						(xi < 0 && yi < 0 && xi < math.MaxInt64/yi) ||
+						(xi > 0 && yi < 0 && yi < math.MinInt64/xi) ||
+						(xi < 0 && yi > 0 && xi < math.MinInt64/yi) {
+						return nil, fmt.Errorf("%d * %d overflows int", xi, yi)
+					}
+					return xi * yi, nil
+				case token.QUO:
+					if yi == 0 {
+						return nil, fmt.Errorf("division by 0")
+					}
+					return xi / yi, nil
+				case token.REM:
+					if yi == 0 {
+						return nil, fmt.Errorf("division by 0")
+					}
+					return xi % yi, nil
+				}
+			}
 		}
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		xi, ok := xv.Convert(typeUint64).Interface().(uint64)
+		if ok {
+			yi, ok := yv.Convert(typeUint64).Interface().(uint64)
+			if ok {
+				switch e.Op {
+				case token.ADD:
+					if yi > 0 && xi > math.MaxUint64-yi {
+						return nil, fmt.Errorf("%d + %d overflows uint", xi, yi)
+					}
+					return xi + yi, nil
+				case token.SUB:
+					if xi < yi {
+						return nil, fmt.Errorf("%d - %d overflows uint", xi, yi)
+					}
+					return xi - yi, nil
+				case token.MUL:
+					if xi > math.MaxUint64/yi {
+						return nil, fmt.Errorf("%d * %d overflows uint", xi, yi)
+					}
+					return xi * yi, nil
+				case token.QUO:
+					if yi == 0 {
+						return nil, fmt.Errorf("division by 0")
+					}
+					return xi / yi, nil
+				case token.REM:
+					if yi == 0 {
+						return nil, fmt.Errorf("division by 0")
+					}
+					return xi % yi, nil
+				}
+			}
+		}
+	case reflect.Float32, reflect.Float64:
+		xf, ok := xv.Convert(typeFloat64).Interface().(float64)
+		if ok {
+			yf, ok := yv.Convert(typeFloat64).Interface().(float64)
+			if ok {
+				switch e.Op {
+				case token.ADD:
+					return xf + yf, nil
+				case token.SUB:
+					return xf - yf, nil
+				case token.MUL:
+					return xf * yf, nil
+				case token.QUO:
+					if yf == 0.0 {
+						return nil, fmt.Errorf("division by 0")
+					}
+					return xf / yf, nil
+				}
+			}
+		}
+	case reflect.String:
+		xs, ok := xv.Convert(typeString).Interface().(string)
+		if ok {
+			ys, ok := yv.Convert(typeString).Interface().(string)
+			if ok {
+				if e.Op == token.ADD {
+					if t.executingLeftArrowExprArg {
+						if _, ok := (e.Y).(*ast.ParameterExpr); ok {
+							var err error
+							ys, err = t.addIndent(ys, xs)
+							if err != nil {
+								return nil, errors.Wrap(err, "failed to concat strings")
+							}
+						}
+					}
+					return xs + ys, nil
+				}
+			}
+		}
+	case reflect.Invalid:
+		return nil, fmt.Errorf("operator %s not defined on nil", e.Op)
 	}
-	return strX + strY, nil
+
+	return nil, fmt.Errorf("operator %s not defined on %#v (value of type %T)", e.Op, x, x)
 }
 
 // align indents of marshaled texts
@@ -211,14 +384,6 @@ func (t *Template) addIndent(str, preStr string) (string, error) {
 		}
 	}
 	return str, nil
-}
-
-func (t *Template) stringize(v interface{}) (string, error) {
-	s, ok := v.(string)
-	if !ok {
-		return "", errors.Errorf("expect string but got %T", v)
-	}
-	return s, nil
 }
 
 func (t *Template) requiredFuncArgType(funcType reflect.Type, argIdx int) reflect.Type {
@@ -348,11 +513,12 @@ func (t *Template) executeArgs(fnName string, fnType reflect.Type, vs []reflect.
 		}
 		requiredType := t.requiredFuncArgType(fnType, len(vs))
 		v := reflect.ValueOf(a)
-		if v.IsValid() {
-			vv, ok, _ := reflectutil.Convert(requiredType, v)
-			if ok {
-				v = vv
-			}
+		vv, ok, _ := reflectutil.Convert(requiredType, v)
+		if ok {
+			v = vv
+		}
+		if !v.IsValid() {
+			return nil, errors.Errorf("can't use nil as %s in arguments[%d] to %s", requiredType, i, fnName)
 		}
 		if typ := v.Type(); typ != requiredType {
 			return nil, errors.Errorf("can't use %s as %s in arguments[%d] to %s", typ, requiredType, i, fnName)

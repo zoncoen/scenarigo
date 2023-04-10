@@ -185,6 +185,91 @@ func TestScanner_Scan(t *testing.T) {
 					},
 				},
 			},
+			"just an INT": {
+				src: `{{123}}`,
+				expected: []result{
+					{
+						pos: 1,
+						tok: token.LDBRACE,
+						lit: "{{",
+					},
+					{
+						pos: 3,
+						tok: token.INT,
+						lit: "123",
+					},
+					{
+						pos: 6,
+						tok: token.RDBRACE,
+						lit: "}}",
+					},
+				},
+			},
+			"just a negative INT": {
+				src: `{{-123}}`,
+				expected: []result{
+					{
+						pos: 1,
+						tok: token.LDBRACE,
+						lit: "{{",
+					},
+					{
+						pos: 3,
+						tok: token.SUB,
+						lit: "-",
+					},
+					{
+						pos: 4,
+						tok: token.INT,
+						lit: "123",
+					},
+					{
+						pos: 7,
+						tok: token.RDBRACE,
+						lit: "}}",
+					},
+				},
+			},
+			"just a FLOAT": {
+				src: `{{1.23}}`,
+				expected: []result{
+					{
+						pos: 1,
+						tok: token.LDBRACE,
+						lit: "{{",
+					},
+					{
+						pos: 3,
+						tok: token.FLOAT,
+						lit: "1.23",
+					},
+					{
+						pos: 7,
+						tok: token.RDBRACE,
+						lit: "}}",
+					},
+				},
+			},
+			"just a FLOAT (first disit is 0)": {
+				src: `{{0.123}}`,
+				expected: []result{
+					{
+						pos: 1,
+						tok: token.LDBRACE,
+						lit: "{{",
+					},
+					{
+						pos: 3,
+						tok: token.FLOAT,
+						lit: "0.123",
+					},
+					{
+						pos: 8,
+						tok: token.RDBRACE,
+						lit: "}}",
+					},
+				},
+			},
 			"just a BOOL": {
 				src: `{{true}}`,
 				expected: []result{
@@ -649,6 +734,126 @@ func TestScanner_Scan(t *testing.T) {
 					},
 				},
 			},
+			"sub": {
+				src: `{{1-2}}`,
+				expected: []result{
+					{
+						pos: 1,
+						tok: token.LDBRACE,
+						lit: "{{",
+					},
+					{
+						pos: 3,
+						tok: token.INT,
+						lit: "1",
+					},
+					{
+						pos: 4,
+						tok: token.SUB,
+						lit: "-",
+					},
+					{
+						pos: 5,
+						tok: token.INT,
+						lit: "2",
+					},
+					{
+						pos: 6,
+						tok: token.RDBRACE,
+						lit: "}}",
+					},
+				},
+			},
+			"mul": {
+				src: `{{1*2}}`,
+				expected: []result{
+					{
+						pos: 1,
+						tok: token.LDBRACE,
+						lit: "{{",
+					},
+					{
+						pos: 3,
+						tok: token.INT,
+						lit: "1",
+					},
+					{
+						pos: 4,
+						tok: token.MUL,
+						lit: "*",
+					},
+					{
+						pos: 5,
+						tok: token.INT,
+						lit: "2",
+					},
+					{
+						pos: 6,
+						tok: token.RDBRACE,
+						lit: "}}",
+					},
+				},
+			},
+			"quo": {
+				src: `{{2/1}}`,
+				expected: []result{
+					{
+						pos: 1,
+						tok: token.LDBRACE,
+						lit: "{{",
+					},
+					{
+						pos: 3,
+						tok: token.INT,
+						lit: "2",
+					},
+					{
+						pos: 4,
+						tok: token.QUO,
+						lit: "/",
+					},
+					{
+						pos: 5,
+						tok: token.INT,
+						lit: "1",
+					},
+					{
+						pos: 6,
+						tok: token.RDBRACE,
+						lit: "}}",
+					},
+				},
+			},
+			"rem": {
+				src: `{{1%2}}`,
+				expected: []result{
+					{
+						pos: 1,
+						tok: token.LDBRACE,
+						lit: "{{",
+					},
+					{
+						pos: 3,
+						tok: token.INT,
+						lit: "1",
+					},
+					{
+						pos: 4,
+						tok: token.REM,
+						lit: "%",
+					},
+					{
+						pos: 5,
+						tok: token.INT,
+						lit: "2",
+					},
+					{
+						pos: 6,
+						tok: token.RDBRACE,
+						lit: "}}",
+					},
+				},
+			},
 		}
 		for name, test := range tests {
 			test := test
@@ -694,6 +899,21 @@ func TestScanner_Scan(t *testing.T) {
 				src: "{{01}}",
 				pos: 3,
 				lit: "01",
+			},
+			"invalid float": {
+				src: "{{01.2.3}}",
+				pos: 3,
+				lit: "01.2.3",
+			},
+			"invalid float (trailing period)": {
+				src: "{{1.}}",
+				pos: 3,
+				lit: "1.",
+			},
+			"invalid float (too many period)": {
+				src: "{{1.2.3}}",
+				pos: 3,
+				lit: "1.2.3",
 			},
 		}
 		for name, test := range tests {

@@ -80,7 +80,7 @@ func TestExecute(t *testing.T) {
 			},
 			expected: map[string]interface{}{
 				"env":     "test",
-				"version": 1,
+				"version": int64(1),
 				"nil":     nil,
 			},
 		},
@@ -110,7 +110,7 @@ func TestExecute(t *testing.T) {
 		},
 		"[]interface{}": {
 			in:       []interface{}{`{{"one"}}`, `{{1}}`, nil},
-			expected: []interface{}{"one", 1, nil},
+			expected: []interface{}{"one", int64(1), nil},
 		},
 		"yaml.MapSlice": {
 			in: yaml.MapSlice{
@@ -137,7 +137,7 @@ func TestExecute(t *testing.T) {
 					Value: "Bob",
 				},
 				yaml.MapItem{
-					Key:   1,
+					Key:   int64(1),
 					Value: "one",
 				},
 			},

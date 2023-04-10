@@ -9,10 +9,15 @@ const (
 
 	STRING // "text"
 	INT    // 123
+	FLOAT  // 1.23
 	BOOL   // true
 	IDENT  // vars
 
 	ADD  // +
+	SUB  // -
+	MUL  // *
+	QUO  // /
+	REM  // %
 	CALL // }}:\n
 
 	LPAREN    // (
@@ -38,28 +43,38 @@ func (t Token) String() string {
 		return "string"
 	case INT:
 		return "int"
+	case FLOAT:
+		return "float"
 	case BOOL:
 		return "bool"
 	case IDENT:
 		return "ident"
 	case ADD:
-		return "add"
+		return "+"
+	case SUB:
+		return "-"
+	case MUL:
+		return "*"
+	case QUO:
+		return "/"
+	case REM:
+		return "%"
 	case LPAREN:
-		return "lparen"
+		return "("
 	case RPAREN:
-		return "rparen"
+		return ")"
 	case LBRACK:
-		return "lbrack"
+		return "["
 	case RBRACK:
-		return "rbrack"
+		return "]"
 	case LDBRACE:
-		return "ldbrace"
+		return "{{"
 	case RDBRACE:
-		return "rdbrace"
+		return "}}"
 	case COMMA:
-		return "comma"
+		return ","
 	case PERIOD:
-		return "period"
+		return "."
 	case LARROW:
 		return "<-"
 	case LINEBREAK:
@@ -81,8 +96,10 @@ const (
 // is LowestPrecedence.
 func (t Token) Precedence() int {
 	switch t {
-	case ADD, LARROW, LDBRACE, STRING:
+	case ADD, SUB, LARROW, LDBRACE, STRING:
 		return 1
+	case MUL, QUO, REM:
+		return 2
 	default:
 		return LowestPrec
 	}

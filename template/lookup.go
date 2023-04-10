@@ -19,9 +19,12 @@ func lookup(node ast.Node, data interface{}) (interface{}, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create query from AST")
 	}
-	v, err := q.Extract(data)
+	v, err := q.Extract(defaultFuncs)
 	if err != nil {
-		return nil, err
+		v, err = q.Extract(data)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return Execute(v, data)
 }

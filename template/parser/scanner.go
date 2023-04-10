@@ -251,6 +251,10 @@ func (s *scanner) scanToken() (int, token.Token, string) {
 		return s.pos - 1, token.COMMA, ","
 	case '.':
 		return s.pos - 1, token.PERIOD, "."
+	case '?':
+		return s.pos - 1, token.QUESTION, "?"
+	case ':':
+		return s.pos - 1, token.COLON, ":"
 	case '+':
 		return s.pos - 1, token.ADD, "+"
 	case '-':
@@ -261,13 +265,49 @@ func (s *scanner) scanToken() (int, token.Token, string) {
 		return s.pos - 1, token.QUO, "/"
 	case '%':
 		return s.pos - 1, token.REM, "%"
+	case '&':
+		next := s.read()
+		if next == '&' {
+			return s.pos - 2, token.LAND, "&&"
+		}
+		s.unread(next)
+	case '|':
+		next := s.read()
+		if next == '|' {
+			return s.pos - 2, token.LOR, "||"
+		}
+		s.unread(next)
+	case '=':
+		next := s.read()
+		if next == '=' {
+			return s.pos - 2, token.EQL, "=="
+		}
+		s.unread(next)
+	case '!':
+		next := s.read()
+		if next == '=' {
+			return s.pos - 2, token.NEQ, "!="
+		}
+		s.unread(next)
+		return s.pos - 1, token.NOT, "!"
 	case '<':
 		next := s.read()
-		if next == '-' {
+		switch next {
+		case '=':
+			return s.pos - 2, token.LEQ, "<="
+		case '-':
 			s.expectColon = true
 			return s.pos - 2, token.LARROW, "<-"
 		}
 		s.unread(next)
+		return s.pos - 1, token.LSS, "<"
+	case '>':
+		next := s.read()
+		if next == '=' {
+			return s.pos - 2, token.GEQ, ">="
+		}
+		s.unread(next)
+		return s.pos - 1, token.GTR, ">"
 	default:
 		if ch == '"' {
 			return s.scanString()

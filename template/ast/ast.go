@@ -61,6 +61,15 @@ type (
 		Rparen int
 	}
 
+	// ConditionalExpr node represents a ternary conditional expression..
+	ConditionalExpr struct {
+		Condition Expr
+		Question  int
+		X         Expr
+		Colon     int
+		Y         Expr
+	}
+
 	// Ident node represents an identifier.
 	Ident struct {
 		NamePos int
@@ -99,27 +108,29 @@ type (
 )
 
 // Pos implements Node.
-func (e *BadExpr) Pos() int       { return e.ValuePos }
-func (e *UnaryExpr) Pos() int     { return e.OpPos }
-func (e *BinaryExpr) Pos() int    { return e.OpPos }
-func (e *BasicLit) Pos() int      { return e.ValuePos }
-func (e *ParameterExpr) Pos() int { return e.Ldbrace }
-func (e *ParenExpr) Pos() int     { return e.Lparen }
-func (e *Ident) Pos() int         { return e.NamePos }
-func (e *SelectorExpr) Pos() int  { return e.Sel.Pos() }
-func (e *IndexExpr) Pos() int     { return e.Lbrack }
-func (e *CallExpr) Pos() int      { return e.Lparen }
-func (e *LeftArrowExpr) Pos() int { return e.Larrow }
+func (e *BadExpr) Pos() int         { return e.ValuePos }
+func (e *UnaryExpr) Pos() int       { return e.OpPos }
+func (e *BinaryExpr) Pos() int      { return e.OpPos }
+func (e *BasicLit) Pos() int        { return e.ValuePos }
+func (e *ParameterExpr) Pos() int   { return e.Ldbrace }
+func (e *ParenExpr) Pos() int       { return e.Lparen }
+func (e *ConditionalExpr) Pos() int { return e.Question }
+func (e *Ident) Pos() int           { return e.NamePos }
+func (e *SelectorExpr) Pos() int    { return e.Sel.Pos() }
+func (e *IndexExpr) Pos() int       { return e.Lbrack }
+func (e *CallExpr) Pos() int        { return e.Lparen }
+func (e *LeftArrowExpr) Pos() int   { return e.Larrow }
 
 // exprNode implements Expr.
-func (e *BadExpr) exprNode()       {}
-func (e *UnaryExpr) exprNode()     {}
-func (e *BinaryExpr) exprNode()    {}
-func (e *BasicLit) exprNode()      {}
-func (e *ParameterExpr) exprNode() {}
-func (e *ParenExpr) exprNode()     {}
-func (e *Ident) exprNode()         {}
-func (e *SelectorExpr) exprNode()  {}
-func (e *IndexExpr) exprNode()     {}
-func (e *LeftArrowExpr) exprNode() {}
-func (e *CallExpr) exprNode()      {}
+func (e *BadExpr) exprNode()         {}
+func (e *UnaryExpr) exprNode()       {}
+func (e *BinaryExpr) exprNode()      {}
+func (e *BasicLit) exprNode()        {}
+func (e *ParameterExpr) exprNode()   {}
+func (e *ParenExpr) exprNode()       {}
+func (e *ConditionalExpr) exprNode() {}
+func (e *Ident) exprNode()           {}
+func (e *SelectorExpr) exprNode()    {}
+func (e *IndexExpr) exprNode()       {}
+func (e *LeftArrowExpr) exprNode()   {}
+func (e *CallExpr) exprNode()        {}

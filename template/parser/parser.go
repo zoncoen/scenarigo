@@ -63,7 +63,9 @@ L:
 		}
 
 		switch p.tok {
-		case token.ADD, token.SUB, token.MUL, token.QUO, token.REM:
+		case token.ADD, token.SUB, token.MUL, token.QUO, token.REM,
+			token.LAND, token.LOR,
+			token.EQL, token.NEQ, token.LSS, token.LEQ, token.GTR, token.GEQ:
 			pos := p.pos
 			tok := p.tok
 			p.next()
@@ -112,6 +114,18 @@ L:
 				OpPos: pos,
 				Op:    token.ADD,
 				Y:     y,
+			}
+		case token.QUESTION:
+			cond := x
+			question := p.pos
+			p.next()
+			expr1 := p.parseExpr()
+			x = &ast.ConditionalExpr{
+				Condition: cond,
+				Question:  question,
+				X:         expr1,
+				Colon:     p.expect(token.COLON),
+				Y:         p.parseExpr(),
 			}
 		default:
 			break L
@@ -192,6 +206,14 @@ func (p *Parser) parseUnaryExpr() ast.Expr {
 		e = &ast.UnaryExpr{
 			OpPos: pos,
 			Op:    token.SUB,
+			X:     p.parseUnaryExpr(),
+		}
+	case token.NOT:
+		pos := p.pos
+		p.next()
+		e = &ast.UnaryExpr{
+			OpPos: pos,
+			Op:    token.NOT,
 			X:     p.parseUnaryExpr(),
 		}
 	default:

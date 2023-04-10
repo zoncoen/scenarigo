@@ -427,6 +427,14 @@ func TestTemplate_Execute_UnaryExpr(t *testing.T) {
 			},
 			expect: -float64(math.MaxFloat64),
 		},
+		"!true": {
+			str:    "{{!true}}",
+			expect: false,
+		},
+		"!1": {
+			str:         "{{!1}}",
+			expectError: `failed to execute: {{!1}}: unknown operation: operator ! not defined on int64`,
+		},
 	}
 	runExecute(t, tests)
 }
@@ -711,6 +719,314 @@ func TestTemplate_Execute_BinaryExpr(t *testing.T) {
 		runExecute(t, tests)
 	})
 
+	t.Run("&&", func(t *testing.T) {
+		tests := map[string]executeTestCase{
+			"true&&true": {
+				str:    `{{true&&true}}`,
+				expect: true,
+			},
+			"true&&false": {
+				str:    `{{true&&false}}`,
+				expect: false,
+			},
+		}
+		runExecute(t, tests)
+	})
+
+	t.Run("||", func(t *testing.T) {
+		tests := map[string]executeTestCase{
+			"true||false": {
+				str:    `{{true||false}}`,
+				expect: true,
+			},
+			"false||false": {
+				str:    `{{false||false}}`,
+				expect: false,
+			},
+		}
+		runExecute(t, tests)
+	})
+
+	t.Run("==", func(t *testing.T) {
+		tests := map[string]executeTestCase{
+			"true==true": {
+				str:    `{{true==true}}`,
+				expect: true,
+			},
+			"true==false": {
+				str:    `{{true==false}}`,
+				expect: false,
+			},
+			"nil==nil": {
+				str: `{{v==v}}`,
+				data: map[string]interface{}{
+					"v": nil,
+				},
+				expect: true,
+			},
+		}
+		runExecute(t, tests)
+	})
+
+	t.Run("!=", func(t *testing.T) {
+		tests := map[string]executeTestCase{
+			"true!=true": {
+				str:    `{{true!=true}}`,
+				expect: false,
+			},
+			"true!=false": {
+				str:    `{{true!=false}}`,
+				expect: true,
+			},
+			"nil!=nil": {
+				str: `{{v!=v}}`,
+				data: map[string]interface{}{
+					"v": nil,
+				},
+				expect: false,
+			},
+		}
+		runExecute(t, tests)
+	})
+
+	t.Run("<", func(t *testing.T) {
+		tests := map[string]executeTestCase{
+			"1<2": {
+				str:    `{{1<2}}`,
+				expect: true,
+			},
+			"1<1": {
+				str:    `{{1<1}}`,
+				expect: false,
+			},
+			"2<1": {
+				str:    `{{2<1}}`,
+				expect: false,
+			},
+			"uint(1)<uint(2)": {
+				str:    `{{uint(1)<uint(2)}}`,
+				expect: true,
+			},
+			"uint(1)<uint(1)": {
+				str:    `{{uint(1)<uint(1)}}`,
+				expect: false,
+			},
+			"uint(2)<uint(1)": {
+				str:    `{{uint(2)<uint(1)}}`,
+				expect: false,
+			},
+			"1.1<2.2": {
+				str:    `{{1.1<2.2}}`,
+				expect: true,
+			},
+			"1.1<1.1": {
+				str:    `{{1.1<1.1}}`,
+				expect: false,
+			},
+			"2.2<1.1": {
+				str:    `{{2.2<1.1}}`,
+				expect: false,
+			},
+			`"a"<"b"`: {
+				str:    `{{"a"<"b"}}`,
+				expect: true,
+			},
+			`"a"<"a"`: {
+				str:    `{{"a"<"a"}}`,
+				expect: false,
+			},
+			`"b"<"a"`: {
+				str:    `{{"b"<"a"}}`,
+				expect: false,
+			},
+		}
+		runExecute(t, tests)
+	})
+
+	t.Run("<=", func(t *testing.T) {
+		tests := map[string]executeTestCase{
+			"1<=2": {
+				str:    `{{1<=2}}`,
+				expect: true,
+			},
+			"1<=1": {
+				str:    `{{1<=1}}`,
+				expect: true,
+			},
+			"2<=1": {
+				str:    `{{2<=1}}`,
+				expect: false,
+			},
+			"uint(1)<=uint(2)": {
+				str:    `{{uint(1)<=uint(2)}}`,
+				expect: true,
+			},
+			"uint(1)<=uint(1)": {
+				str:    `{{uint(1)<=uint(1)}}`,
+				expect: true,
+			},
+			"uint(2)<=uint(1)": {
+				str:    `{{uint(2)<=uint(1)}}`,
+				expect: false,
+			},
+			"1.1<=2.2": {
+				str:    `{{1.1<=2.2}}`,
+				expect: true,
+			},
+			"1.1<=1.1": {
+				str:    `{{1.1<=1.1}}`,
+				expect: true,
+			},
+			"2.2<=1.1": {
+				str:    `{{2.2<=1.1}}`,
+				expect: false,
+			},
+			`"a"<="b"`: {
+				str:    `{{"a"<="b"}}`,
+				expect: true,
+			},
+			`"a"<="a"`: {
+				str:    `{{"a"<="a"}}`,
+				expect: true,
+			},
+			`"b"<="a"`: {
+				str:    `{{"b"<="a"}}`,
+				expect: false,
+			},
+		}
+		runExecute(t, tests)
+	})
+
+	t.Run(">", func(t *testing.T) {
+		tests := map[string]executeTestCase{
+			"1>2": {
+				str:    `{{1>2}}`,
+				expect: false,
+			},
+			"1>1": {
+				str:    `{{1>1}}`,
+				expect: false,
+			},
+			"2>1": {
+				str:    `{{2>1}}`,
+				expect: true,
+			},
+			"uint(1)>uint(2)": {
+				str:    `{{uint(1)>uint(2)}}`,
+				expect: false,
+			},
+			"uint(1)>uint(1)": {
+				str:    `{{uint(1)>uint(1)}}`,
+				expect: false,
+			},
+			"uint(2)>uint(1)": {
+				str:    `{{uint(2)>uint(1)}}`,
+				expect: true,
+			},
+			"1.1>2.2": {
+				str:    `{{1.1>2.2}}`,
+				expect: false,
+			},
+			"1.1>1.1": {
+				str:    `{{1.1>1.1}}`,
+				expect: false,
+			},
+			"2.2>1.1": {
+				str:    `{{2.2>1.1}}`,
+				expect: true,
+			},
+			`"a">"b"`: {
+				str:    `{{"a">"b"}}`,
+				expect: false,
+			},
+			`"a">"a"`: {
+				str:    `{{"a">"a"}}`,
+				expect: false,
+			},
+			`"b">"a"`: {
+				str:    `{{"b">"a"}}`,
+				expect: true,
+			},
+		}
+		runExecute(t, tests)
+	})
+
+	t.Run(">=", func(t *testing.T) {
+		tests := map[string]executeTestCase{
+			"1>=2": {
+				str:    `{{1>=2}}`,
+				expect: false,
+			},
+			"1>=1": {
+				str:    `{{1>=1}}`,
+				expect: true,
+			},
+			"2>=1": {
+				str:    `{{2>=1}}`,
+				expect: true,
+			},
+			"uint(1)>=uint(2)": {
+				str:    `{{uint(1)>=uint(2)}}`,
+				expect: false,
+			},
+			"uint(1)>=uint(1)": {
+				str:    `{{uint(1)>=uint(1)}}`,
+				expect: true,
+			},
+			"uint(2)>=uint(1)": {
+				str:    `{{uint(2)>=uint(1)}}`,
+				expect: true,
+			},
+			"1.1>=2.2": {
+				str:    `{{1.1>=2.2}}`,
+				expect: false,
+			},
+			"1.1>=1.1": {
+				str:    `{{1.1>=1.1}}`,
+				expect: true,
+			},
+			"2.2>=1.1": {
+				str:    `{{2.2>=1.1}}`,
+				expect: true,
+			},
+			`"a">="b"`: {
+				str:    `{{"a">="b"}}`,
+				expect: false,
+			},
+			`"a">="a"`: {
+				str:    `{{"a">="a"}}`,
+				expect: true,
+			},
+			`"b">="a"`: {
+				str:    `{{"b">="a"}}`,
+				expect: true,
+			},
+		}
+		runExecute(t, tests)
+	})
+
+	t.Run("? :", func(t *testing.T) {
+		tests := map[string]executeTestCase{
+			"true ? 1 : 2": {
+				str:    `{{true ? 1 : 2}}`,
+				expect: int64(1),
+			},
+			"false ? 1 : 2": {
+				str:    `{{false ? 1 : 2}}`,
+				expect: int64(2),
+			},
+			"1 ? 1 : 2": {
+				str:         `{{1 ? 1 : 2}}`,
+				expectError: `failed to execute: {{1 ? 1 : 2}}: invalid operation: operator ? not defined on 1 (value of type int64)`,
+			},
+			"true ? 1 : 2 + true": {
+				str:         `{{true ? 1 : 2 + true}}`,
+				expectError: `failed to execute: {{true ? 1 : 2 + true}}: invalid operation: 2 + true: mismatched types int64 and bool`,
+			},
+		}
+		runExecute(t, tests)
+	})
+
 	t.Run("complicated", func(t *testing.T) {
 		tests := map[string]executeTestCase{
 			"*,/ have precedence over +,-": {
@@ -720,6 +1036,14 @@ func TestTemplate_Execute_BinaryExpr(t *testing.T) {
 			"paren expr": {
 				str:    `{{(1 + 2) * 3 / (4 - 5)}}`,
 				expect: int64(-9),
+			},
+			"condition with paren": {
+				str:    `{{ 1 != 2 && !(false || 1 >= 2)}}`,
+				expect: true,
+			},
+			"conditional operator": {
+				str:    `{{1 + 1 <= 2 ? 3 * 3 : 4 / 4}}`,
+				expect: int64(9),
 			},
 		}
 		runExecute(t, tests)

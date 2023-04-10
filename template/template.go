@@ -76,6 +76,8 @@ func (t *Template) executeExpr(expr ast.Expr, data interface{}) (interface{}, er
 			return nil, fmt.Errorf("invalid operation: %w", err)
 		}
 		return v, nil
+	case *ast.ConditionalExpr:
+		return t.executeConditionalExpr(e, data)
 	case *ast.Ident:
 		return lookup(e, data)
 	case *ast.SelectorExpr:
@@ -156,7 +158,8 @@ func (t *Template) executeUnaryExpr(e *ast.UnaryExpr, data interface{}) (interfa
 	if err != nil {
 		return nil, err
 	}
-	if e.Op == token.SUB {
+	switch e.Op {
+	case token.SUB:
 		v := reflectutil.Elem(reflect.ValueOf(x))
 		if v.IsValid() {
 			if v.CanInterface() {
@@ -212,6 +215,15 @@ func (t *Template) executeUnaryExpr(e *ast.UnaryExpr, data interface{}) (interfa
 				}
 			}
 		}
+	case token.NOT:
+		v := reflectutil.Elem(reflect.ValueOf(x))
+		if v.IsValid() {
+			if v.CanInterface() {
+				if b, ok := v.Interface().(bool); ok {
+					return !b, nil
+				}
+			}
+		}
 	}
 	return nil, errors.Errorf(`unknown operation: operator %s not defined on %T`, e.Op, x)
 }
@@ -232,6 +244,24 @@ func (t *Template) executeBinaryExpr(e *ast.BinaryExpr, data interface{}) (inter
 	if xv.Kind() != yv.Kind() {
 		return nil, fmt.Errorf("%#v %s %#v: mismatched types %T and %T", x, e.Op, y, x, y)
 	}
+
+	switch e.Op {
+	case token.EQL:
+		if xv.Kind() == reflect.Invalid {
+			return true, nil
+		}
+		if xv.Comparable() {
+			return xv.Equal(yv), nil
+		}
+	case token.NEQ:
+		if xv.Kind() == reflect.Invalid {
+			return false, nil
+		}
+		if xv.Comparable() {
+			return !xv.Equal(yv), nil
+		}
+	}
+
 	switch xv.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		xi, ok := xv.Convert(typeInt64).Interface().(int64)
@@ -267,6 +297,14 @@ func (t *Template) executeBinaryExpr(e *ast.BinaryExpr, data interface{}) (inter
 						return nil, fmt.Errorf("division by 0")
 					}
 					return xi % yi, nil
+				case token.LSS:
+					return xi < yi, nil
+				case token.LEQ:
+					return xi <= yi, nil
+				case token.GTR:
+					return xi > yi, nil
+				case token.GEQ:
+					return xi >= yi, nil
 				}
 			}
 		}
@@ -301,6 +339,14 @@ func (t *Template) executeBinaryExpr(e *ast.BinaryExpr, data interface{}) (inter
 						return nil, fmt.Errorf("division by 0")
 					}
 					return xi % yi, nil
+				case token.LSS:
+					return xi < yi, nil
+				case token.LEQ:
+					return xi <= yi, nil
+				case token.GTR:
+					return xi > yi, nil
+				case token.GEQ:
+					return xi >= yi, nil
 				}
 			}
 		}
@@ -321,6 +367,27 @@ func (t *Template) executeBinaryExpr(e *ast.BinaryExpr, data interface{}) (inter
 						return nil, fmt.Errorf("division by 0")
 					}
 					return xf / yf, nil
+				case token.LSS:
+					return xf < yf, nil
+				case token.LEQ:
+					return xf <= yf, nil
+				case token.GTR:
+					return xf > yf, nil
+				case token.GEQ:
+					return xf >= yf, nil
+				}
+			}
+		}
+	case reflect.Bool:
+		xb, ok := xv.Convert(typeBool).Interface().(bool)
+		if ok {
+			yb, ok := yv.Convert(typeBool).Interface().(bool)
+			if ok {
+				switch e.Op {
+				case token.LAND:
+					return xb && yb, nil
+				case token.LOR:
+					return xb || yb, nil
 				}
 			}
 		}
@@ -329,7 +396,8 @@ func (t *Template) executeBinaryExpr(e *ast.BinaryExpr, data interface{}) (inter
 		if ok {
 			ys, ok := yv.Convert(typeString).Interface().(string)
 			if ok {
-				if e.Op == token.ADD {
+				switch e.Op {
+				case token.ADD:
 					if t.executingLeftArrowExprArg {
 						if _, ok := (e.Y).(*ast.ParameterExpr); ok {
 							var err error
@@ -340,6 +408,14 @@ func (t *Template) executeBinaryExpr(e *ast.BinaryExpr, data interface{}) (inter
 						}
 					}
 					return xs + ys, nil
+				case token.LSS:
+					return xs < ys, nil
+				case token.LEQ:
+					return xs <= ys, nil
+				case token.GTR:
+					return xs > ys, nil
+				case token.GEQ:
+					return xs >= ys, nil
 				}
 			}
 		}
@@ -348,6 +424,29 @@ func (t *Template) executeBinaryExpr(e *ast.BinaryExpr, data interface{}) (inter
 	}
 
 	return nil, fmt.Errorf("operator %s not defined on %#v (value of type %T)", e.Op, x, x)
+}
+
+func (t *Template) executeConditionalExpr(e *ast.ConditionalExpr, data interface{}) (interface{}, error) {
+	c, err := t.executeExpr(e.Condition, data)
+	if err != nil {
+		return nil, err
+	}
+	condition, ok := c.(bool)
+	if !ok {
+		return nil, fmt.Errorf("invalid operation: operator ? not defined on %#v (value of type %T)", c, c)
+	}
+	x, err := t.executeExpr(e.X, data)
+	if err != nil {
+		return nil, err
+	}
+	y, err := t.executeExpr(e.Y, data)
+	if err != nil {
+		return nil, err
+	}
+	if condition {
+		return x, nil
+	}
+	return y, nil
 }
 
 // align indents of marshaled texts

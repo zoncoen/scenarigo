@@ -60,21 +60,21 @@ func (t Token) String() string {
 	case REM:
 		return "%"
 	case LPAREN:
-		return "lparen"
+		return "("
 	case RPAREN:
-		return "rparen"
+		return ")"
 	case LBRACK:
-		return "lbrack"
+		return "["
 	case RBRACK:
-		return "rbrack"
+		return "]"
 	case LDBRACE:
-		return "ldbrace"
+		return "{{"
 	case RDBRACE:
-		return "rdbrace"
+		return "}}"
 	case COMMA:
-		return "comma"
+		return ","
 	case PERIOD:
-		return "period"
+		return "."
 	case LARROW:
 		return "<-"
 	case LINEBREAK:

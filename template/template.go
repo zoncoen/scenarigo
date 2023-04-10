@@ -66,6 +66,8 @@ func (t *Template) executeExpr(expr ast.Expr, data interface{}) (interface{}, er
 		return t.executeBasicLit(e)
 	case *ast.ParameterExpr:
 		return t.executeParameterExpr(e, data)
+	case *ast.ParenExpr:
+		return t.executeExpr(e.X, data)
 	case *ast.UnaryExpr:
 		return t.executeUnaryExpr(e, data)
 	case *ast.BinaryExpr:

@@ -142,6 +142,14 @@ func (p *Parser) parseUnaryExpr() ast.Expr {
 			Value:    p.lit,
 		}
 		p.next()
+	case token.LPAREN:
+		pos := p.pos
+		p.next()
+		e = &ast.ParenExpr{
+			Lparen: pos,
+			X:      p.parseExpr(),
+			Rparen: p.expect(token.RPAREN),
+		}
 	case token.IDENT:
 		e = p.parseIdent()
 	L:

@@ -717,6 +717,10 @@ func TestTemplate_Execute_BinaryExpr(t *testing.T) {
 				str:    `{{1 + 2 * 3 / 4 - 5}}`,
 				expect: int64(-3),
 			},
+			"paren expr": {
+				str:    `{{(1 + 2) * 3 / (4 - 5)}}`,
+				expect: int64(-9),
+			},
 		}
 		runExecute(t, tests)
 	})

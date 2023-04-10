@@ -54,6 +54,13 @@ type (
 		Quoted  bool
 	}
 
+	// ParenExpr node represents a parenthesized expression.
+	ParenExpr struct {
+		Lparen int
+		X      Expr
+		Rparen int
+	}
+
 	// Ident node represents an identifier.
 	Ident struct {
 		NamePos int
@@ -97,6 +104,7 @@ func (e *UnaryExpr) Pos() int     { return e.OpPos }
 func (e *BinaryExpr) Pos() int    { return e.OpPos }
 func (e *BasicLit) Pos() int      { return e.ValuePos }
 func (e *ParameterExpr) Pos() int { return e.Ldbrace }
+func (e *ParenExpr) Pos() int     { return e.Lparen }
 func (e *Ident) Pos() int         { return e.NamePos }
 func (e *SelectorExpr) Pos() int  { return e.Sel.Pos() }
 func (e *IndexExpr) Pos() int     { return e.Lbrack }
@@ -109,6 +117,7 @@ func (e *UnaryExpr) exprNode()     {}
 func (e *BinaryExpr) exprNode()    {}
 func (e *BasicLit) exprNode()      {}
 func (e *ParameterExpr) exprNode() {}
+func (e *ParenExpr) exprNode()     {}
 func (e *Ident) exprNode()         {}
 func (e *SelectorExpr) exprNode()  {}
 func (e *IndexExpr) exprNode()     {}

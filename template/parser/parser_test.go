@@ -95,6 +95,22 @@ func TestParser_Parse(t *testing.T) {
 					Rdbrace: 7,
 				},
 			},
+			"parenthesized expression": {
+				src: "{{(1)}}",
+				expected: &ast.ParameterExpr{
+					Ldbrace: 1,
+					X: &ast.ParenExpr{
+						Lparen: 3,
+						X: &ast.BasicLit{
+							ValuePos: 4,
+							Kind:     token.INT,
+							Value:    "1",
+						},
+						Rparen: 5,
+					},
+					Rdbrace: 6,
+				},
+			},
 			"just a parameter": {
 				src: "{{test}}",
 				expected: &ast.ParameterExpr{

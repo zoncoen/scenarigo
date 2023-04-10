@@ -6,6 +6,7 @@ linters:
   disable:
     - containedctx
     - dupl
+    - exhaustive
     - funlen
     - gci
     - gochecknoglobals

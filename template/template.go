@@ -216,6 +216,7 @@ func (t *Template) executeUnaryExpr(e *ast.UnaryExpr, data interface{}) (interfa
 	return nil, errors.Errorf(`unknown operation: operator %s not defined on %T`, e.Op, x)
 }
 
+//nolint:gocyclo,cyclop,maintidx
 func (t *Template) executeBinaryExpr(e *ast.BinaryExpr, data interface{}) (interface{}, error) {
 	x, err := t.executeExpr(e.X, data)
 	if err != nil {

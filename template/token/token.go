@@ -20,6 +20,17 @@ const (
 	REM  // %
 	CALL // }}:\n
 
+	LAND // &&
+	LOR  // ||
+
+	EQL // ==
+	NEQ // !=
+	LSS // <
+	LEQ // <=
+	GTR // >
+	GEQ // >=
+	NOT // !
+
 	LPAREN    // (
 	RPAREN    // )
 	LBRACK    // [
@@ -28,8 +39,12 @@ const (
 	RDBRACE   // }}
 	COMMA     // ,
 	PERIOD    // .
+	QUESTION  // ?
+	COLON     // :
 	LARROW    // <-
 	LINEBREAK // end of a larrow expression argument
+
+	DEFINED // defined
 )
 
 // String returns t as string.
@@ -59,6 +74,26 @@ func (t Token) String() string {
 		return "/"
 	case REM:
 		return "%"
+	case CALL:
+		return "call"
+	case LAND:
+		return "&&"
+	case LOR:
+		return "||"
+	case EQL:
+		return "=="
+	case NEQ:
+		return "!="
+	case LSS:
+		return "<"
+	case LEQ:
+		return "<="
+	case GTR:
+		return ">"
+	case GEQ:
+		return ">="
+	case NOT:
+		return "!"
 	case LPAREN:
 		return "("
 	case RPAREN:
@@ -75,20 +110,25 @@ func (t Token) String() string {
 		return ","
 	case PERIOD:
 		return "."
+	case QUESTION:
+		return "?"
+	case COLON:
+		return ":"
 	case LARROW:
 		return "<-"
 	case LINEBREAK:
 		return "line break"
-	default:
-		return "unknown"
+	case DEFINED:
+		return "defined"
 	}
+	return "unknown"
 }
 
 // A set of constants for precedence-based expression parsing.
 // Non-operators have lowest precedence.
 const (
 	LowestPrec  = 0 // non-operators
-	HighestPrec = 3
+	HighestPrec = 7
 )
 
 // Precedence returns the operator precedence of the binary
@@ -96,10 +136,18 @@ const (
 // is LowestPrecedence.
 func (t Token) Precedence() int {
 	switch t {
-	case ADD, SUB, LARROW, LDBRACE, STRING:
+	case QUESTION, COLON:
 		return 1
-	case MUL, QUO, REM:
+	case LOR:
 		return 2
+	case LAND:
+		return 3
+	case EQL, NEQ, LSS, LEQ, GTR, GEQ:
+		return 4
+	case ADD, SUB, LARROW, LDBRACE, STRING:
+		return 5
+	case MUL, QUO, REM:
+		return 6
 	default:
 		return LowestPrec
 	}

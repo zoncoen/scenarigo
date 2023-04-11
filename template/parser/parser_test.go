@@ -95,6 +95,22 @@ func TestParser_Parse(t *testing.T) {
 					Rdbrace: 7,
 				},
 			},
+			"not bool": {
+				src: `{{!true}}`,
+				expected: &ast.ParameterExpr{
+					Ldbrace: 1,
+					X: &ast.UnaryExpr{
+						OpPos: 3,
+						Op:    token.NOT,
+						X: &ast.BasicLit{
+							ValuePos: 4,
+							Kind:     token.BOOL,
+							Value:    "true",
+						},
+					},
+					Rdbrace: 8,
+				},
+			},
 			"parenthesized expression": {
 				src: "{{(1)}}",
 				expected: &ast.ParameterExpr{
@@ -462,6 +478,222 @@ func TestParser_Parse(t *testing.T) {
 						},
 					},
 					Rdbrace: 6,
+				},
+			},
+			"&&": {
+				src: `{{true&&true}}`,
+				expected: &ast.ParameterExpr{
+					Ldbrace: 1,
+					X: &ast.BinaryExpr{
+						X: &ast.BasicLit{
+							ValuePos: 3,
+							Kind:     token.BOOL,
+							Value:    "true",
+						},
+						OpPos: 7,
+						Op:    token.LAND,
+						Y: &ast.BasicLit{
+							ValuePos: 9,
+							Kind:     token.BOOL,
+							Value:    "true",
+						},
+					},
+					Rdbrace: 13,
+				},
+			},
+			"||": {
+				src: `{{true||true}}`,
+				expected: &ast.ParameterExpr{
+					Ldbrace: 1,
+					X: &ast.BinaryExpr{
+						X: &ast.BasicLit{
+							ValuePos: 3,
+							Kind:     token.BOOL,
+							Value:    "true",
+						},
+						OpPos: 7,
+						Op:    token.LOR,
+						Y: &ast.BasicLit{
+							ValuePos: 9,
+							Kind:     token.BOOL,
+							Value:    "true",
+						},
+					},
+					Rdbrace: 13,
+				},
+			},
+			"==": {
+				src: `{{1==1}}`,
+				expected: &ast.ParameterExpr{
+					Ldbrace: 1,
+					X: &ast.BinaryExpr{
+						X: &ast.BasicLit{
+							ValuePos: 3,
+							Kind:     token.INT,
+							Value:    "1",
+						},
+						OpPos: 4,
+						Op:    token.EQL,
+						Y: &ast.BasicLit{
+							ValuePos: 6,
+							Kind:     token.INT,
+							Value:    "1",
+						},
+					},
+					Rdbrace: 7,
+				},
+			},
+			"!=": {
+				src: `{{1!=1}}`,
+				expected: &ast.ParameterExpr{
+					Ldbrace: 1,
+					X: &ast.BinaryExpr{
+						X: &ast.BasicLit{
+							ValuePos: 3,
+							Kind:     token.INT,
+							Value:    "1",
+						},
+						OpPos: 4,
+						Op:    token.NEQ,
+						Y: &ast.BasicLit{
+							ValuePos: 6,
+							Kind:     token.INT,
+							Value:    "1",
+						},
+					},
+					Rdbrace: 7,
+				},
+			},
+			"<": {
+				src: `{{1<1}}`,
+				expected: &ast.ParameterExpr{
+					Ldbrace: 1,
+					X: &ast.BinaryExpr{
+						X: &ast.BasicLit{
+							ValuePos: 3,
+							Kind:     token.INT,
+							Value:    "1",
+						},
+						OpPos: 4,
+						Op:    token.LSS,
+						Y: &ast.BasicLit{
+							ValuePos: 5,
+							Kind:     token.INT,
+							Value:    "1",
+						},
+					},
+					Rdbrace: 6,
+				},
+			},
+			"<=": {
+				src: `{{1<=1}}`,
+				expected: &ast.ParameterExpr{
+					Ldbrace: 1,
+					X: &ast.BinaryExpr{
+						X: &ast.BasicLit{
+							ValuePos: 3,
+							Kind:     token.INT,
+							Value:    "1",
+						},
+						OpPos: 4,
+						Op:    token.LEQ,
+						Y: &ast.BasicLit{
+							ValuePos: 6,
+							Kind:     token.INT,
+							Value:    "1",
+						},
+					},
+					Rdbrace: 7,
+				},
+			},
+			">": {
+				src: `{{1>1}}`,
+				expected: &ast.ParameterExpr{
+					Ldbrace: 1,
+					X: &ast.BinaryExpr{
+						X: &ast.BasicLit{
+							ValuePos: 3,
+							Kind:     token.INT,
+							Value:    "1",
+						},
+						OpPos: 4,
+						Op:    token.GTR,
+						Y: &ast.BasicLit{
+							ValuePos: 5,
+							Kind:     token.INT,
+							Value:    "1",
+						},
+					},
+					Rdbrace: 6,
+				},
+			},
+			">=": {
+				src: `{{1>=1}}`,
+				expected: &ast.ParameterExpr{
+					Ldbrace: 1,
+					X: &ast.BinaryExpr{
+						X: &ast.BasicLit{
+							ValuePos: 3,
+							Kind:     token.INT,
+							Value:    "1",
+						},
+						OpPos: 4,
+						Op:    token.GEQ,
+						Y: &ast.BasicLit{
+							ValuePos: 6,
+							Kind:     token.INT,
+							Value:    "1",
+						},
+					},
+					Rdbrace: 7,
+				},
+			},
+			"conditional expression": {
+				src: `{{true?1:2}}`,
+				expected: &ast.ParameterExpr{
+					Ldbrace: 1,
+					X: &ast.ConditionalExpr{
+						Condition: &ast.BasicLit{
+							ValuePos: 3,
+							Kind:     token.BOOL,
+							Value:    "true",
+						},
+						Question: 7,
+						X: &ast.BasicLit{
+							ValuePos: 8,
+							Kind:     token.INT,
+							Value:    "1",
+						},
+						Colon: 9,
+						Y: &ast.BasicLit{
+							ValuePos: 10,
+							Kind:     token.INT,
+							Value:    "2",
+						},
+					},
+					Rdbrace: 11,
+				},
+			},
+			"defined()": {
+				src: `{{defined(a.b)}}`,
+				expected: &ast.ParameterExpr{
+					Ldbrace: 1,
+					X: &ast.DefinedExpr{
+						DefinedPos: 3,
+						Lparen:     10,
+						Arg: &ast.SelectorExpr{
+							X: &ast.Ident{
+								NamePos: 11,
+								Name:    "a",
+							},
+							Sel: &ast.Ident{
+								NamePos: 13,
+								Name:    "b",
+							},
+						},
+						Rparen: 14,
+					},
+					Rdbrace: 15,
 				},
 			},
 		}

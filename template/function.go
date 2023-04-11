@@ -13,6 +13,7 @@ var (
 	typeInt64   = reflect.TypeOf(int64(0))
 	typeUint64  = reflect.TypeOf(uint64(0))
 	typeFloat64 = reflect.TypeOf(float64(0))
+	typeBool    = reflect.TypeOf(false)
 	typeString  = reflect.TypeOf("")
 )
 

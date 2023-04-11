@@ -250,15 +250,15 @@ func (t *Template) executeBinaryExpr(e *ast.BinaryExpr, data interface{}) (inter
 		if xv.Kind() == reflect.Invalid {
 			return true, nil
 		}
-		if xv.Comparable() {
-			return xv.Equal(yv), nil
+		if comparable(xv) {
+			return equal(xv, yv), nil
 		}
 	case token.NEQ:
 		if xv.Kind() == reflect.Invalid {
 			return false, nil
 		}
-		if xv.Comparable() {
-			return !xv.Equal(yv), nil
+		if comparable(xv) {
+			return !equal(xv, yv), nil
 		}
 	}
 

@@ -435,6 +435,23 @@ func TestTemplate_Execute_UnaryExpr(t *testing.T) {
 			str:         "{{!1}}",
 			expectError: `failed to execute: {{!1}}: unknown operation: operator ! not defined on int64`,
 		},
+		"defined": {
+			str: "{{defined(a.b)}}",
+			data: map[string]any{
+				"a": map[string]any{
+					"b": `{{test}}`,
+				},
+			},
+			expect: true,
+		},
+		"not defined": {
+			str:    "{{defined(a.b)}}",
+			expect: false,
+		},
+		"invalid argument to defined()": {
+			str:         "{{defined(true)}}",
+			expectError: "failed to execute: {{defined(true)}}: invalid argument to defined()",
+		},
 	}
 	runExecute(t, tests)
 }

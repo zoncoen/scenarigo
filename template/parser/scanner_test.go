@@ -1159,6 +1159,51 @@ func TestScanner_Scan(t *testing.T) {
 					},
 				},
 			},
+			"defined": {
+				src: "{{defined(a.b)}}",
+				expected: []result{
+					{
+						pos: 1,
+						tok: token.LDBRACE,
+						lit: "{{",
+					},
+					{
+						pos: 3,
+						tok: token.DEFINED,
+						lit: "defined",
+					},
+					{
+						pos: 10,
+						tok: token.LPAREN,
+						lit: "(",
+					},
+					{
+						pos: 11,
+						tok: token.IDENT,
+						lit: "a",
+					},
+					{
+						pos: 12,
+						tok: token.PERIOD,
+						lit: ".",
+					},
+					{
+						pos: 13,
+						tok: token.IDENT,
+						lit: "b",
+					},
+					{
+						pos: 14,
+						tok: token.RPAREN,
+						lit: ")",
+					},
+					{
+						pos: 15,
+						tok: token.RDBRACE,
+						lit: "}}",
+					},
+				},
+			},
 		}
 		for name, test := range tests {
 			test := test

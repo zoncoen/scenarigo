@@ -43,6 +43,8 @@ const (
 	COLON     // :
 	LARROW    // <-
 	LINEBREAK // end of a larrow expression argument
+
+	DEFINED // defined
 )
 
 // String returns t as string.
@@ -116,6 +118,8 @@ func (t Token) String() string {
 		return "<-"
 	case LINEBREAK:
 		return "line break"
+	case DEFINED:
+		return "defined"
 	}
 	return "unknown"
 }

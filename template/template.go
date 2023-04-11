@@ -88,6 +88,8 @@ func (t *Template) executeExpr(expr ast.Expr, data interface{}) (interface{}, er
 		return t.executeFuncCall(e, data)
 	case *ast.LeftArrowExpr:
 		return t.executeLeftArrowExpr(e, data)
+	case *ast.DefinedExpr:
+		return t.executeDefinedExpr(e, data)
 	default:
 		return nil, errors.Errorf(`unknown expression "%T"`, e)
 	}
@@ -673,6 +675,21 @@ func (t *Template) executeLeftArrowExpr(e *ast.LeftArrowExpr, data interface{}) 
 		return nil, err
 	}
 	return f.Exec(arg)
+}
+
+func (t *Template) executeDefinedExpr(e *ast.DefinedExpr, data interface{}) (interface{}, error) {
+	switch e.Arg.(type) {
+	case *ast.Ident, *ast.SelectorExpr, *ast.IndexExpr:
+		if _, err := extract(e.Arg, data); err != nil {
+			var notDefined errNotDefined
+			if errors.As(err, &notDefined) {
+				return false, nil
+			}
+			return nil, err
+		}
+		return true, nil
+	}
+	return nil, errors.New("invalid argument to defined()")
 }
 
 func (t *Template) executeLeftArrowExprArg(arg ast.Expr, data interface{}) (interface{}, error) {

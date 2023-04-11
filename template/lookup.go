@@ -11,7 +11,19 @@ import (
 	"github.com/zoncoen/scenarigo/template/token"
 )
 
+type errNotDefined struct {
+	error
+}
+
 func lookup(node ast.Node, data interface{}) (interface{}, error) {
+	v, err := extract(node, data)
+	if err != nil {
+		return nil, err
+	}
+	return Execute(v, data)
+}
+
+func extract(node ast.Node, data interface{}) (interface{}, error) {
 	q, err := buildQuery(query.New(
 		query.ExtractByStructTag("yaml", "json"),
 		query.CustomExtractFunc(yamlextractor.MapSliceExtractFunc(false)),
@@ -23,10 +35,10 @@ func lookup(node ast.Node, data interface{}) (interface{}, error) {
 	if err != nil {
 		v, err = q.Extract(data)
 		if err != nil {
-			return nil, err
+			return nil, errNotDefined{err}
 		}
 	}
-	return Execute(v, data)
+	return v, nil
 }
 
 func buildQuery(q *query.Query, node ast.Node) (*query.Query, error) {

@@ -674,6 +674,28 @@ func TestParser_Parse(t *testing.T) {
 					Rdbrace: 11,
 				},
 			},
+			"defined()": {
+				src: `{{defined(a.b)}}`,
+				expected: &ast.ParameterExpr{
+					Ldbrace: 1,
+					X: &ast.DefinedExpr{
+						DefinedPos: 3,
+						Lparen:     10,
+						Arg: &ast.SelectorExpr{
+							X: &ast.Ident{
+								NamePos: 11,
+								Name:    "a",
+							},
+							Sel: &ast.Ident{
+								NamePos: 13,
+								Name:    "b",
+							},
+						},
+						Rparen: 14,
+					},
+					Rdbrace: 15,
+				},
+			},
 		}
 		for name, test := range tests {
 			test := test

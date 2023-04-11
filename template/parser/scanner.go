@@ -184,6 +184,8 @@ scan:
 	switch str {
 	case "true", "false":
 		return s.pos - runesLen(str), token.BOOL, str
+	case "defined":
+		return s.pos - runesLen(str), token.DEFINED, str
 	}
 	return s.pos - runesLen(str), token.IDENT, str
 }

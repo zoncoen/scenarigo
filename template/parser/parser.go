@@ -216,6 +216,15 @@ func (p *Parser) parseUnaryExpr() ast.Expr {
 			Op:    token.NOT,
 			X:     p.parseUnaryExpr(),
 		}
+	case token.DEFINED:
+		pos := p.pos
+		p.next()
+		e = &ast.DefinedExpr{
+			DefinedPos: pos,
+			Lparen:     p.expect(token.LPAREN),
+			Arg:        p.parseExpr(),
+			Rparen:     p.expect(token.RPAREN),
+		}
 	default:
 		return nil
 	}

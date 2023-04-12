@@ -437,18 +437,10 @@ func (t *Template) executeConditionalExpr(e *ast.ConditionalExpr, data interface
 	if !ok {
 		return nil, fmt.Errorf("invalid operation: operator ? not defined on %#v (value of type %T)", c, c)
 	}
-	x, err := t.executeExpr(e.X, data)
-	if err != nil {
-		return nil, err
-	}
-	y, err := t.executeExpr(e.Y, data)
-	if err != nil {
-		return nil, err
-	}
 	if condition {
-		return x, nil
+		return t.executeExpr(e.X, data)
 	}
-	return y, nil
+	return t.executeExpr(e.Y, data)
 }
 
 // align indents of marshaled texts

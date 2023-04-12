@@ -1036,9 +1036,18 @@ func TestTemplate_Execute_BinaryExpr(t *testing.T) {
 				str:         `{{1 ? 1 : 2}}`,
 				expectError: `failed to execute: {{1 ? 1 : 2}}: invalid operation: operator ? not defined on 1 (value of type int64)`,
 			},
-			"true ? 1 : 2 + true": {
-				str:         `{{true ? 1 : 2 + true}}`,
-				expectError: `failed to execute: {{true ? 1 : 2 + true}}: invalid operation: 2 + true: mismatched types int64 and bool`,
+			`defined(v) ? v : "default" + true`: {
+				// "default" + true should not be evaluated
+				str: `{{defined(v) ? v : "default" + true}}`,
+				data: map[string]interface{}{
+					"v": "override",
+				},
+				expect: "override",
+			},
+			`defined(v) ? v + true : "default"`: {
+				// v + true should not be evaluated
+				str:    `{{defined(v) ? v : "default"}}`,
+				expect: "default",
 			},
 		}
 		runExecute(t, tests)

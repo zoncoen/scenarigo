@@ -9,28 +9,31 @@ import (
 
 	"github.com/goccy/go-yaml"
 	"github.com/golang/mock/gomock"
-	"github.com/golang/protobuf/proto" //nolint:staticcheck
 	"github.com/google/go-cmp/cmp"
 	"github.com/zoncoen/scenarigo/context"
 	"github.com/zoncoen/scenarigo/internal/mockutil"
 	"github.com/zoncoen/scenarigo/internal/testutil"
 	"github.com/zoncoen/scenarigo/reporter"
-	"github.com/zoncoen/scenarigo/testdata/gen/pb/test"
+	testpb "github.com/zoncoen/scenarigo/testdata/gen/pb/test"
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
+	spb "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/testing/protocmp"
+	"google.golang.org/protobuf/types/known/anypb"
 )
 
 func TestRequest_Invoke(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		t.Run("Echo returns no error", func(t *testing.T) {
-			req := &test.EchoRequest{MessageId: "1", MessageBody: "hello"}
-			resp := &test.EchoResponse{MessageId: "1", MessageBody: "hello"}
+			req := &testpb.EchoRequest{MessageId: "1", MessageBody: "hello"}
+			resp := &testpb.EchoResponse{MessageId: "1", MessageBody: "hello"}
 
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			client := test.NewMockTestClient(ctrl)
+			client := testpb.NewMockTestClient(ctrl)
 			client.EXPECT().Echo(gomock.Any(), mockutil.ProtoMessage(req), gomock.Any()).Return(resp, nil)
 
 			r := &Request{
@@ -72,11 +75,11 @@ func TestRequest_Invoke(t *testing.T) {
 			}
 		})
 		t.Run("Echo returns error", func(t *testing.T) {
-			req := &test.EchoRequest{MessageId: "1", MessageBody: "hello"}
+			req := &testpb.EchoRequest{MessageId: "1", MessageBody: "hello"}
 
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			client := test.NewMockTestClient(ctrl)
+			client := testpb.NewMockTestClient(ctrl)
 			client.EXPECT().Echo(gomock.Any(), mockutil.ProtoMessage(req), gomock.Any()).Return(nil, status.New(codes.Unauthenticated, "unauthenticated").Err())
 
 			r := &Request{
@@ -138,7 +141,7 @@ func TestRequest_Invoke(t *testing.T) {
 			},
 			"method not found": {
 				vars: map[string]interface{}{
-					"client": test.NewTestClient(nil),
+					"client": testpb.NewTestClient(nil),
 				},
 				client:      "{{vars.client}}",
 				method:      "NotFound",
@@ -146,7 +149,7 @@ func TestRequest_Invoke(t *testing.T) {
 			},
 			"invalid metadata": {
 				vars: map[string]interface{}{
-					"client": test.NewTestClient(nil),
+					"client": testpb.NewTestClient(nil),
 				},
 				method:   "Echo",
 				client:   "{{vars.client}}",
@@ -180,39 +183,15 @@ func TestRequest_Invoke(t *testing.T) {
 }
 
 func TestRequest_Invoke_Log(t *testing.T) {
-	req := &test.EchoRequest{MessageId: "1", MessageBody: "hello"}
-	resp := &test.EchoResponse{MessageId: "1", MessageBody: "hello"}
+	req := &testpb.EchoRequest{MessageId: "1", MessageBody: "hello"}
+	resp := &testpb.EchoResponse{MessageId: "1", MessageBody: "hello"}
 
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-	client := test.NewMockTestClient(ctrl)
-	client.EXPECT().Echo(gomock.Any(), mockutil.ProtoMessage(req), gomock.Any()).Return(resp, nil)
-
-	r := &Request{
-		Client: "{{vars.client}}",
-		Method: "Echo",
-		Metadata: map[string]string{
-			"version": "1.0.0",
-		},
-		Message: yaml.MapSlice{
-			yaml.MapItem{Key: "messageId", Value: "1"},
-			yaml.MapItem{Key: "messageBody", Value: "hello"},
-		},
-	}
-
-	var b bytes.Buffer
-	reporter.Run(func(rptr reporter.Reporter) {
-		rptr.Run("test.yaml", func(rptr reporter.Reporter) {
-			ctx := context.New(rptr).WithVars(map[string]interface{}{
-				"client": client,
-			})
-			if _, _, err := r.Invoke(ctx); err != nil {
-				t.Fatalf("unexpected error: %s", err)
-			}
-		})
-	}, reporter.WithWriter(&b), reporter.WithVerboseLog())
-
-	expect := strings.TrimPrefix(`
+	tests := map[string]struct {
+		err    error
+		expect string
+	}{
+		"success": {
+			expect: `
 === RUN   test.yaml
 --- PASS: test.yaml (0.00s)
         request:
@@ -224,20 +203,105 @@ func TestRequest_Invoke_Log(t *testing.T) {
             messageId: "1"
             messageBody: hello
         response:
+          status:
+            code: OK
           message:
             messageId: "1"
             messageBody: hello
 PASS
 ok  	test.yaml	0.000s
-`, "\n")
-	if diff := cmp.Diff(expect, testutil.ResetDuration(b.String())); diff != "" {
-		t.Errorf("differs (-want +got):\n%s", diff)
+`,
+		},
+		"failure": {
+			err: status.FromProto(&spb.Status{
+				Code:    int32(codes.InvalidArgument),
+				Message: "invalid argument",
+				Details: []*anypb.Any{
+					mustAny(t,
+						&errdetails.LocalizedMessage{
+							Locale:  "ja-JP",
+							Message: "エラー",
+						},
+					),
+					mustAny(t,
+						&errdetails.DebugInfo{
+							Detail: "debug",
+						},
+					),
+				},
+			}).Err(),
+			expect: `
+=== RUN   test.yaml
+--- PASS: test.yaml (0.00s)
+        request:
+          method: Echo
+          metadata:
+            version:
+            - 1.0.0
+          message:
+            messageId: "1"
+            messageBody: hello
+        response:
+          status:
+            code: InvalidArgument
+            message: invalid argument
+            details:
+              google.rpc.LocalizedMessage:
+                locale: ja-JP
+                message: エラー
+              google.rpc.DebugInfo:
+                detail: debug
+          message:
+            messageId: "1"
+            messageBody: hello
+PASS
+ok  	test.yaml	0.000s
+`,
+		},
+	}
+	for name, test := range tests {
+		test := test
+		t.Run(name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			client := testpb.NewMockTestClient(ctrl)
+			client.EXPECT().Echo(gomock.Any(), mockutil.ProtoMessage(req), gomock.Any()).Return(resp, test.err)
+
+			r := &Request{
+				Client: "{{vars.client}}",
+				Method: "Echo",
+				Metadata: map[string]string{
+					"version": "1.0.0",
+				},
+				Message: yaml.MapSlice{
+					yaml.MapItem{Key: "messageId", Value: "1"},
+					yaml.MapItem{Key: "messageBody", Value: "hello"},
+				},
+			}
+
+			var b bytes.Buffer
+			reporter.Run(func(rptr reporter.Reporter) {
+				rptr.Run("test.yaml", func(rptr reporter.Reporter) {
+					ctx := context.New(rptr).WithVars(map[string]interface{}{
+						"client": client,
+					})
+					if _, _, err := r.Invoke(ctx); err != nil {
+						t.Fatalf("unexpected error: %s", err)
+					}
+				})
+			}, reporter.WithWriter(&b), reporter.WithVerboseLog())
+
+			expect := strings.TrimPrefix(test.expect, "\n")
+			if diff := cmp.Diff(expect, testutil.ResetDuration(b.String())); diff != "" {
+				t.Errorf("differs (-want +got):\n%s", diff)
+			}
+		})
 	}
 }
 
 func TestValidateMethod(t *testing.T) {
 	t.Run("valid", func(t *testing.T) {
-		method := reflect.ValueOf(test.NewTestClient(nil)).MethodByName("Echo")
+		method := reflect.ValueOf(testpb.NewTestClient(nil)).MethodByName("Echo")
 		if err := validateMethod(method); err != nil {
 			t.Fatalf("unexpected error: %s", err)
 		}
@@ -305,11 +369,11 @@ func TestBuildRequestBody(t *testing.T) {
 	tests := map[string]struct {
 		vars   interface{}
 		src    interface{}
-		expect *test.EchoRequest
+		expect *testpb.EchoRequest
 		error  bool
 	}{
 		"empty": {
-			expect: &test.EchoRequest{},
+			expect: &testpb.EchoRequest{},
 		},
 		"set fields": {
 			src: yaml.MapSlice{
@@ -322,7 +386,7 @@ func TestBuildRequestBody(t *testing.T) {
 					Value: "hello",
 				},
 			},
-			expect: &test.EchoRequest{
+			expect: &testpb.EchoRequest{
 				MessageId:   "1",
 				MessageBody: "hello",
 			},
@@ -337,7 +401,7 @@ func TestBuildRequestBody(t *testing.T) {
 					Value: "{{vars.body}}",
 				},
 			},
-			expect: &test.EchoRequest{
+			expect: &testpb.EchoRequest{
 				MessageBody: "hello",
 			},
 		},
@@ -357,7 +421,7 @@ func TestBuildRequestBody(t *testing.T) {
 			if tc.vars != nil {
 				ctx = ctx.WithVars(tc.vars)
 			}
-			var req test.EchoRequest
+			var req testpb.EchoRequest
 			err := buildRequestMsg(ctx, &req, tc.src)
 			if err != nil {
 				if !tc.error {

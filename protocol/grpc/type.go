@@ -4,8 +4,8 @@ import (
 	"context"
 	"reflect"
 
-	"github.com/golang/protobuf/proto" //nolint:staticcheck
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/proto"
 )
 
 var (

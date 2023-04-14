@@ -7,11 +7,12 @@ import (
 	"strings"
 
 	"github.com/goccy/go-yaml"
-	"github.com/golang/protobuf/jsonpb" //nolint:staticcheck
-	"github.com/golang/protobuf/proto"  //nolint:staticcheck
-
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/zoncoen/scenarigo/context"
 	"github.com/zoncoen/scenarigo/errors"
@@ -30,10 +31,17 @@ type Request struct {
 }
 
 type response struct {
+	Status  responseStatus  `yaml:"status,omitempty"`
 	Header  metadata.MD     `yaml:"header,omitempty"`
 	Trailer metadata.MD     `yaml:"trailer,omitempty"`
 	Message interface{}     `yaml:"message,omitempty"`
 	rvalues []reflect.Value `yaml:"-"`
+}
+
+type responseStatus struct {
+	Code    string        `yaml:"code,omitempty"`
+	Message string        `yaml:"message,omitempty"`
+	Details yaml.MapSlice `yaml:"details,omitempty"`
 }
 
 const (
@@ -185,11 +193,46 @@ func invoke(ctx *context.Context, method reflect.Value, r *Request) (*context.Co
 
 	rvalues := method.Call(in)
 	message := rvalues[0].Interface()
+	var err error
+	if rvalues[1].IsValid() && rvalues[1].CanInterface() {
+		e, ok := rvalues[1].Interface().(error)
+		if ok {
+			err = e
+		}
+	}
 	resp := response{
+		Status: responseStatus{
+			Code:    codes.OK.String(),
+			Message: "",
+			Details: nil,
+		},
 		Header:  header,
 		Trailer: trailer,
 		Message: message,
 		rvalues: rvalues,
+	}
+	if err != nil {
+		if sts, ok := status.FromError(err); ok {
+			resp.Status.Code = sts.Code().String()
+			resp.Status.Message = sts.Message()
+			details := sts.Details()
+			if l := len(details); l > 0 {
+				m := make(yaml.MapSlice, l)
+				for i, d := range details {
+					item := yaml.MapItem{
+						Key:   "",
+						Value: d,
+					}
+					if msg, ok := d.(proto.Message); ok {
+						item.Key = string(proto.MessageName(msg))
+					} else {
+						item.Key = fmt.Sprintf("%T (not proto.Message)", d)
+					}
+					m[i] = item
+				}
+				resp.Status.Details = m
+			}
+		}
 	}
 	ctx = ctx.WithResponse(message)
 	if b, err := yaml.Marshal(resp); err == nil {
@@ -206,14 +249,16 @@ func buildRequestMsg(ctx *context.Context, req interface{}, src interface{}) err
 	if err != nil {
 		return err
 	}
+	if x == nil {
+		return nil
+	}
 	var buf bytes.Buffer
 	if err := yaml.NewEncoder(&buf, yaml.JSON()).Encode(x); err != nil {
 		return err
 	}
 	message, ok := req.(proto.Message)
 	if ok {
-		r := bytes.NewReader(buf.Bytes())
-		if err := jsonpb.Unmarshal(r, message); err != nil {
+		if err := protojson.Unmarshal(buf.Bytes(), message); err != nil {
 			return err
 		}
 	}

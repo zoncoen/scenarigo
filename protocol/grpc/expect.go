@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
-	"strings"
 
 	"github.com/goccy/go-yaml"
-	"github.com/golang/protobuf/proto" //nolint:staticcheck
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protoreflect"
 
 	// Register proto messages to unmarshal com.google.protobuf.Any.
 	_ "google.golang.org/genproto/googleapis/rpc/errdetails"
@@ -128,14 +128,26 @@ func (e *Expect) buildStatusDetailAssertions(ctx *context.Context) ([]assert.Ass
 				if err != nil {
 					return nil, errors.WrapPath(err, fmt.Sprintf("status.details[%d].'%s'", i, k), "failed to execute template")
 				}
-				fullName := assert.Build(executed)
+				var fullName assert.Assertion
+				if s, ok := executed.(string); ok {
+					fullName = assert.Build(protoreflect.FullName(s))
+				} else {
+					fullName = assert.Build(executed)
+				}
 				executed, err = ctx.ExecuteTemplate(v)
 				if err != nil {
 					return nil, errors.WrapPath(err, fmt.Sprintf("status.details[%d].'%s'", i, k), "failed to execute template")
 				}
 				fields := assert.Build(executed)
 				statusDetailAssertions[i] = assert.AssertionFunc(func(v interface{}) error {
-					if err := fullName.Assert(proto.MessageV2(v).ProtoReflect().Descriptor().FullName()); err != nil {
+					m, ok := v.(proto.Message)
+					if !ok {
+						return fmt.Errorf("expect proto.Message but got %T", v)
+					}
+					if m == nil {
+						return errors.New("got nil proto.Message")
+					}
+					if err := fullName.Assert(proto.MessageName(m)); err != nil {
 						return err
 					}
 					if err := fields.Assert(v); err != nil {
@@ -155,16 +167,7 @@ func assertStatusCode(assertion assert.Assertion, sts *status.Status) error {
 	if err == nil {
 		return nil
 	}
-	err = assertion.Assert(strconv.Itoa(int(sts.Code())))
-	if err == nil {
-		return nil
-	}
-	return errors.Errorf(
-		`%s: message="%s"%s`,
-		err,
-		sts.Message(),
-		appendDetailsString(sts),
-	)
+	return assertion.Assert(strconv.Itoa(int(sts.Code())))
 }
 
 func (e *Expect) assertStatusMessage(assertion assert.Assertion, sts *status.Status) error {
@@ -175,11 +178,7 @@ func (e *Expect) assertStatusMessage(assertion assert.Assertion, sts *status.Sta
 	if err == nil {
 		return nil
 	}
-	return errors.Errorf(
-		`%s%s`,
-		err,
-		appendDetailsString(sts),
-	)
+	return err
 }
 
 func (e *Expect) assertStatusDetails(assertions []assert.Assertion, sts *status.Status) error {
@@ -191,39 +190,15 @@ func (e *Expect) assertStatusDetails(assertions []assert.Assertion, sts *status.
 
 	for i, assertion := range assertions {
 		if i >= len(actualDetails) {
-			return errors.ErrorPathf(fmt.Sprintf("details[%d]", i), `not found%s`, appendDetailsString(sts))
+			return errors.ErrorPath(fmt.Sprintf("details[%d]", i), `not found`)
 		}
 
 		if err := assertion.Assert(actualDetails[i]); err != nil {
-			return errors.WrapPath(err, fmt.Sprintf("details[%d]", i), appendDetailsString(sts))
+			return errors.WithPath(err, fmt.Sprintf("details[%d]", i))
 		}
 	}
 
 	return nil
-}
-
-func appendDetailsString(sts *status.Status) string {
-	format := "%s: {%s}"
-	var details []string
-
-	for _, i := range sts.Details() {
-		if pb, ok := i.(proto.Message); ok {
-			details = append(details, fmt.Sprintf(format, proto.MessageV2(pb).ProtoReflect().Descriptor().FullName(), pb.String()))
-			continue
-		}
-
-		if e, ok := i.(interface{ Error() string }); ok {
-			details = append(details, fmt.Sprintf(format, "<non proto message>", e.Error()))
-			continue
-		}
-
-		details = append(details, fmt.Sprintf(format, "<non proto message>", fmt.Sprintf("{%#v}", i)))
-	}
-
-	if len(details) == 0 {
-		return ""
-	}
-	return fmt.Sprintf(": details=[ %s ]", strings.Join(details, ", "))
 }
 
 func extract(v response) (proto.Message, *status.Status, error) {

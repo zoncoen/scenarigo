@@ -6,11 +6,13 @@ import (
 	"testing"
 
 	"github.com/goccy/go-yaml"
-	"github.com/golang/protobuf/proto" //nolint:staticcheck
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
+	spb "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/anypb"
 
 	"github.com/zoncoen/scenarigo/context"
 	"github.com/zoncoen/scenarigo/internal/reflectutil"
@@ -162,16 +164,23 @@ func TestExpect_Build(t *testing.T) {
 				v: response{
 					rvalues: []reflect.Value{
 						reflect.Zero(reflect.TypeOf(&test.EchoResponse{})),
-						reflect.ValueOf(mustWithDetails(
-							status.New(codes.InvalidArgument, "invalid argument"),
-							&errdetails.LocalizedMessage{
-								Locale:  "ja-JP",
-								Message: "エラー",
+						reflect.ValueOf(status.FromProto(&spb.Status{
+							Code:    int32(codes.InvalidArgument),
+							Message: "invalid argument",
+							Details: []*anypb.Any{
+								mustAny(t,
+									&errdetails.LocalizedMessage{
+										Locale:  "ja-JP",
+										Message: "エラー",
+									},
+								),
+								mustAny(t,
+									&errdetails.DebugInfo{
+										Detail: "debug",
+									},
+								),
 							},
-							&errdetails.DebugInfo{
-								Detail: "debug",
-							},
-						).Err()),
+						}).Err()),
 					},
 				},
 			},
@@ -185,9 +194,8 @@ func TestExpect_Build(t *testing.T) {
 				v: response{
 					rvalues: []reflect.Value{
 						reflect.Zero(reflect.TypeOf(&test.EchoResponse{})),
-						reflect.ValueOf(mustWithDetails(
-							status.New(codes.InvalidArgument, "invalid argument"),
-						).Err()),
+						reflect.ValueOf(
+							status.New(codes.InvalidArgument, "invalid argument").Err()),
 					},
 				},
 			},
@@ -240,6 +248,7 @@ func TestExpect_Build(t *testing.T) {
 			v                 response
 			expectBuildError  bool
 			expectAssertError bool
+			expectError       string
 		}{
 			"failed to execute template": {
 				expect: &Expect{
@@ -505,7 +514,9 @@ func TestExpect_Build(t *testing.T) {
 				},
 				expectAssertError: true,
 			},
-			"wrong status details: name is an invalid template": {
+
+			// status details
+			"wrong status details: type name is an invalid template": {
 				expect: &Expect{
 					Status: ExpectStatus{
 						Details: []map[string]yaml.MapSlice{
@@ -523,23 +534,31 @@ func TestExpect_Build(t *testing.T) {
 				v: response{
 					rvalues: []reflect.Value{
 						reflect.Zero(reflect.TypeOf(&test.EchoResponse{})),
-						reflect.ValueOf(mustWithDetails(
-							status.New(codes.InvalidArgument, "invalid argument"),
-							&errdetails.LocalizedMessage{
-								Locale:  "ja-JP",
-								Message: "エラー",
+						reflect.ValueOf(status.FromProto(&spb.Status{
+							Code:    int32(codes.InvalidArgument),
+							Message: "invalid argument",
+							Details: []*anypb.Any{
+								mustAny(t,
+									&errdetails.LocalizedMessage{
+										Locale:  "ja-JP",
+										Message: "エラー",
+									},
+								),
+								mustAny(t,
+									&errdetails.DebugInfo{
+										Detail: "debug",
+									},
+								),
 							},
-							&errdetails.DebugInfo{
-								Detail: "debug",
-							},
-						).Err()),
+						}).Err()),
 					},
 				},
 				expectBuildError: true,
 			},
-			"wrong status details: name is wrong": {
+			"wrong status details: type name is wrong": {
 				expect: &Expect{
 					Status: ExpectStatus{
+						Code: "InvalidArgument",
 						Details: []map[string]yaml.MapSlice{
 							{
 								"google.rpc.Invalid": yaml.MapSlice{
@@ -555,23 +574,32 @@ func TestExpect_Build(t *testing.T) {
 				v: response{
 					rvalues: []reflect.Value{
 						reflect.Zero(reflect.TypeOf(&test.EchoResponse{})),
-						reflect.ValueOf(mustWithDetails(
-							status.New(codes.InvalidArgument, "invalid argument"),
-							&errdetails.LocalizedMessage{
-								Locale:  "ja-JP",
-								Message: "エラー",
+						reflect.ValueOf(status.FromProto(&spb.Status{
+							Code:    int32(codes.InvalidArgument),
+							Message: "invalid argument",
+							Details: []*anypb.Any{
+								mustAny(t,
+									&errdetails.LocalizedMessage{
+										Locale:  "ja-JP",
+										Message: "エラー",
+									},
+								),
+								mustAny(t,
+									&errdetails.DebugInfo{
+										Detail: "debug",
+									},
+								),
 							},
-							&errdetails.DebugInfo{
-								Detail: "debug",
-							},
-						).Err()),
+						}).Err()),
 					},
 				},
 				expectAssertError: true,
+				expectError:       `.status.details[0]: expected google.rpc.Invalid but got google.rpc.LocalizedMessage`,
 			},
-			"wrong status details: value is an invalid template": {
+			"wrong status details: key is an invalid template": {
 				expect: &Expect{
 					Status: ExpectStatus{
+						Code: "InvalidArgument",
 						Details: []map[string]yaml.MapSlice{
 							{
 								"google.rpc.LocalizedMessage": yaml.MapSlice{
@@ -587,29 +615,38 @@ func TestExpect_Build(t *testing.T) {
 				v: response{
 					rvalues: []reflect.Value{
 						reflect.Zero(reflect.TypeOf(&test.EchoResponse{})),
-						reflect.ValueOf(mustWithDetails(
-							status.New(codes.InvalidArgument, "invalid argument"),
-							&errdetails.LocalizedMessage{
-								Locale:  "ja-JP",
-								Message: "エラー",
+						reflect.ValueOf(status.FromProto(&spb.Status{
+							Code:    int32(codes.InvalidArgument),
+							Message: "invalid argument",
+							Details: []*anypb.Any{
+								mustAny(t,
+									&errdetails.LocalizedMessage{
+										Locale:  "ja-JP",
+										Message: "エラー",
+									},
+								),
+								mustAny(t,
+									&errdetails.DebugInfo{
+										Detail: "debug",
+									},
+								),
 							},
-							&errdetails.DebugInfo{
-								Detail: "debug",
-							},
-						).Err()),
+						}).Err()),
 					},
 				},
 				expectBuildError: true,
+				expectError:      `.status.details[0].'google.rpc.LocalizedMessage'.{{locale: failed to execute template: failed to parse "{{locale": col 9: expected '}}', found 'EOF'`,
 			},
-			"wrong status details: value is wrong": {
+			"wrong status details: key not found": {
 				expect: &Expect{
 					Status: ExpectStatus{
+						Code: "InvalidArgument",
 						Details: []map[string]yaml.MapSlice{
 							{
-								"google.rpc.DebugInfo": yaml.MapSlice{
+								"google.rpc.LocalizedMessage": yaml.MapSlice{
 									yaml.MapItem{
-										Key:   "detail",
-										Value: "unknown",
+										Key:   "Loc",
+										Value: "ja-JP",
 									},
 								},
 							},
@@ -619,19 +656,68 @@ func TestExpect_Build(t *testing.T) {
 				v: response{
 					rvalues: []reflect.Value{
 						reflect.Zero(reflect.TypeOf(&test.EchoResponse{})),
-						reflect.ValueOf(mustWithDetails(
-							status.New(codes.InvalidArgument, "invalid argument"),
-							&errdetails.LocalizedMessage{
-								Locale:  "ja-JP",
-								Message: "エラー",
+						reflect.ValueOf(status.FromProto(&spb.Status{
+							Code:    int32(codes.InvalidArgument),
+							Message: "invalid argument",
+							Details: []*anypb.Any{
+								mustAny(t,
+									&errdetails.LocalizedMessage{
+										Locale:  "ja-JP",
+										Message: "エラー",
+									},
+								),
+								mustAny(t,
+									&errdetails.DebugInfo{
+										Detail: "debug",
+									},
+								),
 							},
-							&errdetails.DebugInfo{
-								Detail: "debug",
-							},
-						).Err()),
+						}).Err()),
 					},
 				},
 				expectAssertError: true,
+				expectError:       `.status.details[0].'google.rpc.LocalizedMessage': ".Loc" not found`,
+			},
+			"wrong status details: value is wrong": {
+				expect: &Expect{
+					Status: ExpectStatus{
+						Code: "InvalidArgument",
+						Details: []map[string]yaml.MapSlice{
+							{
+								"google.rpc.LocalizedMessage": yaml.MapSlice{
+									yaml.MapItem{
+										Key:   "Locale",
+										Value: "en-US",
+									},
+								},
+							},
+						},
+					},
+				},
+				v: response{
+					rvalues: []reflect.Value{
+						reflect.Zero(reflect.TypeOf(&test.EchoResponse{})),
+						reflect.ValueOf(status.FromProto(&spb.Status{
+							Code:    int32(codes.InvalidArgument),
+							Message: "invalid argument",
+							Details: []*anypb.Any{
+								mustAny(t,
+									&errdetails.LocalizedMessage{
+										Locale:  "ja-JP",
+										Message: "エラー",
+									},
+								),
+								mustAny(t,
+									&errdetails.DebugInfo{
+										Detail: "debug",
+									},
+								),
+							},
+						}).Err()),
+					},
+				},
+				expectAssertError: true,
+				expectError:       `.status.details[0].'google.rpc.LocalizedMessage'.Locale: expected en-US but got ja-JP`,
 			},
 		}
 		for name, test := range tests {
@@ -639,8 +725,15 @@ func TestExpect_Build(t *testing.T) {
 			t.Run(name, func(t *testing.T) {
 				ctx := context.FromT(t)
 				assertion, err := test.expect.Build(ctx)
-				if test.expectBuildError && err == nil {
-					t.Fatal("succeeded building assertion")
+				if test.expectBuildError {
+					if err == nil {
+						t.Fatal("succeeded building assertion")
+					}
+					if test.expectError != "" {
+						if got, expect := err.Error(), test.expectError; got != expect {
+							t.Fatalf("expect %q but got %q", expect, got)
+						}
+					}
 				}
 				if !test.expectBuildError && err != nil {
 					t.Fatalf("failed to build assertion: %s", err)
@@ -650,11 +743,18 @@ func TestExpect_Build(t *testing.T) {
 				}
 
 				err = assertion.Assert(test.v)
-				if test.expectAssertError && err == nil {
-					t.Errorf("no assertion error")
+				if test.expectAssertError {
+					if err == nil {
+						t.Fatal("no assertion error")
+					}
+					if test.expectError != "" {
+						if got, expect := err.Error(), test.expectError; got != expect {
+							t.Fatalf("\nexpect: %s\ngot:    %s", expect, got)
+						}
+					}
 				}
 				if !test.expectAssertError && err != nil {
-					t.Errorf("got assertion error: %s", err)
+					t.Fatalf("got assertion error: %s", err)
 				}
 			})
 		}
@@ -691,10 +791,11 @@ func TestExpect_Build(t *testing.T) {
 	})
 }
 
-func mustWithDetails(s *status.Status, details ...proto.Message) *status.Status {
-	ss, err := s.WithDetails(details...)
+func mustAny(t *testing.T, m proto.Message) *anypb.Any {
+	t.Helper()
+	a, err := anypb.New(m)
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
-	return ss
+	return a
 }

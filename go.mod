@@ -3,7 +3,7 @@ module github.com/zoncoen/scenarigo
 go 1.19
 
 require (
-	github.com/cenkalti/backoff/v4 v4.2.0
+	github.com/cenkalti/backoff/v4 v4.2.1
 	github.com/fatih/color v1.15.0
 	github.com/goccy/go-yaml v1.11.0
 	github.com/golang/mock v1.6.0

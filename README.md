@@ -1,5 +1,7 @@
 <a href="https://github.com/zoncoen/scenarigo">
-  <img alt="Scenarigo" src="https://user-images.githubusercontent.com/2238852/205980597-37eaaf03-fd35-4a04-93c4-884c95f48df3.png" width="485px">
+  <p align="center">
+    <img alt="Scenarigo" src="https://user-images.githubusercontent.com/2238852/205980597-37eaaf03-fd35-4a04-93c4-884c95f48df3.png" width="485px">
+  </p>
 </a>
 
 A scenario-based API testing tool for HTTP/gRPC server.
@@ -236,6 +238,67 @@ steps:
       message: hello
 ```
 
+### Variables
+
+The `vars` field defines variables that can be referred by [template string](#template-string) like `'{{vars.id}}'`.
+
+```yaml
+title: get message 1
+vars:
+  id: 1
+steps:
+- title: GET /messages
+  protocol: http
+  request:
+    method: GET
+    url: 'http://example.com/messages/{{vars.id}}'
+```
+
+You can define `step` scope variables that can't be accessed from other steps.
+
+```yaml
+title: get message 1
+steps:
+- title: GET /messages
+  vars:
+    id: 1
+  protocol: http
+  request:
+    method: GET
+    url: 'http://example.com/messages/{{vars.id}}'
+```
+
+If you want to pass the response data to the subsequent steps, use the `bind` field.
+
+```yaml
+title: re-post message 1
+vars:
+  id: 1
+steps:
+- title: GET /messages
+  protocol: http
+  request:
+    method: GET
+    url: 'http://example.com/messages/{{vars.id}}'
+  bind:
+    vars:
+      msg: '{{response.text}}'
+- title: POST /messages
+  protocol: http
+  request:
+    method: POST
+    url: http://example.com/messages
+    header:
+      Content-Type: application/json
+    body:
+      text: '{{vars.msg}}'
+  expect:
+    code: OK
+    body:
+      id: '{{assert.notZero}}'
+      text: '{{request.text}}'
+```
+
 ### Timeout/Retry
 
 You can set timeout and retry policy for each step.
@@ -302,40 +365,402 @@ Note: `maxInterval` caps the retry interval, not the randomized interval.
 |9|180s|[90s, 270s]|
 |10|180s|[90s, 270s]|
 
-### Template string
+## Template String
 
-Scenarigo provides the original template string feature. It enables to store and reuse values in test scenarios.
-The `vars` field defines variables that can be referred by template string like `'{{vars.id}}'`.
+Scenarigo provides the original template string feature which is evaluated at runtime. You can use expressions with a pair of double braces `{{}}` in YAML strings. All expression return an arbitrary value.
+
+For instance, `'{{1}}'` is evaluated as an integer `1` at runtime.
 
 ```yaml
-title: check /message
 vars:
-  id: 1
-steps:
-- title: GET /message
-  protocol: http
-  request:
-    method: GET
-    url: http://example.com/message
-    query:
-      id: '{{vars.id}}'
+  id: '{{1}}' # id: 1
 ```
 
-You can define "step" scope variables that can't be accessed from other steps.
+You can mix the templates into a raw string if all expressions' results are a string.
 
 ```yaml
-title: check /message
-steps:
-- title: GET /message
-  vars:
-  - 1
-  protocol: http
-  request:
-    method: GET
-    url: http://example.com/message
-    query:
-      id: '{{vars[0]}}'
+vars:
+  text: 'foo-{{"bar"}}-baz' # text: 'foo-bar-baz'
 ```
+
+### Syntax
+
+The grammar of the template is defined below, using `|` for alternatives, `[]` for optional, `{}` for repeated, `()` for grouping, and `...` for character range.
+
+```
+ParameterExpr   = "{{" Expr "}}"
+Expr            = UnaryExpr | BinaryExpr | ConditionalExpr
+UnaryExpr       = [UnaryOp] (
+                    ParenExpr | SelectorExpr | IndexExpr | CallExpr |
+                    INT | FLOAT | BOOL | STRING | IDENT
+                  )
+UnaryOp         = "!" | "-"
+ParenExpr       = "(" Expr ")"
+SelectorExpr    = Expr "." IDENT
+IndexExpr       = Expr "[" INT "]"
+CallExpr        = Expr "(" [Expr {"," Expr}] ")"
+BinaryExpr      = Expr BinaryOp Expr
+BinaryOp        = "+" | "-" | "*" | "/" | "%" |
+                  "&&" | "||" |
+                  "==" | "!=" | "<" | "<=" | ">" | ">=" 
+ConditionalExpr = Expr ? Expr : Expr
+```
+
+The lexis is defined below.
+
+```
+INT           = "0" | ("1"..."9" {DECIMAL_DIGIT})
+FLOAT         = INT "." DECIMAL_DIGIT {DECIMAL_DIGIT}
+BOOL          = "true" | "false"
+STRING        = `"` {UNICODE_VALUE} `"`
+IDENT         = LETTER {LETTER | DECIMAL_DIGIT | "-" | "_"} - RESERVED
+
+DECIMAL_DIGIT = "0"..."9"
+UNICODE_VALUE = UNICODE_CHAR | ESCAPED_CHAR
+UNICODE_CHAR  = /* an arbitrary UTF-8 encoded char */
+ESCAPED_CHAR  = "\" `"`
+LETTER        = "a"..."Z"
+RESERVED      = BOOL | "defined"
+```
+
+### Types
+
+The template feature has abstract types for operations.
+
+|Template Type|Description|Go Type|
+|---|---|---|
+|int|64-bit signed integers|int, int8, int16, int32, int64|
+|uint|64-bit unsigned integers|uint, uint8, uint16, uint32, uint64|
+|float|IEEE-754 64-bit floating-point numbers|float32, float64|
+|bool|booleans|bool|
+|string|UTF-8 strings|string|
+|bytes|byte sequence|[]byte|
+|any|other all Go types|any|
+
+#### Type Conversions
+
+The template feature provides functions to convert types.
+
+<table>
+  <thead>
+    <tr>
+      <th>Function</th>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td align="center" rowspan=4>int</td>
+      <td>(*int) -> int</td>
+      <td>type conversion (returns an error if arg is nil)</td>
+    </tr>
+    <tr>
+      <td>(uint) -> int</td>
+      <td>type conversion (returns an error if result is out of range)</td>
+    </tr>
+    <tr>
+      <td>(float) -> int</td>
+      <td>type conversion (rounds toward zero, returns an error if result is out of range)</td>
+    </tr>
+    <tr>
+      <td>(string) -> int</td>
+      <td>type conversion (returns an error if arg in invalid int string)</td>
+    </tr>
+    <tr>
+      <td align="center" rowspan=4>uint</td>
+      <td>(int) -> uint</td>
+      <td>type conversion (returns an error if result is out of range)</td>
+    </tr>
+    <tr>
+      <td>(*uint) -> uint</td>
+      <td>type conversion (returns an error if arg is nil)</td>
+    </tr>
+    <tr>
+      <td>(float) -> uint</td>
+      <td>type conversion (rounds toward zero, returns an error if result is out of range)</td>
+    </tr>
+    <tr>
+      <td>(string) -> uint</td>
+      <td>type conversion (returns an error if arg in invalid uint string)</td>
+    </tr>
+    <tr>
+      <td align="center" rowspan=4>float</td>
+      <td>(int) -> float</td>
+      <td>type conversion</td>
+    </tr>
+    <tr>
+      <td>(uint) -> float</td>
+      <td>type conversion</td>
+    </tr>
+    <tr>
+      <td>(*float) -> float</td>
+      <td>type conversion (returns an error if arg is nil)</td>
+    </tr>
+    <tr>
+      <td>(string) -> float</td>
+      <td>type conversion (returns an error if arg in invalid float string)</td>
+    </tr>
+    <tr>
+      <td align="center">bool</td>
+      <td>(*bool) -> bool</td>
+      <td>type conversion (returns an error if arg is nil)</td>
+    </tr>
+    <tr>
+      <td align="center" rowspan=5>string</td>
+      <td>(int) -> string</td>
+      <td>type conversion</td>
+    </tr>
+    <tr>
+      <td>(uint) -> string</td>
+      <td>type conversion</td>
+    </tr>
+    <tr>
+      <td>(float) -> string</td>
+      <td>type conversion</td>
+    </tr>
+    <tr>
+      <td>(*string) -> string</td>
+      <td>type conversion (returns an error if arg is nil)</td>
+    </tr>
+    <tr>
+      <td>(bytes) -> string</td>
+      <td>type conversion (returns an error if arg contains invalid UTF-8 encoded characters)</td>
+    </tr>
+    <tr>
+      <td align="center" rowspan=2>bytes</td>
+      <td>(string) -> bytes</td>
+      <td>type conversion</td>
+    </tr>
+    <tr>
+      <td>(*bytes) -> bytes</td>
+      <td>type conversion (returns an error if arg is nil)</td>
+    </tr>
+  </tbody>
+</table>
+
+### Operators
+
+<table>
+  <thead>
+    <tr>
+      <th>Operator</th>
+      <th>Type</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td align="center">!</td>
+      <td>(bool) -> bool</td>
+      <td>logical not</td>
+    </tr>
+    <tr>
+      <td align="center" rowspan=2>-</td>
+      <td>(int) -> int</td>
+      <td>negation</td>
+    </tr>
+    <tr>
+      <td>(float) -> float</td>
+      <td>negation</td>
+    </tr>
+    <tr>
+      <td align="center" rowspan=5>+</td>
+      <td>(int, int) -> int</td>
+      <td>arithmetic</td>
+    </tr>
+    <tr>
+      <td>(uint, uint) -> uint</td>
+      <td>arithmetic</td>
+    </tr>
+    <tr>
+      <td>(float, float) -> float</td>
+      <td>arithmetic</td>
+    </tr>
+    <tr>
+      <td>(string, string) -> string</td>
+      <td>concatenation</td>
+    </tr>
+    <tr>
+      <td>(bytes, bytes) -> bytes</td>
+      <td>concatenation</td>
+    </tr>
+    <tr>
+      <td align="center" rowspan=3>-</td>
+      <td>(int, int) -> int</td>
+      <td>arithmetic</td>
+    </tr>
+    <tr>
+      <td>(uint, uint) -> uint</td>
+      <td>arithmetic</td>
+    </tr>
+    <tr>
+      <td>(float, float) -> float</td>
+      <td>arithmetic</td>
+    </tr>
+    <tr>
+      <td align="center" rowspan=3>*</td>
+      <td>(int, int) -> int</td>
+      <td>arithmetic</td>
+    </tr>
+    <tr>
+      <td>(uint, uint) -> uint</td>
+      <td>arithmetic</td>
+    </tr>
+    <tr>
+      <td>(float, float) -> float</td>
+      <td>arithmetic</td>
+    </tr>
+    <tr>
+      <td align="center" rowspan=3>/</td>
+      <td>(int, int) -> int</td>
+      <td>arithmetic</td>
+    </tr>
+    <tr>
+      <td>(uint, uint) -> uint</td>
+      <td>arithmetic</td>
+    </tr>
+    <tr>
+      <td>(float, float) -> float</td>
+      <td>arithmetic</td>
+    </tr>
+    <tr>
+      <td align="center" rowspan=2>%</td>
+      <td>(int, int) -> int</td>
+      <td>arithmetic</td>
+    </tr>
+    <tr>
+      <td>(uint, uint) -> uint</td>
+      <td>arithmetic</td>
+    </tr>
+    <tr>
+      <td align="center">==</td>
+      <td>(A, A) -> bool</td>
+      <td>equality</td>
+    </tr>
+    <tr>
+      <td align="center">!=</td>
+      <td>(A, A) -> bool</td>
+      <td>inequality</td>
+    </tr>
+    <tr>
+      <td align="center" rowspan=5><</td>
+      <td>(int, int) -> bool</td>
+      <td>ordering</td>
+    </tr>
+    <tr>
+      <td>(uint, uint) -> bool</td>
+      <td>ordering</td>
+    </tr>
+    <tr>
+      <td>(float, float) -> bool</td>
+      <td>ordering</td>
+    </tr>
+    <tr>
+      <td>(string, string) -> bool</td>
+      <td>ordering</td>
+    </tr>
+    <tr>
+      <td>(bytes, bytes) -> bool</td>
+      <td>ordering</td>
+    </tr>
+    <tr>
+      <td align="center" rowspan=5><=</td>
+      <td>(int, int) -> bool</td>
+      <td>ordering</td>
+    </tr>
+    <tr>
+      <td>(uint, uint) -> bool</td>
+      <td>ordering</td>
+    </tr>
+    <tr>
+      <td>(float, float) -> bool</td>
+      <td>ordering</td>
+    </tr>
+    <tr>
+      <td>(string, string) -> bool</td>
+      <td>ordering</td>
+    </tr>
+    <tr>
+      <td>(bytes, bytes) -> bool</td>
+      <td>ordering</td>
+    </tr>
+    <tr>
+      <td align="center" rowspan=5>></td>
+      <td>(int, int) -> bool</td>
+      <td>ordering</td>
+    </tr>
+    <tr>
+      <td>(uint, uint) -> bool</td>
+      <td>ordering</td>
+    </tr>
+    <tr>
+      <td>(float, float) -> bool</td>
+      <td>ordering</td>
+    </tr>
+    <tr>
+      <td>(string, string) -> bool</td>
+      <td>ordering</td>
+    </tr>
+    <tr>
+      <td>(bytes, bytes) -> bool</td>
+      <td>ordering</td>
+    </tr>
+    <tr>
+      <td align="center" rowspan=5>>=</td>
+      <td>(int, int) -> bool</td>
+      <td>ordering</td>
+    </tr>
+    <tr>
+      <td>(uint, uint) -> bool</td>
+      <td>ordering</td>
+    </tr>
+    <tr>
+      <td>(float, float) -> bool</td>
+      <td>ordering</td>
+    </tr>
+    <tr>
+      <td>(string, string) -> bool</td>
+      <td>ordering</td>
+    </tr>
+    <tr>
+      <td>(bytes, bytes) -> bool</td>
+      <td>ordering</td>
+    </tr>
+    <tr>
+      <td align="center">&&</td>
+      <td>(bool, bool) -> bool</td>
+      <td>logical and</td>
+    </tr>
+    <tr>
+      <td align="center">||</td>
+      <td>(bool, bool) -> bool</td>
+      <td>logical or</td>
+    </tr>
+    <tr>
+      <td align="center">? :</td>
+      <td>(bool, A, A) -> A</td>
+      <td>ternary conditional operator</td>
+    </tr>
+  </tbody>
+</table>
+
+### Predefined Variables
+
+|variables|description|
+|---|---|
+|vars|user-defined variables|
+|plugins|loaded plugins|
+|env|environment variables|
+|request|request data|
+|response|response data|
+|assert|assert functions|
+
+### Predefined Functions
+
+|function|description|example|
+|---|---|---|
+|defined|tells whether a variable is defined or not|`defined(a) ? a : b`|
 
 ## Plugin
 

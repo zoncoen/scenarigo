@@ -2,6 +2,7 @@
 package template
 
 import (
+	"bytes"
 	"fmt"
 	"math"
 	"reflect"
@@ -249,18 +250,12 @@ func (t *Template) executeBinaryExpr(e *ast.BinaryExpr, data interface{}) (inter
 
 	switch e.Op {
 	case token.EQL:
-		if xv.Kind() == reflect.Invalid {
-			return true, nil
-		}
-		if comparable(xv) {
-			return equal(xv, yv), nil
+		if b, ok := equal(xv, yv); ok {
+			return b, nil
 		}
 	case token.NEQ:
-		if xv.Kind() == reflect.Invalid {
-			return false, nil
-		}
-		if comparable(xv) {
-			return !equal(xv, yv), nil
+		if b, ok := equal(xv, yv); ok {
+			return !b, nil
 		}
 	}
 
@@ -421,11 +416,53 @@ func (t *Template) executeBinaryExpr(e *ast.BinaryExpr, data interface{}) (inter
 				}
 			}
 		}
+	case reflect.Slice:
+		if xv.Type().Elem().Kind() == reflect.Uint8 {
+			xb, ok := xv.Interface().([]byte)
+			if ok {
+				yb, ok := yv.Interface().([]byte)
+				if ok {
+					switch e.Op {
+					case token.ADD:
+						return append(xb, yb...), nil
+					case token.LSS:
+						return bytes.Compare(xb, yb) < 0, nil
+					case token.LEQ:
+						return bytes.Compare(xb, yb) <= 0, nil
+					case token.GTR:
+						return bytes.Compare(xb, yb) > 0, nil
+					case token.GEQ:
+						return bytes.Compare(xb, yb) >= 0, nil
+					}
+				}
+			}
+		}
 	case reflect.Invalid:
 		return nil, fmt.Errorf("operator %s not defined on nil", e.Op)
 	}
 
 	return nil, fmt.Errorf("operator %s not defined on %#v (value of type %T)", e.Op, x, x)
+}
+
+func equal(x, y reflect.Value) (bool, bool) {
+	if x.Kind() == reflect.Invalid {
+		return true, true
+	}
+	if comparable(x) {
+		return reflectEqual(x, y), true
+	}
+	if x.Kind() == reflect.Slice {
+		if x.Type().Elem().Kind() == reflect.Uint8 {
+			xb, ok := x.Interface().([]byte)
+			if ok {
+				yb, ok := y.Interface().([]byte)
+				if ok {
+					return bytes.Equal(xb, yb), true
+				}
+			}
+		}
+	}
+	return false, false
 }
 
 func (t *Template) executeConditionalExpr(e *ast.ConditionalExpr, data interface{}) (interface{}, error) {

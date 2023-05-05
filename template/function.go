@@ -5,6 +5,7 @@ import (
 	"math"
 	"reflect"
 	"strconv"
+	"unicode/utf8"
 
 	"github.com/zoncoen/scenarigo/internal/reflectutil"
 )
@@ -24,6 +25,7 @@ var defaultFuncs = map[string]interface{}{
 	"float":  convertToFloat,
 	"bool":   convertToBool,
 	"string": convertToString,
+	"bytes":  convertToBytes,
 }
 
 func convertToInt(in interface{}) (int64, error) {
@@ -190,10 +192,41 @@ func convertToString(in interface{}) (string, error) {
 		if ok {
 			return s, nil
 		}
+	case reflect.Slice:
+		if v.Type().Elem().Kind() == reflect.Uint8 {
+			if b, ok := v.Interface().([]byte); ok {
+				if !utf8.Valid(b) {
+					return "", fmt.Errorf("can't convert bytes to string: invalid UTF-8 encoded characters in bytes")
+				}
+				return string(b), nil
+			}
+		}
 	case reflect.Invalid:
 		return "", fmt.Errorf("can't convert %#v to string", in)
 	default:
 		return "", fmt.Errorf("can't convert %T to string", in)
 	}
 	return "", fmt.Errorf("can't convert %T to string", in)
+}
+
+func convertToBytes(in interface{}) ([]byte, error) {
+	if in == nil {
+		return nil, fmt.Errorf("can't convert nil to bytes")
+	}
+	v := reflectutil.Elem(reflect.ValueOf(in))
+	switch v.Kind() {
+	case reflect.String:
+		if s, ok := v.Interface().(string); ok {
+			return []byte(s), nil
+		}
+	case reflect.Slice:
+		if v.Type().Elem().Kind() == reflect.Uint8 {
+			if b, ok := v.Interface().([]byte); ok {
+				return b, nil
+			}
+		}
+	case reflect.Invalid:
+		return nil, fmt.Errorf("can't convert %#v to bytes", in)
+	}
+	return nil, fmt.Errorf("can't convert %T to bytes", in)
 }

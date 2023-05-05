@@ -506,6 +506,14 @@ func TestTemplate_Execute_BinaryExpr(t *testing.T) {
 				str:    `foo-{{ "bar" + "-" + "baz" }}`,
 				expect: "foo-bar-baz",
 			},
+			"add bytes": {
+				str: "{{a + b}}",
+				data: map[string]interface{}{
+					"a": []byte("a"),
+					"b": []byte("b"),
+				},
+				expect: []byte("ab"),
+			},
 			"failed to add mismatched types": {
 				str:         `{{1 + uint(1)}}`,
 				expectError: "failed to execute: {{1 + uint(1)}}: invalid operation: 1 + 0x1: mismatched types int64 and uint",
@@ -774,6 +782,45 @@ func TestTemplate_Execute_BinaryExpr(t *testing.T) {
 				str:    `{{true==false}}`,
 				expect: false,
 			},
+			`1==1`: {
+				str:    `{{1==1}}`,
+				expect: true,
+			},
+			`1==2`: {
+				str:    `{{1==2}}`,
+				expect: false,
+			},
+			`1.1==1.1`: {
+				str:    `{{1.1==1.1}}`,
+				expect: true,
+			},
+			`1.1==2.2`: {
+				str:    `{{1.1==2.2}}`,
+				expect: false,
+			},
+			`"a"=="a"`: {
+				str:    `{{"a"=="a"}}`,
+				expect: true,
+			},
+			`"a"=="b"`: {
+				str:    `{{"a"=="b"}}`,
+				expect: false,
+			},
+			`bytes("a")==bytes("a")`: {
+				str: `{{a==a}}`,
+				data: map[string]interface{}{
+					"a": []byte("a"),
+				},
+				expect: true,
+			},
+			`bytes("a")==bytes("b")`: {
+				str: `{{a==b}}`,
+				data: map[string]interface{}{
+					"a": []byte("a"),
+					"b": []byte("b"),
+				},
+				expect: false,
+			},
 			"nil==nil": {
 				str: `{{v==v}}`,
 				data: map[string]interface{}{
@@ -793,6 +840,45 @@ func TestTemplate_Execute_BinaryExpr(t *testing.T) {
 			},
 			"true!=false": {
 				str:    `{{true!=false}}`,
+				expect: true,
+			},
+			`1!=1`: {
+				str:    `{{1!=1}}`,
+				expect: false,
+			},
+			`1!=2`: {
+				str:    `{{1!=2}}`,
+				expect: true,
+			},
+			`1.1!=1.1`: {
+				str:    `{{1.1!=1.1}}`,
+				expect: false,
+			},
+			`1.1!=2.2`: {
+				str:    `{{1.1!=2.2}}`,
+				expect: true,
+			},
+			`"a"!="a"`: {
+				str:    `{{"a"!="a"}}`,
+				expect: false,
+			},
+			`"a"!="b"`: {
+				str:    `{{"a"!="b"}}`,
+				expect: true,
+			},
+			`bytes("a")!=bytes("a")`: {
+				str: `{{a!=a}}`,
+				data: map[string]interface{}{
+					"a": []byte("a"),
+				},
+				expect: false,
+			},
+			`bytes("a")!=bytes("b")`: {
+				str: `{{a!=b}}`,
+				data: map[string]interface{}{
+					"a": []byte("a"),
+					"b": []byte("b"),
+				},
 				expect: true,
 			},
 			"nil!=nil": {
@@ -856,6 +942,29 @@ func TestTemplate_Execute_BinaryExpr(t *testing.T) {
 				str:    `{{"b"<"a"}}`,
 				expect: false,
 			},
+			`bytes("a")<bytes("b")`: {
+				str: `{{a<b}}`,
+				data: map[string]interface{}{
+					"a": []byte("a"),
+					"b": []byte("b"),
+				},
+				expect: true,
+			},
+			`bytes("a")<bytes("a")`: {
+				str: `{{a<a}}`,
+				data: map[string]interface{}{
+					"a": []byte("a"),
+				},
+				expect: false,
+			},
+			`bytes("b")<bytes("a")`: {
+				str: `{{b<a}}`,
+				data: map[string]interface{}{
+					"a": []byte("a"),
+					"b": []byte("b"),
+				},
+				expect: false,
+			},
 		}
 		runExecute(t, tests)
 	})
@@ -908,6 +1017,29 @@ func TestTemplate_Execute_BinaryExpr(t *testing.T) {
 			},
 			`"b"<="a"`: {
 				str:    `{{"b"<="a"}}`,
+				expect: false,
+			},
+			`bytes("a")<=bytes("b")`: {
+				str: `{{a<=b}}`,
+				data: map[string]interface{}{
+					"a": []byte("a"),
+					"b": []byte("b"),
+				},
+				expect: true,
+			},
+			`bytes("a")<=bytes("a")`: {
+				str: `{{a<=a}}`,
+				data: map[string]interface{}{
+					"a": []byte("a"),
+				},
+				expect: true,
+			},
+			`bytes("b")<=bytes("a")`: {
+				str: `{{b<=a}}`,
+				data: map[string]interface{}{
+					"a": []byte("a"),
+					"b": []byte("b"),
+				},
 				expect: false,
 			},
 		}
@@ -964,6 +1096,29 @@ func TestTemplate_Execute_BinaryExpr(t *testing.T) {
 				str:    `{{"b">"a"}}`,
 				expect: true,
 			},
+			`bytes("a")>bytes("b")`: {
+				str: `{{a>b}}`,
+				data: map[string]interface{}{
+					"a": []byte("a"),
+					"b": []byte("b"),
+				},
+				expect: false,
+			},
+			`bytes("a")>bytes("a")`: {
+				str: `{{a>a}}`,
+				data: map[string]interface{}{
+					"a": []byte("a"),
+				},
+				expect: false,
+			},
+			`bytes("b")>bytes("a")`: {
+				str: `{{b>a}}`,
+				data: map[string]interface{}{
+					"a": []byte("a"),
+					"b": []byte("b"),
+				},
+				expect: true,
+			},
 		}
 		runExecute(t, tests)
 	})
@@ -1016,6 +1171,29 @@ func TestTemplate_Execute_BinaryExpr(t *testing.T) {
 			},
 			`"b">="a"`: {
 				str:    `{{"b">="a"}}`,
+				expect: true,
+			},
+			`bytes("a")>=bytes("b")`: {
+				str: `{{a>=b}}`,
+				data: map[string]interface{}{
+					"a": []byte("a"),
+					"b": []byte("b"),
+				},
+				expect: false,
+			},
+			`bytes("a")>=bytes("a")`: {
+				str: `{{a>=a}}`,
+				data: map[string]interface{}{
+					"a": []byte("a"),
+				},
+				expect: true,
+			},
+			`bytes("b")>=bytes("a")`: {
+				str: `{{b>=a}}`,
+				data: map[string]interface{}{
+					"a": []byte("a"),
+					"b": []byte("b"),
+				},
 				expect: true,
 			},
 		}

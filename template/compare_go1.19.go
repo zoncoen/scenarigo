@@ -1,9 +1,11 @@
-//go:build go1.19
+//go:build !go1.20
 
 //nolint:all
 package template
 
-import "reflect"
+import (
+	"reflect"
+)
 
 func comparable(v reflect.Value) bool {
 	k := v.Kind()
@@ -52,7 +54,7 @@ func typeComparable(typ reflect.Type) bool {
 	return false
 }
 
-func equal(v, u reflect.Value) bool {
+func reflectEqual(v, u reflect.Value) bool {
 	if v.Kind() == reflect.Interface {
 		v = v.Elem()
 	}
@@ -98,7 +100,7 @@ func equal(v, u reflect.Value) bool {
 			return true
 		}
 		for i := 0; i < vl; i++ {
-			if !equal(v.Index(i), u.Index(i)) {
+			if !reflectEqual(v.Index(i), u.Index(i)) {
 				return false
 			}
 		}
@@ -107,7 +109,7 @@ func equal(v, u reflect.Value) bool {
 		// u and v have the same type so they have the same fields
 		nf := v.NumField()
 		for i := 0; i < nf; i++ {
-			if !equal(v.Field(i), u.Field(i)) {
+			if !reflectEqual(v.Field(i), u.Field(i)) {
 				return false
 			}
 		}

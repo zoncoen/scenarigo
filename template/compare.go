@@ -1,4 +1,4 @@
-//go:build !go1.19
+//go:build go1.20
 
 package template
 
@@ -8,6 +8,6 @@ func comparable(v reflect.Value) bool {
 	return v.Comparable()
 }
 
-func equal(v, u reflect.Value) bool {
+func reflectEqual(v, u reflect.Value) bool {
 	return v.Equal(u)
 }

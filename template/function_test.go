@@ -250,6 +250,20 @@ func TestTypeConversion(t *testing.T) {
 				str:    `{{string("test")}}`,
 				expect: "test",
 			},
+			"convert bytes to string": {
+				str: `{{string(v)}}`,
+				data: map[string]interface{}{
+					"v": []byte("test"),
+				},
+				expect: "test",
+			},
+			"failed to convert bytes to string": {
+				str: `{{string(v)}}`,
+				data: map[string]interface{}{
+					"v": []byte("\xF4\x90\x80\x80"), // U+10FFFF+1; out of range
+				},
+				expectError: `failed to execute: {{string(v)}}: can't convert bytes to string: invalid UTF-8 encoded characters in bytes`,
+			},
 			"failed to convert struct to string": {
 				str: `{{string(v)}}`,
 				data: map[string]interface{}{
@@ -277,6 +291,48 @@ func TestTypeConversion(t *testing.T) {
 					"v": nil,
 				},
 				expectError: `failed to execute: {{string(v)}}: can't convert nil to string`,
+			},
+		}
+		runExecute(t, tests)
+	})
+
+	t.Run("bytes()", func(t *testing.T) {
+		tests := map[string]executeTestCase{
+			"convert string to bytes": {
+				str:    `{{bytes("test")}}`,
+				expect: []byte("test"),
+			},
+			"convert []byte to bytes": {
+				str: "{{bytes(v)}}",
+				data: map[string]interface{}{
+					"v": []byte("test"),
+				},
+				expect: []byte("test"),
+			},
+			"convert *[]byte to bytes": {
+				str: "{{bytes(v)}}",
+				data: map[string]interface{}{
+					"v": testutil.ToPtr([]byte("test")),
+				},
+				expect: []byte("test"),
+			},
+			"failed to convert int64 to bool": {
+				str:         `{{bytes(1)}}`,
+				expectError: "failed to execute: {{bytes(1)}}: can't convert int64 to bytes",
+			},
+			"failed to convert (*[]byte)(nil) to bytes": {
+				str: `{{bytes(v)}}`,
+				data: map[string]interface{}{
+					"v": (*[]byte)(nil),
+				},
+				expectError: `failed to execute: {{bytes(v)}}: can't convert (*[]uint8)(nil) to bytes`,
+			},
+			"failed to convert untyped nil to bool": {
+				str: `{{bytes(v)}}`,
+				data: map[string]interface{}{
+					"v": nil,
+				},
+				expectError: `failed to execute: {{bytes(v)}}: can't convert nil to bytes`,
 			},
 		}
 		runExecute(t, tests)

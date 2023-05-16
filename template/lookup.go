@@ -31,12 +31,14 @@ func extract(node ast.Node, data interface{}) (interface{}, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create query from AST")
 	}
-	v, err := q.Extract(defaultFuncs)
+
+	v, err := q.Extract(typeFunctions)
+	if err == nil {
+		return v, nil
+	}
+	v, err = q.Extract(data)
 	if err != nil {
-		v, err = q.Extract(data)
-		if err != nil {
-			return nil, errNotDefined{err}
-		}
+		return nil, errNotDefined{err}
 	}
 	return v, nil
 }

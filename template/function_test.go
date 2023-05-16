@@ -32,6 +32,20 @@ func TestTypeConversion(t *testing.T) {
 				str:    "{{int(1.9)}}",
 				expect: int64(1),
 			},
+			"failed to convert float to int (too small)": {
+				str: "{{int(v)}}",
+				data: map[string]interface{}{
+					"v": float64(math.MinInt64) - 10000,
+				},
+				expectError: `failed to execute: {{int(v)}}: -9223372036854786000 overflows int`,
+			},
+			"failed to convert float to int (too big)": {
+				str: "{{int(v)}}",
+				data: map[string]interface{}{
+					"v": float64(math.MaxInt64) + 10000,
+				},
+				expectError: `failed to execute: {{int(v)}}: 9223372036854786000 overflows int`,
+			},
 			"convert string to int": {
 				str:    `{{int("1")}}`,
 				expect: int64(1),
@@ -96,6 +110,17 @@ func TestTypeConversion(t *testing.T) {
 			"convert float to uint": {
 				str:    "{{uint(1.9)}}",
 				expect: uint64(1),
+			},
+			"failed to convert float to uint (negative number)": {
+				str:         "{{uint(-1.2)}}",
+				expectError: "failed to execute: {{uint(-1.2)}}: can't convert -1.2 to uint",
+			},
+			"failed to convert float to uint (overflow)": {
+				str: "{{uint(v)}}",
+				data: map[string]interface{}{
+					"v": float64(math.MaxUint64) + 10000,
+				},
+				expectError: "failed to execute: {{uint(v)}}: 18446744073709560000 overflows uint",
 			},
 			"convert string to uint": {
 				str:    `{{uint("1")}}`,

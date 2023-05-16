@@ -50,6 +50,12 @@ func convertToInt(in interface{}) (int64, error) {
 	case reflect.Float32, reflect.Float64:
 		f, ok := v.Convert(typeFloat64).Interface().(float64)
 		if ok {
+			if f < float64(math.MinInt64) {
+				return 0, fmt.Errorf("%s overflows int", strconv.FormatFloat(f, 'f', -1, 64))
+			}
+			if f > float64(math.MaxInt64) {
+				return 0, fmt.Errorf("%s overflows int", strconv.FormatFloat(f, 'f', -1, 64))
+			}
 			return int64(f), nil
 		}
 	case reflect.String:
@@ -91,6 +97,12 @@ func convertToUint(in interface{}) (uint64, error) {
 	case reflect.Float32, reflect.Float64:
 		f, ok := v.Convert(typeFloat64).Interface().(float64)
 		if ok {
+			if f < 0 {
+				return 0, fmt.Errorf("can't convert %s to uint", strconv.FormatFloat(f, 'f', -1, 64))
+			}
+			if f > float64(math.MaxUint64) {
+				return 0, fmt.Errorf("%s overflows uint", strconv.FormatFloat(f, 'f', -1, 64))
+			}
 			return uint64(f), nil
 		}
 	case reflect.String:

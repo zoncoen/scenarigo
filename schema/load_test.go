@@ -17,6 +17,7 @@ import (
 	"github.com/zoncoen/scenarigo/assert"
 	"github.com/zoncoen/scenarigo/context"
 	"github.com/zoncoen/scenarigo/protocol"
+	"github.com/zoncoen/scenarigo/protocol/http"
 )
 
 type testProtocol struct {
@@ -564,6 +565,49 @@ func TestMarshalYAML(t *testing.T) {
 	}
 
 	if got, expect := buf.String(), string(b); got != expect {
+		dmp := diffmatchpatch.New()
+		diffs := dmp.DiffMain(expect, got, false)
+		t.Errorf("differs:\n%s", dmp.DiffPrettyText(diffs))
+	}
+}
+
+func Test_Issue304(t *testing.T) {
+	http.Register()
+	yml := `title: get scenarigo repository
+steps:
+- title: expect 404
+  protocol: http
+  request:
+    method: GET
+    url: https://api.github.com/repos/zoncoen/aaaaaaaaaaaaa
+    body:
+      # message: this comment does evil
+  expect:
+    code: Not Found
+`
+	scenarios, err := LoadScenariosFromReader(strings.NewReader(yml))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if l := len(scenarios); l != 1 {
+		t.Fatalf("unexpected length %d", l)
+	}
+	b, err := yaml.Marshal(scenarios[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expect := `title: get scenarigo repository
+steps:
+- title: expect 404
+  protocol: http
+  request:
+    method: GET
+    url: https://api.github.com/repos/zoncoen/aaaaaaaaaaaaa
+  expect:
+    code: Not Found
+`
+	if got := string(b); got != expect {
 		dmp := diffmatchpatch.New()
 		diffs := dmp.DiffMain(expect, got, false)
 		t.Errorf("differs:\n%s", dmp.DiffPrettyText(diffs))

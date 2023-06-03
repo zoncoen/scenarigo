@@ -2,9 +2,7 @@
 package template
 
 import (
-	"bytes"
 	"fmt"
-	"math"
 	"reflect"
 	"strconv"
 	"strings"
@@ -15,6 +13,7 @@ import (
 	"github.com/zoncoen/scenarigo/template/ast"
 	"github.com/zoncoen/scenarigo/template/parser"
 	"github.com/zoncoen/scenarigo/template/token"
+	"github.com/zoncoen/scenarigo/template/val"
 )
 
 // Template is the representation of a parsed template.
@@ -70,7 +69,11 @@ func (t *Template) executeExpr(expr ast.Expr, data interface{}) (interface{}, er
 	case *ast.ParenExpr:
 		return t.executeExpr(e.X, data)
 	case *ast.UnaryExpr:
-		return t.executeUnaryExpr(e, data)
+		v, err := t.executeUnaryExpr(e, data)
+		if err != nil {
+			return nil, fmt.Errorf("invalid operation: %w", err)
+		}
+		return v, nil
 	case *ast.BinaryExpr:
 		v, err := t.executeBinaryExpr(e, data)
 		if err != nil {
@@ -156,82 +159,43 @@ func (t *Template) executeParameterExpr(e *ast.ParameterExpr, data interface{}) 
 	return v, nil
 }
 
+func typeValue(v val.Value) string {
+	if _, ok := v.(val.Nil); ok {
+		return "nil"
+	}
+	return fmt.Sprintf("%s(%v)", v.Type().Name(), v.GoValue())
+}
+
 func (t *Template) executeUnaryExpr(e *ast.UnaryExpr, data interface{}) (interface{}, error) {
 	x, err := t.executeExpr(e.X, data)
 	if err != nil {
 		return nil, err
 	}
-	switch e.Op {
-	case token.SUB:
-		v := reflectutil.Elem(reflect.ValueOf(x))
-		if v.IsValid() {
-			if v.CanInterface() {
-				switch n := v.Interface().(type) {
-				case int:
-					if n == math.MinInt {
-						return 0, fmt.Errorf("-(%d) overflows int", n)
-					}
-					return -n, nil
-				case int8:
-					if n == math.MinInt8 {
-						return 0, fmt.Errorf("-(%d) overflows int8", n)
-					}
-					return -n, nil
-				case int16:
-					if n == math.MinInt16 {
-						return 0, fmt.Errorf("-(%d) overflows int16", n)
-					}
-					return -n, nil
-				case int32:
-					if n == math.MinInt32 {
-						return 0, fmt.Errorf("-(%d) overflows int32", n)
-					}
-					return -n, nil
-				case int64:
-					if n == math.MinInt64 {
-						return 0, fmt.Errorf("-(%d) overflows int64", n)
-					}
-					return -n, nil
-				case uint:
-					if n > -math.MinInt {
-						return 0, fmt.Errorf("-%d overflows int", n)
-					}
-					return -int(n), nil
-				case uint8:
-					return -int(n), nil
-				case uint16:
-					return -int(n), nil
-				case uint32:
-					if uint64(n) > uint64(-math.MinInt) {
-						return 0, fmt.Errorf("-%d overflows int", n)
-					}
-					return -int(n), nil
-				case uint64:
-					if n > uint64(-math.MinInt) {
-						return 0, fmt.Errorf("-%d overflows int", n)
-					}
-					return -int(n), nil
-				case float32:
-					return -n, nil
-				case float64:
-					return -n, nil
-				}
-			}
+	xv := val.NewValue(x)
+	v, err := t.executeUnaryOperation(e.Op, xv)
+	if err != nil {
+		if errors.Is(err, val.ErrOperationNotDefined) {
+			return nil, fmt.Errorf("operator %s not defined on %s", e.Op, typeValue(xv))
 		}
-	case token.NOT:
-		v := reflectutil.Elem(reflect.ValueOf(x))
-		if v.IsValid() {
-			if v.CanInterface() {
-				if b, ok := v.Interface().(bool); ok {
-					return !b, nil
-				}
-			}
-		}
+		return nil, err
 	}
-	return nil, errors.Errorf(`unknown operation: operator %s not defined on %T`, e.Op, x)
+	return v.GoValue(), err
 }
 
-//nolint:gocyclo,cyclop,maintidx
+func (t *Template) executeUnaryOperation(op token.Token, x val.Value) (val.Value, error) {
+	switch op {
+	case token.SUB:
+		if o, ok := x.(val.Negator); ok {
+			return o.Neg()
+		}
+	case token.NOT:
+		if o, ok := x.(val.LogicalValue); ok {
+			return val.Bool(!o.IsTruthy()), nil
+		}
+	}
+	return nil, val.ErrOperationNotDefined
+}
+
 func (t *Template) executeBinaryExpr(e *ast.BinaryExpr, data interface{}) (interface{}, error) {
 	x, err := t.executeExpr(e.X, data)
 	if err != nil {
@@ -241,228 +205,129 @@ func (t *Template) executeBinaryExpr(e *ast.BinaryExpr, data interface{}) (inter
 	if err != nil {
 		return nil, err
 	}
-
-	xv := reflect.ValueOf(x)
-	yv := reflect.ValueOf(y)
-	if xv.Kind() != yv.Kind() {
-		return nil, fmt.Errorf("%#v %s %#v: mismatched types %T and %T", x, e.Op, y, x, y)
+	xv, yv := val.NewValue(x), val.NewValue(y)
+	v, err := t.executeBinaryOperation(e.Op, xv, yv, e.Y)
+	if err != nil {
+		if errors.Is(err, val.ErrOperationNotDefined) {
+			return nil, fmt.Errorf("%s %s %s not defined", typeValue(xv), e.Op, typeValue(yv))
+		}
+		return nil, err
 	}
+	return v.GoValue(), nil
+}
 
-	switch e.Op {
+//nolint:gocyclo,cyclop,maintidx
+func (t *Template) executeBinaryOperation(op token.Token, x, y val.Value, yExpr ast.Expr) (val.Value, error) {
+	switch op {
 	case token.EQL:
-		if b, ok := equal(xv, yv); ok {
-			return b, nil
+		if o, ok := x.(val.Equaler); ok {
+			return o.Equal(y)
 		}
 	case token.NEQ:
-		if b, ok := equal(xv, yv); ok {
-			return !b, nil
-		}
-	}
-
-	switch xv.Kind() {
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		xi, ok := xv.Convert(typeInt64).Interface().(int64)
-		if ok {
-			yi, ok := yv.Convert(typeInt64).Interface().(int64)
-			if ok {
-				switch e.Op {
-				case token.ADD:
-					if (yi > 0 && xi > math.MaxInt64-yi) || (yi < 0 && xi < math.MinInt64-yi) {
-						return nil, fmt.Errorf("%d + %d overflows int", xi, yi)
-					}
-					return xi + yi, nil
-				case token.SUB:
-					if (yi < 0 && xi > math.MaxInt64+yi) || (yi > 0 && xi < math.MinInt64+yi) {
-						return nil, fmt.Errorf("%d - %d overflows int", xi, yi)
-					}
-					return xi - yi, nil
-				case token.MUL:
-					if (xi > 0 && yi > 0 && xi > math.MaxInt64/yi) ||
-						(xi < 0 && yi < 0 && xi < math.MaxInt64/yi) ||
-						(xi > 0 && yi < 0 && yi < math.MinInt64/xi) ||
-						(xi < 0 && yi > 0 && xi < math.MinInt64/yi) {
-						return nil, fmt.Errorf("%d * %d overflows int", xi, yi)
-					}
-					return xi * yi, nil
-				case token.QUO:
-					if yi == 0 {
-						return nil, fmt.Errorf("division by 0")
-					}
-					return xi / yi, nil
-				case token.REM:
-					if yi == 0 {
-						return nil, fmt.Errorf("division by 0")
-					}
-					return xi % yi, nil
-				case token.LSS:
-					return xi < yi, nil
-				case token.LEQ:
-					return xi <= yi, nil
-				case token.GTR:
-					return xi > yi, nil
-				case token.GEQ:
-					return xi >= yi, nil
-				}
+		if o, ok := x.(val.Equaler); ok {
+			b, err := o.Equal(y)
+			if err != nil {
+				return nil, err
 			}
+			return val.Bool(!b.IsTruthy()), nil
 		}
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		xi, ok := xv.Convert(typeUint64).Interface().(uint64)
-		if ok {
-			yi, ok := yv.Convert(typeUint64).Interface().(uint64)
-			if ok {
-				switch e.Op {
-				case token.ADD:
-					if yi > 0 && xi > math.MaxUint64-yi {
-						return nil, fmt.Errorf("%d + %d overflows uint", xi, yi)
-					}
-					return xi + yi, nil
-				case token.SUB:
-					if xi < yi {
-						return nil, fmt.Errorf("%d - %d overflows uint", xi, yi)
-					}
-					return xi - yi, nil
-				case token.MUL:
-					if xi > math.MaxUint64/yi {
-						return nil, fmt.Errorf("%d * %d overflows uint", xi, yi)
-					}
-					return xi * yi, nil
-				case token.QUO:
-					if yi == 0 {
-						return nil, fmt.Errorf("division by 0")
-					}
-					return xi / yi, nil
-				case token.REM:
-					if yi == 0 {
-						return nil, fmt.Errorf("division by 0")
-					}
-					return xi % yi, nil
-				case token.LSS:
-					return xi < yi, nil
-				case token.LEQ:
-					return xi <= yi, nil
-				case token.GTR:
-					return xi > yi, nil
-				case token.GEQ:
-					return xi >= yi, nil
-				}
+	case token.LSS:
+		if o, ok := x.(val.Comparer); ok {
+			i, err := o.Compare(y)
+			if err != nil {
+				return nil, err
 			}
+			return oneOf(i, val.Int(-1))
 		}
-	case reflect.Float32, reflect.Float64:
-		xf, ok := xv.Convert(typeFloat64).Interface().(float64)
-		if ok {
-			yf, ok := yv.Convert(typeFloat64).Interface().(float64)
-			if ok {
-				switch e.Op {
-				case token.ADD:
-					return xf + yf, nil
-				case token.SUB:
-					return xf - yf, nil
-				case token.MUL:
-					return xf * yf, nil
-				case token.QUO:
-					if yf == 0.0 {
-						return nil, fmt.Errorf("division by 0")
-					}
-					return xf / yf, nil
-				case token.LSS:
-					return xf < yf, nil
-				case token.LEQ:
-					return xf <= yf, nil
-				case token.GTR:
-					return xf > yf, nil
-				case token.GEQ:
-					return xf >= yf, nil
-				}
+	case token.LEQ:
+		if o, ok := x.(val.Comparer); ok {
+			i, err := o.Compare(y)
+			if err != nil {
+				return nil, err
 			}
+			return oneOf(i, val.Int(-1), val.Int(0))
 		}
-	case reflect.Bool:
-		xb, ok := xv.Convert(typeBool).Interface().(bool)
-		if ok {
-			yb, ok := yv.Convert(typeBool).Interface().(bool)
-			if ok {
-				switch e.Op {
-				case token.LAND:
-					return xb && yb, nil
-				case token.LOR:
-					return xb || yb, nil
-				}
+	case token.GTR:
+		if o, ok := x.(val.Comparer); ok {
+			i, err := o.Compare(y)
+			if err != nil {
+				return nil, err
 			}
+			return oneOf(i, val.Int(1))
 		}
-	case reflect.String:
-		xs, ok := xv.Convert(typeString).Interface().(string)
-		if ok {
-			ys, ok := yv.Convert(typeString).Interface().(string)
-			if ok {
-				switch e.Op {
-				case token.ADD:
-					if t.executingLeftArrowExprArg {
-						if _, ok := (e.Y).(*ast.ParameterExpr); ok {
+	case token.GEQ:
+		if o, ok := x.(val.Comparer); ok {
+			i, err := o.Compare(y)
+			if err != nil {
+				return nil, err
+			}
+			return oneOf(i, val.Int(1), val.Int(0))
+		}
+	case token.ADD:
+		if o, ok := x.(val.Adder); ok {
+			// hack for strings of left arrow functions
+			if t.executingLeftArrowExprArg {
+				if _, ok := (yExpr).(*ast.ParameterExpr); ok {
+					if xs, ok := x.(val.String); ok {
+						if ys, ok := y.(val.String); ok {
 							var err error
-							ys, err = t.addIndent(ys, xs)
+							s, err := t.addIndent(string(ys), string(xs))
 							if err != nil {
 								return nil, errors.Wrap(err, "failed to concat strings")
 							}
+							y = val.String(s)
 						}
 					}
-					return xs + ys, nil
-				case token.LSS:
-					return xs < ys, nil
-				case token.LEQ:
-					return xs <= ys, nil
-				case token.GTR:
-					return xs > ys, nil
-				case token.GEQ:
-					return xs >= ys, nil
 				}
 			}
+			return o.Add(y)
 		}
-	case reflect.Slice:
-		if xv.Type().Elem().Kind() == reflect.Uint8 {
-			xb, ok := xv.Interface().([]byte)
-			if ok {
-				yb, ok := yv.Interface().([]byte)
-				if ok {
-					switch e.Op {
-					case token.ADD:
-						return append(xb, yb...), nil
-					case token.LSS:
-						return bytes.Compare(xb, yb) < 0, nil
-					case token.LEQ:
-						return bytes.Compare(xb, yb) <= 0, nil
-					case token.GTR:
-						return bytes.Compare(xb, yb) > 0, nil
-					case token.GEQ:
-						return bytes.Compare(xb, yb) >= 0, nil
-					}
-				}
+	case token.SUB:
+		if o, ok := x.(val.Subtractor); ok {
+			return o.Sub(y)
+		}
+	case token.MUL:
+		if o, ok := x.(val.Multiplier); ok {
+			return o.Mul(y)
+		}
+	case token.QUO:
+		if o, ok := x.(val.Divider); ok {
+			return o.Div(y)
+		}
+	case token.REM:
+		if o, ok := x.(val.Modder); ok {
+			return o.Mod(y)
+		}
+	case token.LAND:
+		if o, ok := x.(val.LogicalValue); ok {
+			if ylv, ok := y.(val.LogicalValue); ok {
+				return val.Bool(o.IsTruthy() && ylv.IsTruthy()), nil
 			}
 		}
-	case reflect.Invalid:
-		return nil, fmt.Errorf("operator %s not defined on nil", e.Op)
+	case token.LOR:
+		if o, ok := x.(val.LogicalValue); ok {
+			if ylv, ok := y.(val.LogicalValue); ok {
+				return val.Bool(o.IsTruthy() || ylv.IsTruthy()), nil
+			}
+		}
 	}
-
-	return nil, fmt.Errorf("operator %s not defined on %#v (value of type %T)", e.Op, x, x)
+	return nil, val.ErrOperationNotDefined
 }
 
-func equal(x, y reflect.Value) (bool, bool) {
-	if x.Kind() == reflect.Invalid {
-		return true, true
-	}
-	if comparable(x) {
-		return reflectEqual(x, y), true
-	}
-	if x.Kind() == reflect.Slice {
-		if x.Type().Elem().Kind() == reflect.Uint8 {
-			xb, ok := x.Interface().([]byte)
-			if ok {
-				yb, ok := y.Interface().([]byte)
-				if ok {
-					return bytes.Equal(xb, yb), true
-				}
+func oneOf(x val.Value, ys ...val.Value) (val.Bool, error) {
+	if xv, ok := x.(val.Equaler); ok {
+		for _, yv := range ys {
+			b, err := xv.Equal(yv)
+			if err != nil {
+				return val.Bool(false), err
+			}
+			if b.IsTruthy() {
+				return val.Bool(true), nil
 			}
 		}
+		return val.Bool(false), nil
 	}
-	return false, false
+	return val.Bool(false), val.ErrOperationNotDefined
 }
 
 func (t *Template) executeConditionalExpr(e *ast.ConditionalExpr, data interface{}) (interface{}, error) {
@@ -470,11 +335,12 @@ func (t *Template) executeConditionalExpr(e *ast.ConditionalExpr, data interface
 	if err != nil {
 		return nil, err
 	}
-	condition, ok := c.(bool)
+	cv := val.NewValue(c)
+	cond, ok := cv.(val.LogicalValue)
 	if !ok {
-		return nil, fmt.Errorf("invalid operation: operator ? not defined on %#v (value of type %T)", c, c)
+		return nil, fmt.Errorf("invalid operation: operator ? not defined on %s", typeValue(cv))
 	}
-	if condition {
+	if cond.IsTruthy() {
 		return t.executeExpr(e.X, data)
 	}
 	return t.executeExpr(e.Y, data)

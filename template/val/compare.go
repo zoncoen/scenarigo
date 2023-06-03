@@ -1,6 +1,6 @@
 //go:build go1.20
 
-package template
+package val
 
 import "reflect"
 

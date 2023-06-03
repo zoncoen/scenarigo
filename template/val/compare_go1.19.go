@@ -1,7 +1,7 @@
 //go:build !go1.20
 
 //nolint:all
-package template
+package val
 
 import (
 	"reflect"

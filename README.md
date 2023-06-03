@@ -420,7 +420,9 @@ UNICODE_VALUE = UNICODE_CHAR | ESCAPED_CHAR
 UNICODE_CHAR  = /* an arbitrary UTF-8 encoded char */
 ESCAPED_CHAR  = "\" `"`
 LETTER        = "a"..."Z"
-RESERVED      = BOOL | "defined"
+TYPES         = "int" | "uint" | "float" | "bool" | "string" |
+                "bytes" | "time" | "duration" | "any"
+RESERVED      = BOOL | TYPES | "type" | "defined"
 ```
 
 ### Types
@@ -435,6 +437,8 @@ The template feature has abstract types for operations.
 |bool|booleans|bool|
 |string|UTF-8 strings|string|
 |bytes|byte sequence|[]byte|
+|time|time with nanosecond precision|[time.Time](https://pkg.go.dev/time#Time)|
+|duration|amount of time|[time.Duration](https://pkg.go.dev/time#Duration)|
 |any|other all Go types|any|
 
 #### Type Conversions
@@ -451,7 +455,7 @@ The template feature provides functions to convert types.
   </thead>
   <tbody>
     <tr>
-      <td align="center" rowspan=4>int</td>
+      <td align="center" rowspan=5>int</td>
       <td>(*int) -> int</td>
       <td>type conversion (returns an error if arg is nil)</td>
     </tr>
@@ -466,6 +470,10 @@ The template feature provides functions to convert types.
     <tr>
       <td>(string) -> int</td>
       <td>type conversion (returns an error if arg in invalid int string)</td>
+    </tr>
+    <tr>
+      <td>(duration) -> int</td>
+      <td>type conversion</td>
     </tr>
     <tr>
       <td align="center" rowspan=4>uint</td>
@@ -507,7 +515,7 @@ The template feature provides functions to convert types.
       <td>type conversion (returns an error if arg is nil)</td>
     </tr>
     <tr>
-      <td align="center" rowspan=5>string</td>
+      <td align="center" rowspan=7>string</td>
       <td>(int) -> string</td>
       <td>type conversion</td>
     </tr>
@@ -528,12 +536,42 @@ The template feature provides functions to convert types.
       <td>type conversion (returns an error if arg contains invalid UTF-8 encoded characters)</td>
     </tr>
     <tr>
+      <td>(time) -> string</td>
+      <td>convert to string according to RFC3339 format</td>
+    </tr>
+    <tr>
+      <td>(duration) -> string</td>
+      <td>convert to string according to <a href="https://pkg.go.dev/time#Duration.String">time.Duration.String</a> format</td>
+    </tr>
+    <tr>
       <td align="center" rowspan=2>bytes</td>
       <td>(string) -> bytes</td>
       <td>type conversion</td>
     </tr>
     <tr>
       <td>(*bytes) -> bytes</td>
+      <td>type conversion (returns an error if arg is nil)</td>
+    </tr>
+    <tr>
+      <td align="center" rowspan=2>time</td>
+      <td>(string) -> time</td>
+      <td>parse RFC3339 format string as time</td>
+    </tr>
+    <tr>
+      <td>(*time) -> time</td>
+      <td>type conversion (returns an error if arg is nil)</td>
+    </tr>
+    <tr>
+      <td align="center" rowspan=3>duration</td>
+      <td>(int) -> duration</td>
+      <td>type conversion</td>
+    </tr>
+    <tr>
+      <td>(string) -> duration</td>
+      <td>parse string as duration by <a href="https://pkg.go.dev/time#ParseDuration">time.ParseDuration</a></td>
+    </tr>
+    <tr>
+      <td>(*duration) -> duration</td>
       <td>type conversion (returns an error if arg is nil)</td>
     </tr>
   </tbody>
@@ -551,12 +589,12 @@ The template feature provides functions to convert types.
   </thead>
   <tbody>
     <tr>
-      <td align="center">!</td>
+      <td align="center">! _</td>
       <td>(bool) -> bool</td>
       <td>logical not</td>
     </tr>
     <tr>
-      <td align="center" rowspan=2>-</td>
+      <td align="center" rowspan=3>- _</td>
       <td>(int) -> int</td>
       <td>negation</td>
     </tr>
@@ -565,7 +603,11 @@ The template feature provides functions to convert types.
       <td>negation</td>
     </tr>
     <tr>
-      <td align="center" rowspan=5>+</td>
+      <td>(duration) -> duration</td>
+      <td>negation</td>
+    </tr>
+    <tr>
+      <td align="center" rowspan=8>_ + _</td>
       <td>(int, int) -> int</td>
       <td>arithmetic</td>
     </tr>
@@ -586,7 +628,19 @@ The template feature provides functions to convert types.
       <td>concatenation</td>
     </tr>
     <tr>
-      <td align="center" rowspan=3>-</td>
+      <td>(time, duration) -> time</td>
+      <td>arithmetic</td>
+    </tr>
+    <tr>
+      <td>(duration, time) -> time</td>
+      <td>arithmetic</td>
+    </tr>
+    <tr>
+      <td>(duration, duration) -> duration</td>
+      <td>arithmetic</td>
+    </tr>
+    <tr>
+      <td align="center" rowspan=6>_ - _</td>
       <td>(int, int) -> int</td>
       <td>arithmetic</td>
     </tr>
@@ -599,7 +653,19 @@ The template feature provides functions to convert types.
       <td>arithmetic</td>
     </tr>
     <tr>
-      <td align="center" rowspan=3>*</td>
+      <td>(time, time) -> duration</td>
+      <td>arithmetic</td>
+    </tr>
+    <tr>
+      <td>(time, duration) -> time</td>
+      <td>arithmetic</td>
+    </tr>
+    <tr>
+      <td>(duration, duration) -> duration</td>
+      <td>arithmetic</td>
+    </tr>
+    <tr>
+      <td align="center" rowspan=3>_ * _</td>
       <td>(int, int) -> int</td>
       <td>arithmetic</td>
     </tr>
@@ -612,7 +678,7 @@ The template feature provides functions to convert types.
       <td>arithmetic</td>
     </tr>
     <tr>
-      <td align="center" rowspan=3>/</td>
+      <td align="center" rowspan=3>_ / _</td>
       <td>(int, int) -> int</td>
       <td>arithmetic</td>
     </tr>
@@ -625,7 +691,7 @@ The template feature provides functions to convert types.
       <td>arithmetic</td>
     </tr>
     <tr>
-      <td align="center" rowspan=2>%</td>
+      <td align="center" rowspan=2>_ % _</td>
       <td>(int, int) -> int</td>
       <td>arithmetic</td>
     </tr>
@@ -634,17 +700,17 @@ The template feature provides functions to convert types.
       <td>arithmetic</td>
     </tr>
     <tr>
-      <td align="center">==</td>
+      <td align="center">_ == _</td>
       <td>(A, A) -> bool</td>
       <td>equality</td>
     </tr>
     <tr>
-      <td align="center">!=</td>
+      <td align="center">_ != _</td>
       <td>(A, A) -> bool</td>
       <td>inequality</td>
     </tr>
     <tr>
-      <td align="center" rowspan=5><</td>
+      <td align="center" rowspan=7>_ < _</td>
       <td>(int, int) -> bool</td>
       <td>ordering</td>
     </tr>
@@ -665,7 +731,15 @@ The template feature provides functions to convert types.
       <td>ordering</td>
     </tr>
     <tr>
-      <td align="center" rowspan=5><=</td>
+      <td>(time, time) -> bool</td>
+      <td>ordering</td>
+    </tr>
+    <tr>
+      <td>(duration, duration) -> bool</td>
+      <td>ordering</td>
+    </tr>
+    <tr>
+      <td align="center" rowspan=7>_ <= _</td>
       <td>(int, int) -> bool</td>
       <td>ordering</td>
     </tr>
@@ -686,7 +760,15 @@ The template feature provides functions to convert types.
       <td>ordering</td>
     </tr>
     <tr>
-      <td align="center" rowspan=5>></td>
+      <td>(time, time) -> bool</td>
+      <td>ordering</td>
+    </tr>
+    <tr>
+      <td>(duration, duration) -> bool</td>
+      <td>ordering</td>
+    </tr>
+    <tr>
+      <td align="center" rowspan=7>_ > _</td>
       <td>(int, int) -> bool</td>
       <td>ordering</td>
     </tr>
@@ -707,7 +789,15 @@ The template feature provides functions to convert types.
       <td>ordering</td>
     </tr>
     <tr>
-      <td align="center" rowspan=5>>=</td>
+      <td>(time, time) -> bool</td>
+      <td>ordering</td>
+    </tr>
+    <tr>
+      <td>(duration, duration) -> bool</td>
+      <td>ordering</td>
+    </tr>
+    <tr>
+      <td align="center" rowspan=7>_ >= _</td>
       <td>(int, int) -> bool</td>
       <td>ordering</td>
     </tr>
@@ -728,17 +818,25 @@ The template feature provides functions to convert types.
       <td>ordering</td>
     </tr>
     <tr>
-      <td align="center">&&</td>
+      <td>(time, time) -> bool</td>
+      <td>ordering</td>
+    </tr>
+    <tr>
+      <td>(duration, duration) -> bool</td>
+      <td>ordering</td>
+    </tr>
+    <tr>
+      <td align="center">_ && _</td>
       <td>(bool, bool) -> bool</td>
       <td>logical and</td>
     </tr>
     <tr>
-      <td align="center">||</td>
+      <td align="center">_ || _</td>
       <td>(bool, bool) -> bool</td>
       <td>logical or</td>
     </tr>
     <tr>
-      <td align="center">? :</td>
+      <td align="center">_ ? _ : _</td>
       <td>(bool, A, A) -> A</td>
       <td>ternary conditional operator</td>
     </tr>
@@ -760,6 +858,7 @@ The template feature provides functions to convert types.
 
 |function|description|example|
 |---|---|---|
+|type|returns the abstract type of expression in string|`type(0) == "int"`|
 |defined|tells whether a variable is defined or not|`defined(a) ? a : b`|
 
 ## Plugin

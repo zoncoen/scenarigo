@@ -310,6 +310,8 @@ func (s *scanner) scanToken() (int, token.Token, string) {
 		}
 		s.unread(next)
 		return s.pos - 1, token.GTR, ">"
+	case '$':
+		return s.pos - 1, token.IDENT, string(ch)
 	default:
 		if ch == '"' {
 			return s.scanString()

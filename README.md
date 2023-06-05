@@ -413,7 +413,7 @@ INT           = "0" | ("1"..."9" {DECIMAL_DIGIT})
 FLOAT         = INT "." DECIMAL_DIGIT {DECIMAL_DIGIT}
 BOOL          = "true" | "false"
 STRING        = `"` {UNICODE_VALUE} `"`
-IDENT         = LETTER {LETTER | DECIMAL_DIGIT | "-" | "_"} - RESERVED
+IDENT         = (LETTER {LETTER | DECIMAL_DIGIT | "-" | "_"} | "$") - RESERVED
 
 DECIMAL_DIGIT = "0"..."9"
 UNICODE_VALUE = UNICODE_CHAR | ESCAPED_CHAR

@@ -18,7 +18,7 @@ require (
 	github.com/zoncoen/query-go v1.2.1
 	github.com/zoncoen/query-go/extractor/yaml v0.1.1
 	golang.org/x/mod v0.10.0
-	golang.org/x/sync v0.2.0
+	golang.org/x/sync v0.3.0
 	golang.org/x/text v0.9.0
 	google.golang.org/genproto v0.0.0-20230306155012-7f2fa6fef1f4
 	google.golang.org/grpc v1.55.0

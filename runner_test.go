@@ -358,7 +358,7 @@ func TestWithConfig(t *testing.T) {
 				t.Fatalf("unexpected error: %s", err)
 			}
 			if diff := cmp.Diff(test.expect, got,
-				cmp.AllowUnexported(Runner{}),
+				cmp.AllowUnexported(Runner{}, schema.OrderedMap[string, schema.PluginConfig]{}),
 				cmp.FilterPath(func(p cmp.Path) bool {
 					switch p.String() {
 					case "pluginSetup", "pluginTeardown":

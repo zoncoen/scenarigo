@@ -1,38 +1,44 @@
 package scenarigo
 
 import (
-	"sort"
-
 	"github.com/zoncoen/scenarigo/context"
 	"github.com/zoncoen/scenarigo/plugin"
 )
 
-type setupMap map[string]plugin.SetupFunc
+type setupFuncList []setupFunc
 
-func (sm setupMap) setup(ctx *plugin.Context) (*plugin.Context, func(*plugin.Context)) {
-	if len(sm) == 0 {
+type setupFunc struct {
+	name string
+	f    plugin.SetupFunc
+}
+
+type teardownFunc struct {
+	name string
+	f    func(*plugin.Context)
+}
+
+func (sl setupFuncList) setup(ctx *plugin.Context) (*plugin.Context, func(*plugin.Context)) {
+	if len(sl) == 0 {
 		return ctx, func(_ *plugin.Context) {}
 	}
-	var keys sort.StringSlice
-	teardowns := map[string]func(*plugin.Context){}
+	var teardowns []teardownFunc
 	setupCtx := ctx
 	ctx.Run("setup", func(ctx *plugin.Context) {
-		for key := range sm {
-			keys = append(keys, key)
-		}
-		sort.Sort(keys)
-		for _, key := range keys {
+		for _, setup := range sl {
 			if ctx.Reporter().Failed() {
 				break
 			}
 			newCtx := ctx
-			ctx.Run(key, func(ctx *context.Context) {
-				ctx, teardown := sm[key](ctx)
+			ctx.Run(setup.name, func(ctx *context.Context) {
+				ctx, teardown := setup.f(ctx)
 				if ctx != nil {
 					newCtx = ctx
 				}
 				if teardown != nil {
-					teardowns[key] = teardown
+					teardowns = append(teardowns, teardownFunc{
+						name: setup.name,
+						f:    teardown,
+					})
 				}
 			})
 			ctx = newCtx.WithReporter(ctx.Reporter())
@@ -45,13 +51,10 @@ func (sm setupMap) setup(ctx *plugin.Context) (*plugin.Context, func(*plugin.Con
 	}
 	return ctx, func(ctx *plugin.Context) {
 		ctx.Run("teardown", func(ctx *plugin.Context) {
-			for i := keys.Len() - 1; i >= 0; i-- {
-				key := keys[i]
-				if teardown, ok := teardowns[key]; ok {
-					ctx.Run(key, func(ctx *context.Context) {
-						teardown(ctx)
-					})
-				}
+			for i := len(teardowns) - 1; i >= 0; i-- {
+				ctx.Run(teardowns[i].name, func(ctx *context.Context) {
+					teardowns[i].f(ctx)
+				})
 			}
 		})
 	}

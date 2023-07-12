@@ -74,10 +74,10 @@ func TestE2E(t *testing.T) {
 
 					config := &schema.Config{
 						PluginDirectory: "testdata/gen/plugins",
-						Plugins:         map[string]schema.PluginConfig{},
+						Plugins:         schema.NewOrderedMap[string, schema.PluginConfig](),
 					}
 					for _, p := range scenario.Plugins {
-						config.Plugins[p] = schema.PluginConfig{}
+						config.Plugins.Set(p, schema.PluginConfig{})
 					}
 
 					r, err := scenarigo.NewRunner(

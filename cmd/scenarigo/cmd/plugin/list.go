@@ -36,8 +36,8 @@ func list(cmd *cobra.Command, args []string) error {
 	}
 	pluginDir := filepathutil.From(cfg.Root, cfg.PluginDirectory)
 	var plugins sort.StringSlice
-	for out := range cfg.Plugins {
-		rel, err := filepath.Rel(wd, filepathutil.From(pluginDir, out))
+	for _, item := range cfg.Plugins.ToSlice() {
+		rel, err := filepath.Rel(wd, filepathutil.From(pluginDir, item.Key))
 		if err != nil {
 			return fmt.Errorf("failed to get releative path: %w", err)
 		}

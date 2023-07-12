@@ -32,7 +32,7 @@ func init() {
 // Runner represents a test runner.
 type Runner struct {
 	pluginDir       *string
-	plugins         map[string]schema.PluginConfig
+	plugins         schema.OrderedMap[string, schema.PluginConfig]
 	scenarioFiles   []string
 	scenarioReaders []io.Reader
 	enabledColor    bool
@@ -205,21 +205,27 @@ func (r *Runner) Run(ctx *context.Context) {
 	if dir := ctx.PluginDir(); dir != "" {
 		pluginDir = dir
 	}
-	sm := make(setupMap)
-	for out := range r.plugins {
-		p, err := plugin.Open(filepath.Join(pluginDir, out))
+	var setups setupFuncList
+	for _, item := range r.plugins.ToSlice() {
+		p, err := plugin.Open(filepath.Join(pluginDir, item.Key))
 		if err != nil {
-			sm[out] = func(ctx *context.Context) (*context.Context, func(*context.Context)) {
-				ctx.Reporter().Fatalf("failed to open plugin: %s", err)
-				return nil, nil
-			}
+			setups = append(setups, setupFunc{
+				name: item.Key,
+				f: func(ctx *context.Context) (*context.Context, func(*context.Context)) {
+					ctx.Reporter().Fatalf("failed to open plugin: %s", err)
+					return nil, nil
+				},
+			})
 			continue
 		}
 		if setup := p.GetSetup(); setup != nil {
-			sm[out] = setup
+			setups = append(setups, setupFunc{
+				name: item.Key,
+				f:    setup,
+			})
 		}
 	}
-	ctx, teardown := sm.setup(ctx)
+	ctx, teardown := setups.setup(ctx)
 	if ctx.Reporter().Failed() {
 		teardown(ctx)
 		return

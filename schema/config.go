@@ -5,8 +5,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/fatih/color"
@@ -20,98 +18,21 @@ import (
 
 // Config represents a configuration.
 type Config struct {
-	SchemaVersion   string          `yaml:"schemaVersion,omitempty"`
-	Scenarios       []string        `yaml:"scenarios,omitempty"`
-	PluginDirectory string          `yaml:"pluginDirectory,omitempty"`
-	Plugins         PluginConfigMap `yaml:"plugins,omitempty"`
-	Input           InputConfig     `yaml:"input,omitempty"`
-	Output          OutputConfig    `yaml:"output,omitempty"`
+	SchemaVersion   string                           `yaml:"schemaVersion,omitempty"`
+	Scenarios       []string                         `yaml:"scenarios,omitempty"`
+	PluginDirectory string                           `yaml:"pluginDirectory,omitempty"`
+	Plugins         OrderedMap[string, PluginConfig] `yaml:"plugins,omitempty"`
+	Input           InputConfig                      `yaml:"input,omitempty"`
+	Output          OutputConfig                     `yaml:"output,omitempty"`
 
 	// absolute path to the configuration file
 	Root     string          `yaml:"-"`
 	Comments yaml.CommentMap `yaml:"-"`
 }
 
-// PluginConfigMap represents a plugin configurations.
-type PluginConfigMap map[string]PluginConfig
-
-func (m *PluginConfigMap) UnmarshalYAML(b []byte) error {
-	var s yaml.MapSlice
-	if err := yaml.Unmarshal(b, &s); err != nil {
-		return err
-	}
-	configs := map[string]PluginConfig{}
-	for i, item := range s {
-		name, err := toYAMLString(item.Key)
-		if err != nil {
-			return err
-		}
-		val, ok := item.Value.(map[string]interface{})
-		if !ok {
-			return errors.Errorf("%T was used where mapping is expected", item.Value)
-		}
-		var src string
-		for k, v := range val {
-			switch k {
-			case "src":
-				src, err = toYAMLString(v)
-				if err != nil {
-					return err
-				}
-			default:
-				return errors.Errorf(`unknown field "%s"`, k)
-			}
-		}
-		configs[name] = PluginConfig{
-			Order: i + 1,
-			Name:  name,
-			Src:   src,
-		}
-	}
-	*m = configs
-	return nil
-}
-
-func toYAMLString(in interface{}) (string, error) {
-	switch v := in.(type) {
-	case string:
-		return v, nil
-	case uint64:
-		return strconv.Itoa(int(v)), nil
-	case int64:
-		return strconv.Itoa(int(v)), nil
-	}
-	return "", errors.Errorf("value of type %T is not assignable to type string", in)
-}
-
-func (m PluginConfigMap) MarshalYAML() ([]byte, error) {
-	var s yaml.MapSlice
-	for _, c := range m.ToSlice() {
-		s = append(s, yaml.MapItem{
-			Key:   c.Name,
-			Value: c,
-		})
-	}
-	return yaml.Marshal(s)
-}
-
-// ToSlice returns m as a slice.
-func (m PluginConfigMap) ToSlice() []PluginConfig {
-	s := []PluginConfig{}
-	for _, p := range m {
-		s = append(s, p)
-	}
-	sort.Slice(s, func(i, j int) bool {
-		return s[i].Order < s[j].Order
-	})
-	return s
-}
-
 // PluginConfig represents a plugin configuration.
 type PluginConfig struct {
-	Order int    `yaml:"-"`
-	Name  string `yaml:"-"`
-	Src   string `yaml:"src,omitempty"`
+	Src string `yaml:"src,omitempty"`
 }
 
 // InputConfig represents an input configuration.
@@ -222,14 +143,14 @@ func validate(c *Config, node ast.Node) error {
 			errs = append(errs, err)
 		}
 	}
-	for name, p := range c.Plugins {
-		p := p
-		if err := stat(c, p.Src, (&yaml.PathBuilder{}).Root().Child("plugins").Child(name).Child("src").Build(), node); err != nil {
+	for _, item := range c.Plugins.ToSlice() {
+		item := item
+		if err := stat(c, item.Value.Src, (&yaml.PathBuilder{}).Root().Child("plugins").Child(item.Key).Child("src").Build(), node); err != nil {
 			var neErr notExist
 			if errors.As(err, &neErr) {
-				m := p.Src
+				m := item.Value.Src
 				if i := strings.Index(m, "@"); i >= 0 { // trim version query
-					m = p.Src[:i]
+					m = item.Value.Src[:i]
 				}
 				// may be a Go module path, not local files
 				if merr := module.CheckPath(m); merr == nil {

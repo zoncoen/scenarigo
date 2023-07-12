@@ -97,15 +97,15 @@ func buildRun(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	pbs := make([]*pluginBuilder, 0, len(cfg.Plugins))
+	pbs := make([]*pluginBuilder, 0, cfg.Plugins.Len())
 	pluginModules := map[string]*overrideModule{}
 	pluginDir := filepathutil.From(cfg.Root, cfg.PluginDirectory)
-	for _, p := range cfg.Plugins.ToSlice() {
-		out := p.Name
-		mod := filepathutil.From(cfg.Root, p.Src)
+	for _, item := range cfg.Plugins.ToSlice() {
+		out := item.Key
+		mod := filepathutil.From(cfg.Root, item.Value.Src)
 		var src string
 		if _, err := os.Stat(mod); err != nil {
-			m, s, r, clean, err := downloadModule(ctx(cmd), goCmd, p.Src)
+			m, s, r, clean, err := downloadModule(ctx(cmd), goCmd, item.Value.Src)
 			defer clean()
 			if err != nil {
 				return fmt.Errorf("failed to build plugin %s: %w", out, err)

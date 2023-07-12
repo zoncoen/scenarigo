@@ -205,21 +205,27 @@ func (r *Runner) Run(ctx *context.Context) {
 	if dir := ctx.PluginDir(); dir != "" {
 		pluginDir = dir
 	}
-	sm := make(setupMap)
+	var setups setupFuncList
 	for _, item := range r.plugins.ToSlice() {
 		p, err := plugin.Open(filepath.Join(pluginDir, item.Key))
 		if err != nil {
-			sm[item.Key] = func(ctx *context.Context) (*context.Context, func(*context.Context)) {
-				ctx.Reporter().Fatalf("failed to open plugin: %s", err)
-				return nil, nil
-			}
+			setups = append(setups, setupFunc{
+				name: item.Key,
+				f: func(ctx *context.Context) (*context.Context, func(*context.Context)) {
+					ctx.Reporter().Fatalf("failed to open plugin: %s", err)
+					return nil, nil
+				},
+			})
 			continue
 		}
 		if setup := p.GetSetup(); setup != nil {
-			sm[item.Key] = setup
+			setups = append(setups, setupFunc{
+				name: item.Key,
+				f:    setup,
+			})
 		}
 	}
-	ctx, teardown := sm.setup(ctx)
+	ctx, teardown := setups.setup(ctx)
 	if ctx.Reporter().Failed() {
 		teardown(ctx)
 		return

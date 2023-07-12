@@ -15,7 +15,7 @@ import (
 // RunScenario runs a test scenario s.
 func RunScenario(ctx *context.Context, s *schema.Scenario) *context.Context {
 	ctx = ctx.WithScenarioFilepath(s.Filepath())
-	setups := setupMap{}
+	var setups setupFuncList
 	if s.Plugins != nil {
 		plugs := map[string]interface{}{}
 		for name, path := range s.Plugins {
@@ -29,7 +29,10 @@ func RunScenario(ctx *context.Context, s *schema.Scenario) *context.Context {
 			}
 			plugs[name] = p
 			if setup := p.GetSetupEachScenario(); setup != nil {
-				setups[name] = setup
+				setups = append(setups, setupFunc{
+					name: name,
+					f:    setup,
+				})
 			}
 		}
 		ctx = ctx.WithPlugins(plugs)

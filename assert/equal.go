@@ -41,7 +41,7 @@ func (eq equaler) Equal(expected, got interface{}) (bool, error) {
 }
 
 // Equal returns an assertion to ensure a value equals the expected value.
-func Equal(expected interface{}) Assertion {
+func Equal(expected interface{}, customEqs ...Equaler) Assertion {
 	return AssertionFunc(func(v interface{}) error {
 		if n, ok := v.(json.Number); ok {
 			switch expected.(type) {
@@ -65,6 +65,13 @@ func Equal(expected interface{}) Assertion {
 
 		if isNil(v) && isNil(expected) {
 			return nil
+		}
+
+		for _, eq := range customEqs {
+			ok, err := eq.Equal(expected, v)
+			if ok {
+				return err
+			}
 		}
 
 		m.RLock()

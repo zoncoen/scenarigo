@@ -10,8 +10,8 @@ import (
 
 // RetryPolicy represents a retry policy.
 type RetryPolicy struct {
-	Constant    *RetryPolicyConstant    `yaml:"constant"`
-	Exponential *RetryPolicyExponential `yaml:"exponential"`
+	Constant    *RetryPolicyConstant    `yaml:"constant,omitempty"`
+	Exponential *RetryPolicyExponential `yaml:"exponential,omitempty"`
 }
 
 // Build returns p as backoff.BackOff.
@@ -41,9 +41,9 @@ func maxElapsedTimeContextFunc(ctx context.Context, t *Duration, b backoff.BackO
 
 // RetryPolicyConstant represents a constant retry policy.
 type RetryPolicyConstant struct {
-	Interval       *Duration `yaml:"interval"`       // default value is 1s
-	MaxRetries     *int      `yaml:"maxRetries"`     // default value is 5, 0 means forever
-	MaxElapsedTime *Duration `yaml:"maxElapsedTime"` // default value is 0, 0 means forever
+	Interval       *Duration `yaml:"interval,omitempty"`       // default value is 1s
+	MaxRetries     *int      `yaml:"maxRetries,omitempty"`     // default value is 5, 0 means forever
+	MaxElapsedTime *Duration `yaml:"maxElapsedTime,omitempty"` // default value is 0, 0 means forever
 }
 
 // Build returns p as backoff.Policy.
@@ -68,12 +68,12 @@ func (p *RetryPolicyConstant) Build(ctx context.Context) (context.Context, func(
 
 // RetryPolicyExponential represents a exponential retry policy.
 type RetryPolicyExponential struct {
-	InitialInterval *Duration `yaml:"initialInterval"` // default value is 500ms
-	Factor          *float64  `yaml:"factor"`          // default value is 1.5
-	JitterFactor    *float64  `yaml:"jitterFactor"`    // default value is 0.5
-	MaxInterval     *Duration `yaml:"maxInterval"`     // default value is 60s
-	MaxRetries      *int      `yaml:"maxRetries"`      // default value is 5, 0 means forever
-	MaxElapsedTime  *Duration `yaml:"maxElapsedTime"`  // default value is 0, 0 means forever
+	InitialInterval *Duration `yaml:"initialInterval,omitempty"` // default value is 500ms
+	Factor          *float64  `yaml:"factor,omitempty"`          // default value is 1.5
+	JitterFactor    *float64  `yaml:"jitterFactor,omitempty"`    // default value is 0.5
+	MaxInterval     *Duration `yaml:"maxInterval,omitempty"`     // default value is 60s
+	MaxRetries      *int      `yaml:"maxRetries,omitempty"`      // default value is 5, 0 means forever
+	MaxElapsedTime  *Duration `yaml:"maxElapsedTime,omitempty"`  // default value is 0, 0 means forever
 }
 
 // Build returns p as backoff.Policy.

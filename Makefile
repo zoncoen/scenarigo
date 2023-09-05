@@ -244,6 +244,12 @@ crossbuild:
 	@rm -rf ./dist ./assets
 	@ls ./tmp/
 
+.PHONY: crossbuild/test
+crossbuild/test:
+	@rm -rf ./dist
+	@SNAPSHOT=true GO_VERSION=$$(go version | perl -ape '$$_ = $$F[2]; s/go(.+)/$$1/') make build/ci
+	@ls ./dist
+
 .PHONY: build/ci
 build/ci:
 	@rm -rf assets

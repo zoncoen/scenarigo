@@ -1,8 +1,9 @@
 module github.com/zoncoen/scenarigo
 
-go 1.19
+go 1.20
 
 require (
+	github.com/Masterminds/semver v1.5.0
 	github.com/cenkalti/backoff/v4 v4.2.1
 	github.com/fatih/color v1.15.0
 	github.com/goccy/go-yaml v1.11.0

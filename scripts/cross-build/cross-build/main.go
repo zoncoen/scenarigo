@@ -22,7 +22,6 @@ var (
 	ver              = os.Getenv("GO_VERSION")
 	rootDir          = os.Getenv("PJ_ROOT")
 	errImageNotFound = errors.New("image not found")
-	go1_19_1         = semver.MustParse("1.19.1")
 )
 
 func main() {
@@ -46,10 +45,7 @@ func release() error {
 	if err != nil {
 		return fmt.Errorf("failed to parse version: %w", err)
 	}
-	cc := "aarch64-apple-darwin20.2-clang"
-	if v.GreaterThan(go1_19_1) {
-		cc = "aarch64-apple-darwin21.4-clang"
-	}
+	cc := "aarch64-apple-darwin21.4-clang"
 
 	if err := build(ver, tag, cc); err != nil {
 		return fmt.Errorf("failed to build: %w", err)

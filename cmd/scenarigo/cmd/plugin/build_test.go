@@ -20,6 +20,7 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/Masterminds/semver"
 	"github.com/sergi/go-diff/diffmatchpatch"
 	"github.com/sosedoff/gitkit"
 	"github.com/spf13/cobra"
@@ -49,9 +50,22 @@ func init() {
 
 func TestBuild(t *testing.T) {
 	goVersion := strings.TrimPrefix(runtime.Version(), "go")
-	if parts := strings.Split(goVersion, "."); len(parts) > 2 {
-		goVersion = fmt.Sprintf("%s.%s", parts[0], parts[1])
+
+	// Old Go versions need to trim patch versions.
+	v, err := semver.NewVersion(goVersion)
+	if err != nil {
+		t.Fatal(err)
 	}
+	go121, err := semver.NewVersion("1.21.0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v.LessThan(go121) {
+		if parts := strings.Split(goVersion, "."); len(parts) > 2 {
+			goVersion = fmt.Sprintf("%s.%s", parts[0], parts[1])
+		}
+	}
+
 	pluginCode := `package main
 
 func Greet() string {

@@ -1,6 +1,6 @@
 module github.com/zoncoen/scenarigo/examples/ytt/plugin
 
-go 1.19
+go 1.20
 
 require github.com/zoncoen/scenarigo v0.12.8
 

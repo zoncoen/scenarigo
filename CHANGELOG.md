@@ -1,5 +1,24 @@
 # CHANGELOG
 
+<a name="v0.15.0"></a>
+## [v0.15.0] - 2023-09-06
+### Bug Fixes
+- **plugin:** setup plugins in the order in which they are registered
+- **schema:** add a workaround to avoid failing to load scenarios
+- **template:** check overflow
+- **template:** evaluate only an expression that matched the condition
+
+### Code Refactoring
+- add OrderedMap
+
+### Features
+- add dump sub-command
+- add ytt integration
+- add input config
+- **grpc:** contain response status in log
+- **template:** add time and duration type
+- **template:** add bytes type
+
 <a name="v0.14.2"></a>
 ## [v0.14.2] - 2023-03-03
 - bump up the version of dependent modules
@@ -320,6 +339,7 @@ change protocl.Protocol interface
 - first release
 
 
+[v0.15.0]: https://github.com/zoncoen/scenarigo/compare/v0.14.2...v0.15.0
 [v0.14.2]: https://github.com/zoncoen/scenarigo/compare/v0.14.1...v0.14.2
 [v0.14.1]: https://github.com/zoncoen/scenarigo/compare/v0.14.0...v0.14.1
 [v0.14.0]: https://github.com/zoncoen/scenarigo/compare/v0.13.2...v0.14.0

@@ -9,9 +9,9 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/Yamashou/gqlgenc/clientv2"
 
 	"github.com/zoncoen/scenarigo/scripts/cross-build/gen"
@@ -41,12 +41,7 @@ func release() error {
 		return fmt.Errorf("failed to get image tag: %w", err)
 	}
 
-	v, err := semver.NewVersion(ver)
-	if err != nil {
-		return fmt.Errorf("failed to parse version: %w", err)
-	}
 	cc := "aarch64-apple-darwin21.4-clang"
-
 	if err := build(ver, tag, cc); err != nil {
 		return fmt.Errorf("failed to build: %w", err)
 	}
@@ -123,15 +118,27 @@ func build(ver, tag, cc string) error {
 }
 
 func goreleaser(ver, tag string) error {
-	out, err := exec.Command(
-		"docker", "run", "--rm", "--privileged",
+	args := []string{
+		"run",
+		"--rm", "--privileged",
 		"-v", fmt.Sprintf("%s:/scenarigo", rootDir),
 		"-v", "/var/run/docker.sock:/var/run/docker.sock",
 		"-w", "/scenarigo",
 		"-e", fmt.Sprintf("SNAPSHOT=%s", os.Getenv("SNAPSHOT")),
 		"--entrypoint", "bash",
-		fmt.Sprintf("ghcr.io/gythialy/golang-cross:%s", tag),
-		"/scenarigo/scripts/cross-build.sh",
+	}
+
+	// golang-cross has no matching manifest for linux/arm64/v8 in the manifest list entries.
+	if runtime.GOOS == "darwin" && runtime.GOARCH == "arm64" {
+		args = append(args, "--platform", "linux/x86_64")
+	}
+
+	out, err := exec.Command(
+		"docker",
+		append(args,
+			fmt.Sprintf("ghcr.io/gythialy/golang-cross:%s", tag),
+			"/scenarigo/scripts/cross-build.sh",
+		)...,
 	).CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("%s:\n%s", err, out)

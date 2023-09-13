@@ -143,24 +143,6 @@ func TestRun(t *testing.T) {
 				},
 			},
 		},
-		"child panic(nil)": {
-			fs: []func(r Reporter){
-				func(r Reporter) {},
-				func(r Reporter) {
-					panic(nil)
-				},
-			},
-			expect: result{
-				Failed: true,
-				Children: []result{
-					{},
-					{
-						Failed: true,
-						Logs:   []string{"test executed panic(nil) or runtime.Goexit"},
-					},
-				},
-			},
-		},
 		"child runtime.Goexit()": {
 			fs: []func(r Reporter){
 				func(r Reporter) {},

@@ -519,6 +519,58 @@ steps:
       message: "{{request.message}}"
 `,
 			},
+			"disable ytt integration": {
+				config: &schema.Config{
+					Scenarios: []string{"testdata/ytt.yaml"},
+					Input: schema.InputConfig{
+						YAML: schema.YAMLInputConfig{
+							YTT: schema.YTTConfig{
+								Enabled: false,
+							},
+						},
+					},
+				},
+				expect: `schemaVersion: scenario/v1
+title: echo
+vars:
+  message: null
+steps:
+- title: POST /say
+  protocol: http
+  request:
+    body:
+      message: "{{vars.message}}"
+  expect:
+    body:
+      message: "{{request.message}}"
+`,
+			},
+			"invalid but disable ytt integration": {
+				config: &schema.Config{
+					Scenarios: []string{"testdata/ytt_invalid.yaml"},
+					Input: schema.InputConfig{
+						YAML: schema.YAMLInputConfig{
+							YTT: schema.YTTConfig{
+								Enabled: false,
+							},
+						},
+					},
+				},
+				expect: `schemaVersion: scenario/v1
+title: echo
+vars:
+  message: null
+steps:
+- title: POST /say
+  protocol: http
+  request:
+    body:
+      message: "{{vars.message}}"
+  expect:
+    body:
+      message: "{{request.message}}"
+`,
+			},
 		}
 		for name, test := range tests {
 			test := test
@@ -560,36 +612,6 @@ steps:
 				expect: fmt.Sprintf(`failed to load scenarios: ytt failed:
 - undefined: msg
     %s/testdata/ytt_invalid.yaml:4 |   message: #@ msg`, wd),
-			},
-			"disable ytt integration": {
-				config: &schema.Config{
-					Scenarios: []string{"testdata/ytt.yaml"},
-				},
-				expect: `failed to load scenarios: failed to decode YAML: [5:3] string was used where mapping is expected
-       2 | schemaVersion: scenario/v1
-       3 | title: echo
-       4 | vars:
-    >  5 |   message #@ msg: null
-             ^
-       6 | steps:
-       7 | - title: POST /say
-       8 |   protocol: http
-       9 |  `,
-			},
-			"invalid but disable ytt integration": {
-				config: &schema.Config{
-					Scenarios: []string{"testdata/ytt_invalid.yaml"},
-				},
-				expect: `failed to load scenarios: failed to decode YAML: [4:3] string was used where mapping is expected
-       1 | schemaVersion: scenario/v1
-       2 | title: echo
-       3 | vars:
-    >  4 |   message #@ msg: null
-             ^
-       5 | steps:
-       6 | - title: POST /say
-       7 |   protocol: http
-       8 |  `,
 			},
 		}
 		for name, test := range tests {

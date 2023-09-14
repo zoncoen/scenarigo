@@ -1,11 +1,11 @@
 package schema
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
-	"strings"
 
 	"github.com/fatih/color"
 	"github.com/goccy/go-yaml"
@@ -180,41 +180,19 @@ func findAllfiles(paths ...string) ([]string, error) {
 }
 
 func loadScenariosFromFileAST(f *ast.File) ([]*Scenario, error) {
-	// workaround to avoid the issue #304
-	r := strings.NewReader(f.String())
-	dec := yaml.NewDecoder(r, yaml.UseOrderedMap(), yaml.Strict())
+	var buf bytes.Buffer
+	dec := yaml.NewDecoder(&buf, yaml.UseOrderedMap(), yaml.Strict())
 	var scenarios []*Scenario
-	var i int
-	for {
+	for _, doc := range f.Docs {
 		var s Scenario
-		if err := dec.Decode(&s); err != nil {
-			if errors.Is(err, io.EOF) {
-				break
-			}
+		if err := dec.DecodeFromNode(doc.Body, &s); err != nil {
 			return nil, fmt.Errorf("failed to decode YAML: %w", err)
 		}
 		s.filepath = f.Name
-		if i < len(f.Docs) {
-			s.Node = f.Docs[i].Body
-		}
+		s.Node = doc.Body
 		scenarios = append(scenarios, &s)
-		i++
 	}
 	return scenarios, nil
-
-	// var buf bytes.Buffer
-	// dec := yaml.NewDecoder(&buf, yaml.UseOrderedMap(), yaml.Strict())
-	// var scenarios []*Scenario
-	// for _, doc := range f.Docs {
-	// 	var s Scenario
-	// 	if err := dec.DecodeFromNode(doc.Body, &s); err != nil {
-	// 		return nil, fmt.Errorf("failed to decode YAML: %w", err)
-	// 	}
-	// 	s.filepath = f.Name
-	// 	s.Node = doc.Body
-	// 	scenarios = append(scenarios, &s)
-	// }
-	// return scenarios, nil
 }
 
 type loadOption struct {

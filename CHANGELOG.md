@@ -1,5 +1,10 @@
 # CHANGELOG
 
+<a name="v0.15.1"></a>
+## [v0.15.1] - 2023-09-15
+### Code Refactoring
+- remove workaround
+
 <a name="v0.15.0"></a>
 ## [v0.15.0] - 2023-09-06
 ### Bug Fixes
@@ -339,6 +344,7 @@ change protocl.Protocol interface
 - first release
 
 
+[v0.15.1]: https://github.com/zoncoen/scenarigo/compare/v0.15.0...v0.15.1
 [v0.15.0]: https://github.com/zoncoen/scenarigo/compare/v0.14.2...v0.15.0
 [v0.14.2]: https://github.com/zoncoen/scenarigo/compare/v0.14.1...v0.14.2
 [v0.14.1]: https://github.com/zoncoen/scenarigo/compare/v0.14.0...v0.14.1

@@ -1,6 +1,7 @@
 package context_test
 
 import (
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -39,9 +40,17 @@ func TestRunWithRetry(t *testing.T) {
 	ctx := context.FromT(t)
 	interval := schema.Duration(time.Millisecond)
 	maxRetries := 1
-	var i int
+	var (
+		i        int
+		canceled int32
+	)
+	f := func() { atomic.AddInt32(&canceled, 1) }
 	context.RunWithRetry(ctx, "sub", func(ctx *context.Context) {
 		i++
+		go func() {
+			<-ctx.RequestContext().Done()
+			f()
+		}()
 		if i > 1 {
 			return
 		}
@@ -50,4 +59,7 @@ func TestRunWithRetry(t *testing.T) {
 		Interval:   &interval,
 		MaxRetries: &maxRetries,
 	})
+	if atomic.LoadInt32(&canceled) == 0 {
+		t.Errorf("context is not canceled")
+	}
 }

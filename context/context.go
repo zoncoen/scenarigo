@@ -237,7 +237,10 @@ func (c *Context) Run(name string, f func(*Context)) bool {
 
 // RunWithRetry runs f as a subtest of c called name with retry.
 func RunWithRetry(c *Context, name string, f func(*Context), policy reporter.RetryPolicy) bool {
-	return reporter.RunWithRetry(c.RequestContext(), c.Reporter(), name, func(r reporter.Reporter) {
-		f(c.WithReporter(r))
+	reqCtx := c.RequestContext()
+	return reporter.RunWithRetry(reqCtx, c.Reporter(), name, func(r reporter.Reporter) {
+		reqCtx, cancel := context.WithCancel(reqCtx)
+		defer cancel()
+		f(c.WithRequestContext(reqCtx).WithReporter(r))
 	}, policy)
 }

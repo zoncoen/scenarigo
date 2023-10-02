@@ -1,4 +1,4 @@
-module github.com/zoncoen/scenarigo/examples/ytt/plugin
+module github.com/zoncoen/scenarigo/examples/assert/plugin
 
 go 1.20
 

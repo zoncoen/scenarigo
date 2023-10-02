@@ -1,10 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
-	"io"
 	"net"
 	"net/http"
+	"time"
 
 	"github.com/zoncoen/scenarigo/plugin"
 )
@@ -24,12 +25,25 @@ func startServer(ctx *plugin.Context) (*plugin.Context, func(*plugin.Context)) {
 
 	m := http.NewServeMux()
 	m.Handle("/echo", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		now := time.Now()
 		if r.Method != http.MethodPost {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
 		}
 		w.Header().Add("Content-Type", r.Header.Get("Content-Type"))
-		io.Copy(w, r.Body)
+		var req Request
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		resp := &Response{
+			Message:    req.Message,
+			RecievedAt: now.Format(time.RFC3339),
+		}
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 	}))
 	s := http.Server{
 		Handler: m,
@@ -45,4 +59,13 @@ func startServer(ctx *plugin.Context) (*plugin.Context, func(*plugin.Context)) {
 			ctx.Reporter().Errorf("failed to close server: %s", err)
 		}
 	}
+}
+
+type Request struct {
+	Message string `json:"message"`
+}
+
+type Response struct {
+	Message    string `json:"message"`
+	RecievedAt string `json:"recievedAt"`
 }

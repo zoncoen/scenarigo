@@ -126,11 +126,11 @@ func (e *expect) build(ctx *context.Context) (assert.Assertion, error) {
 		return nil
 	})
 	if e.Path != nil {
-		expectPath, err := ctx.ExecuteTemplate(*e.Path)
+		var err error
+		pathAssertion, err = assert.Build(ctx.RequestContext(), *e.Path, assert.FromTemplate(ctx))
 		if err != nil {
 			return nil, errors.WrapPathf(err, "path", "invalid expect path")
 		}
-		pathAssertion = assert.Build(expectPath)
 	}
 
 	headerAssertion, err := assertutil.BuildHeaderAssertion(ctx, e.Header)
@@ -138,11 +138,10 @@ func (e *expect) build(ctx *context.Context) (assert.Assertion, error) {
 		return nil, errors.WrapPathf(err, "header", "invalid expect header")
 	}
 
-	expectBody, err := ctx.ExecuteTemplate(e.Body)
+	assertion, err := assert.Build(ctx.RequestContext(), e.Body, assert.FromTemplate(ctx))
 	if err != nil {
-		return nil, errors.WrapPathf(err, "body", "invalid expect response")
+		return nil, errors.WrapPathf(err, "body", "invalid expect response body")
 	}
-	assertion := assert.Build(expectBody)
 
 	return assert.AssertionFunc(func(v interface{}) error {
 		req, ok := v.(*request)

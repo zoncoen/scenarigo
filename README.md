@@ -238,6 +238,28 @@ steps:
       message: hello
 ```
 
+Scenarigo allows [template string](#template-string) as expected values.
+Besides, you can write assertions by conditional expressions with the actual value `$`.
+
+```yaml
+title: check /message
+steps:
+- title: GET /message
+  protocol: http
+  request:
+    method: GET
+    url: http://example.com/message
+    query:
+      id: 1
+  expect:
+    code: OK
+    header:
+      Content-Type: application/json; charset=utf-8
+    body:
+      id: {{int($) > 0}}
+      message: '{{"hello" + " world"}}'
+```
+
 ### Variables
 
 The `vars` field defines variables that can be referred by [template string](#template-string) like `'{{vars.id}}'`.

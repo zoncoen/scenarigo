@@ -125,13 +125,7 @@ test/examples:
 	@failure=false; \
 	for dir in $(sort $(wildcard examples/*)); do \
 		echo "=== $$dir ==="; \
-		if [ -d $(CURDIR)/$${dir}/plugin/src ]; then \
-			cd $(CURDIR)/$${dir}/plugin/src; \
-			rm -f go.work go.work.sum; \
-			go work init . ../../../..; \
-		fi; \
-		cd $(CURDIR)/$$dir; \
-		scenarigo plugin build && scenarigo run; \
+		make test/$$dir; \
 		if [ $$? -ne 0 ]; then \
 			failure=true; \
 		fi; \
@@ -140,6 +134,16 @@ test/examples:
 	if "$${failure}"; then \
 		exit 1; \
 	fi
+
+test/examples/%:
+	@dir=examples/$*; \
+	if [ -d $(CURDIR)/$${dir}/plugin/src ]; then \
+		cd $(CURDIR)/$${dir}/plugin/src; \
+		rm -f go.work go.work.sum; \
+		go work init . ../../../..; \
+	fi; \
+	cd $(CURDIR)/$$dir; \
+	scenarigo plugin build && scenarigo run
 
 .PHONY: lint
 lint: $(GOLANGCI_LINT) $(LOOPPOINTER) ## run lint

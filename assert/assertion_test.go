@@ -1,10 +1,14 @@
 package assert
 
 import (
+	"context"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/goccy/go-yaml"
+	"github.com/zoncoen/query-go"
 	"github.com/zoncoen/scenarigo/errors"
 )
 
@@ -31,30 +35,40 @@ deps:
 		".deps[0].tags[0]",
 		".deps[0].tags[1]",
 	}
-	assertion := Build(in)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	assertion, err := Build(ctx, in)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	type info struct {
 		Deps []map[string]interface{} `yaml:"deps"`
 	}
 
 	t.Run("no assertion", func(t *testing.T) {
-		assertion := Build(nil)
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		assertion, err := Build(ctx, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
 		v := info{}
 		if err := assertion.Assert(v); err != nil {
 			t.Errorf("unexpected error: %s", err)
 		}
 	})
 	t.Run("compare", func(t *testing.T) {
-		if err := Build(Greater(1)).Assert(2); err != nil {
+		if err := MustBuild(context.Background(), Greater(1)).Assert(2); err != nil {
 			t.Fatal(err)
 		}
-		if err := Build(GreaterOrEqual(1)).Assert(1); err != nil {
+		if err := MustBuild(context.Background(), GreaterOrEqual(1)).Assert(1); err != nil {
 			t.Fatal(err)
 		}
-		if err := Build(Less(2)).Assert(1); err != nil {
+		if err := MustBuild(context.Background(), Less(2)).Assert(1); err != nil {
 			t.Fatal(err)
 		}
-		if err := Build(LessOrEqual(1)).Assert(1); err != nil {
+		if err := MustBuild(context.Background(), LessOrEqual(1)).Assert(1); err != nil {
 			t.Fatal(err)
 		}
 	})
@@ -127,4 +141,116 @@ deps:
 			}
 		}
 	})
+	t.Run("options", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		assertion, err := Build(
+			ctx, `{{aaa}}`,
+			FromTemplate(map[string]string{"aaa": "foo"}),
+			WithEqualers(EqualerFunc(func(a, b any) (bool, error) {
+				return true, nil
+			})),
+		)
+		if err != nil {
+			t.Fatalf("unexpected error: %s", err)
+		}
+		if err := assertion.Assert("bar"); err != nil {
+			t.Errorf("unexpected error: %s", err)
+		}
+	})
+	t.Run("use $", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		assertion, err := Build(ctx, `{{$ == "foo"}}`)
+		if err != nil {
+			t.Fatalf("unexpected error: %s", err)
+		}
+		if err := assertion.Assert("foo"); err != nil {
+			t.Errorf("unexpected error: %s", err)
+		}
+		// call Assert twice
+		if err := assertion.Assert("bar"); err == nil {
+			t.Error("no error")
+		} else if got, expect := err.Error(), "assertion error"; got != expect {
+			t.Errorf("expect %q but got %q", expect, got)
+		}
+	})
+	t.Run("use $ twice", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		assertion, err := Build(ctx, `{{$ == $}}`)
+		if err != nil {
+			t.Fatalf("unexpected error: %s", err)
+		}
+		if err := assertion.Assert("test"); err != nil {
+			t.Errorf("unexpected error: %s", err)
+		}
+	})
+	t.Run("assertion result is not boolean", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		assertion, err := Build(ctx, `{{$ + $}}`)
+		if err != nil {
+			t.Fatalf("unexpected error: %s", err)
+		}
+		if err := assertion.Assert(1); err == nil {
+			t.Error("no error")
+		} else if got, expect := err.Error(), "assertion result must be a boolean value but got string"; got != expect {
+			t.Errorf("expect %q but got %q", expect, got)
+		}
+	})
+}
+
+func TestWaitContext(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	wc := newWaitContext(ctx, map[string]string{"foo": "FOO"})
+	if got, expect := extract(t, "$.foo", wc), "FOO"; got != expect {
+		t.Fatalf("expect %q but got %q", expect, got)
+	}
+
+	// wait until setting a value
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		if got, expect := extract(t, "$.$", wc), "BAR"; got != expect {
+			t.Errorf("expect %q but got %q", expect, got)
+		}
+	}()
+	go func() {
+		defer wg.Done()
+		if got, expect := extract(t, "$.$", wc), "BAR"; got != expect {
+			t.Errorf("expect %q but got %q", expect, got)
+		}
+	}()
+
+	if err := wc.set("BAR"); err != nil {
+		t.Fatalf("failed to set: %s", err)
+	}
+	wg.Wait()
+
+	// extract after setting
+	if got, expect := extract(t, "$.$", wc), "BAR"; got != expect {
+		t.Fatalf("expect %q but got %q", expect, got)
+	}
+
+	// don't set twice
+	if err := wc.set("BAR"); err == nil {
+		t.Fatal("no error")
+	}
+}
+
+func extract(t *testing.T, s string, target any) any {
+	t.Helper()
+	q, err := query.ParseString(s)
+	if err != nil {
+		t.Fatalf("failed to parse query string: %s", err)
+	}
+	v, err := q.Extract(target)
+	if err != nil {
+		t.Fatalf("failed to extract: %s", err)
+	}
+	return v
 }

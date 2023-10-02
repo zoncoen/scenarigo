@@ -23,22 +23,21 @@ func (e *Expect) Build(ctx *context.Context) (assert.Assertion, error) {
 	if e.Code != "" {
 		expectCode = e.Code
 	}
-	executedCode, err := ctx.ExecuteTemplate(expectCode)
+
+	codeAssertion, err := assert.Build(ctx.RequestContext(), expectCode, assert.FromTemplate(ctx))
 	if err != nil {
-		return nil, errors.WrapPathf(err, "code", "invalid expect response: %s", err)
+		return nil, errors.WrapPathf(err, "code", "invalid expect status code")
 	}
-	codeAssertion := assert.Build(executedCode)
 
 	headerAssertion, err := assertutil.BuildHeaderAssertion(ctx, e.Header)
 	if err != nil {
 		return nil, errors.WrapPathf(err, "header", "invalid expect header")
 	}
 
-	expectBody, err := ctx.ExecuteTemplate(e.Body)
+	assertion, err := assert.Build(ctx.RequestContext(), e.Body, assert.FromTemplate(ctx))
 	if err != nil {
-		return nil, errors.WrapPathf(err, "body", "invalid expect response")
+		return nil, errors.WrapPathf(err, "body", "invalid expect response body")
 	}
-	assertion := assert.Build(expectBody)
 
 	return assert.AssertionFunc(func(v interface{}) error {
 		res, ok := v.(response)

@@ -224,6 +224,76 @@ func TestExpect_Build(t *testing.T) {
 					},
 				},
 			},
+			"with $": {
+				vars: map[string]string{"body": "hello"},
+				expect: &Expect{
+					Status: ExpectStatus{
+						Code:    `{{$ == "InvalidArgument"}}`,
+						Message: `{{$ == "invalid argument"}}`,
+						Details: []map[string]yaml.MapSlice{
+							{
+								`{{$ == "google.rpc.LocalizedMessage"}}`: yaml.MapSlice{
+									{
+										Key:   "locale",
+										Value: `{{$ == "ja-JP"}}`,
+									},
+									{
+										Key:   "message",
+										Value: `{{$ == "エラー"}}`,
+									},
+								},
+							},
+						},
+					},
+					Message: yaml.MapSlice{
+						yaml.MapItem{
+							Key:   "messageBody",
+							Value: `{{$ == vars.body}}`,
+						},
+					},
+					Header: yaml.MapSlice{
+						{
+							Key:   "content-type",
+							Value: `{{$ == "application/grpc"}}`,
+						},
+					},
+					Trailer: yaml.MapSlice{
+						{
+							Key:   "version",
+							Value: `{{$ == "v1.0.0"}}`,
+						},
+					},
+				},
+				v: response{
+					rvalues: []reflect.Value{
+						reflect.ValueOf(&test.EchoResponse{
+							MessageBody: "hello",
+						}),
+						reflect.ValueOf(status.FromProto(&spb.Status{
+							Code:    int32(codes.InvalidArgument),
+							Message: "invalid argument",
+							Details: []*anypb.Any{
+								mustAny(t,
+									&errdetails.LocalizedMessage{
+										Locale:  "ja-JP",
+										Message: "エラー",
+									},
+								),
+							},
+						}).Err()),
+					},
+					Header: metadata.MD{
+						"content-type": []string{
+							"application/grpc",
+						},
+					},
+					Trailer: metadata.MD{
+						"version": []string{
+							"v1.0.0",
+						},
+					},
+				},
+			},
 		}
 		for name, test := range tests {
 			test := test
@@ -635,7 +705,7 @@ func TestExpect_Build(t *testing.T) {
 					},
 				},
 				expectBuildError: true,
-				expectError:      `.status.details[0].'google.rpc.LocalizedMessage'.{{locale: failed to execute template: failed to parse "{{locale": col 9: expected '}}', found 'EOF'`,
+				expectError:      `.status.details[0].'google.rpc.LocalizedMessage': invalid expect status detail: failed to build assertion: failed to parse "{{locale": col 9: expected '}}', found 'EOF'`,
 			},
 			"wrong status details: key not found": {
 				expect: &Expect{

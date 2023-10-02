@@ -60,7 +60,7 @@ func TestExpect_Build(t *testing.T) {
 					status: "200 OK",
 				},
 			},
-			"assert body": {
+			"response body": {
 				expect: &Expect{
 					Body: yaml.MapSlice{
 						yaml.MapItem{
@@ -89,6 +89,34 @@ func TestExpect_Build(t *testing.T) {
 					Body:   map[string]string{"foo": "bar"},
 				},
 			},
+			"with $": {
+				vars: map[string]string{
+					"type": "application/json",
+					"foo":  "bar",
+				},
+				expect: &Expect{
+					Code: "{{$ == string(2*100)}}",
+					Header: yaml.MapSlice{
+						{
+							Key:   "Content-Type",
+							Value: `{{$ == vars.type}}`,
+						},
+					},
+					Body: yaml.MapSlice{
+						yaml.MapItem{
+							Key:   "foo",
+							Value: "{{$ == vars.foo}}",
+						},
+					},
+				},
+				response: response{
+					Header: map[string][]string{
+						"Content-Type": {"application/json"},
+					},
+					Body:   map[string]string{"foo": "bar"},
+					status: "200 OK",
+				},
+			},
 		}
 		for name, test := range tests {
 			test := test
@@ -114,14 +142,9 @@ func TestExpect_Build(t *testing.T) {
 			expectBuildError  bool
 			expectAssertError bool
 		}{
-			"failed to execute template": {
+			"invalid code assertion": {
 				expect: &Expect{
-					Body: yaml.MapSlice{
-						yaml.MapItem{
-							Key:   "foo",
-							Value: "{{vars.foo}}",
-						},
-					},
+					Code: `{{foo}}`,
 				},
 				expectBuildError: true,
 			},
@@ -131,6 +154,17 @@ func TestExpect_Build(t *testing.T) {
 						yaml.MapItem{
 							Key:   nil,
 							Value: "value",
+						},
+					},
+				},
+				expectBuildError: true,
+			},
+			"failed to execute template": {
+				expect: &Expect{
+					Body: yaml.MapSlice{
+						yaml.MapItem{
+							Key:   "foo",
+							Value: "{{vars.foo}}",
 						},
 					},
 				},

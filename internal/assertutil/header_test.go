@@ -77,6 +77,21 @@ foo: '{{assert.notZero}}'
 				},
 			},
 		},
+		"not array (with $)": {
+			in: `
+foo: '{{$ != ""}}'
+`,
+			ok: map[string][]string{
+				"foo": {
+					"bar",
+				},
+			},
+			ng: map[string][]string{
+				"foo": {
+					"",
+				},
+			},
+		},
 	}
 	for name, test := range tests {
 		test := test
@@ -89,8 +104,10 @@ foo: '{{assert.notZero}}'
 			if err != nil {
 				t.Fatalf("failed to build assertion: %s", err)
 			}
-			if err := assertion.Assert(test.ok); err != nil {
-				t.Errorf("unexpected error: %s", err)
+			if test.ok != nil {
+				if err := assertion.Assert(test.ok); err != nil {
+					t.Errorf("unexpected error: %s", err)
+				}
 			}
 			if err := assertion.Assert(test.ng); err == nil {
 				t.Error("no error")

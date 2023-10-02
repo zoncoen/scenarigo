@@ -410,7 +410,7 @@ func (t *Template) executeFuncCall(call *ast.CallExpr, data interface{}) (interf
 		if err == nil {
 			fn = reflect.ValueOf(v)
 		} else {
-			r, m, ok := getMethod(x, selector.Sel.Name)
+			r, m, ok := getMethod(reflect.ValueOf(x), selector.Sel.Name)
 			if !ok {
 				return nil, err
 			}
@@ -429,7 +429,12 @@ func (t *Template) executeFuncCall(call *ast.CallExpr, data interface{}) (interf
 		}
 	}
 	if fn.Kind() != reflect.Func {
-		return nil, errors.Errorf("not function")
+		if r, m, ok := getMethod(fn, "Call"); ok {
+			fn = m.Func
+			args = append(args, r)
+		} else {
+			return nil, errors.Errorf("not function")
+		}
 	}
 	fnType := fn.Type()
 	argNum := len(args) + len(call.Args)
@@ -479,8 +484,8 @@ func (t *Template) executeFuncCall(call *ast.CallExpr, data interface{}) (interf
 	}
 }
 
-func getMethod(in interface{}, name string) (reflect.Value, *reflect.Method, bool) {
-	r := reflectutil.Elem(reflect.ValueOf(in))
+func getMethod(in reflect.Value, name string) (reflect.Value, *reflect.Method, bool) {
+	r := reflectutil.Elem(in)
 	m, ok := r.Type().MethodByName(name)
 	if ok {
 		return r, &m, true

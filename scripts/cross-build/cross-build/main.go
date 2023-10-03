@@ -12,6 +12,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/Masterminds/semver"
 	"github.com/Yamashou/gqlgenc/clientv2"
 
 	"github.com/zoncoen/scenarigo/scripts/cross-build/gen"
@@ -22,6 +23,7 @@ var (
 	ver              = os.Getenv("GO_VERSION")
 	rootDir          = os.Getenv("PJ_ROOT")
 	errImageNotFound = errors.New("image not found")
+	go1_21_0         = semver.MustParse("1.21.0")
 )
 
 func main() {
@@ -41,7 +43,15 @@ func release() error {
 		return fmt.Errorf("failed to get image tag: %w", err)
 	}
 
+	v, err := semver.NewVersion(ver)
+	if err != nil {
+		return fmt.Errorf("failed to parse version: %w", err)
+	}
 	cc := "aarch64-apple-darwin21.4-clang"
+	if v.GreaterThan(go1_21_0) {
+		cc = "aarch64-apple-darwin22-clang"
+	}
+
 	if err := build(ver, tag, cc); err != nil {
 		return fmt.Errorf("failed to build: %w", err)
 	}

@@ -140,7 +140,7 @@ test/examples/%:
 	if [ -d $(CURDIR)/$${dir}/plugin/src ]; then \
 		cd $(CURDIR)/$${dir}/plugin/src; \
 		rm -f go.work go.work.sum; \
-		go work init . ../../../..; \
+		$(GO) work init . ../../../..; \
 	fi; \
 	cd $(CURDIR)/$$dir; \
 	scenarigo plugin build && scenarigo run
@@ -152,7 +152,7 @@ lint: $(GOLANGCI_LINT) $(LOOPPOINTER) ## run lint
 
 .PHONY: lint/looppointer
 lint/looppointer: $(LOOPPOINTER)
-	@go vet -vettool=$(LOOPPOINTER) ./...
+	@$(GO) vet -vettool=$(LOOPPOINTER) ./...
 
 .PHONY: lint/fix
 lint/fix: $(GOLANGCI_LINT) $(LOOPPOINTER) ## fix lint errors
@@ -228,7 +228,7 @@ changelog/ci: $(GIT_CHGLOG) $(GOBUMP)
 credits: $(GO_LICENSES) $(GOCREDITS) ## generate CREDITS
 	@$(GO) mod download
 	@$(GO_LICENSES) check ./...
-	@go mod why github.com/davecgh/go-spew # HACK: download explicitly for credits
+	@$(GO) mod why github.com/davecgh/go-spew # HACK: download explicitly for credits
 	@$(GOCREDITS) . > CREDITS
 	@$(GO) mod tidy
 

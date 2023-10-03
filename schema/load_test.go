@@ -56,8 +56,8 @@ func (r request) Invoke(ctx *context.Context) (*context.Context, interface{}, er
 
 type expect map[interface{}]interface{}
 
-func (e expect) Build(_ *context.Context) (assert.Assertion, error) {
-	return assert.Build(e), nil
+func (e expect) Build(ctx *context.Context) (assert.Assertion, error) {
+	return assert.Build(ctx.RequestContext(), e)
 }
 
 func TestLoadScenarios(t *testing.T) {

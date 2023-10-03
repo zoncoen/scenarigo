@@ -236,3 +236,21 @@ steps:
   expect:
     body:
       message: '{{assert.length(assert.greaterThan(2))}}'
+
+---
+title: use $
+steps:
+- protocol: http
+  request:
+    method: GET
+    url: '{{env.TEST_ADDR}}'
+    header:
+      content-type: application/json
+    body:
+      message: 'hello'
+  expect:
+    code: '{{$ == string(2*100)}}'
+    header:
+      Content-Type: '{{$ == "application/json"}}'
+    body:
+      message: '{{$ == request.message}}'

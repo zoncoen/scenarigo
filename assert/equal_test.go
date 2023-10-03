@@ -12,9 +12,10 @@ func TestEqual(t *testing.T) {
 	s := "string"
 	type myString string
 	tests := map[string]struct {
-		expected interface{}
-		ok       interface{}
-		ng       interface{}
+		expected  interface{}
+		customEqs []Equaler
+		ok        interface{}
+		ng        interface{}
 	}{
 		"nil": {
 			expected: nil,
@@ -51,6 +52,23 @@ func TestEqual(t *testing.T) {
 			ok:       myString("test"),
 			ng:       myString("develop"),
 		},
+		"custom equalers": {
+			expected: "test",
+			customEqs: []Equaler{
+				EqualerFunc(func(x, y any) (bool, error) {
+					return false, nil
+				}),
+				EqualerFunc(func(x, y any) (bool, error) {
+					s, ok := y.(string)
+					if !ok {
+						return false, nil
+					}
+					return s == "dev", nil
+				}),
+			},
+			ok: "dev",
+			ng: "prod",
+		},
 		"json.Number (string)": {
 			expected: "100",
 			ok:       json.Number("100"),
@@ -70,7 +88,7 @@ func TestEqual(t *testing.T) {
 	for name, tc := range tests {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
-			assertion := Equal(tc.expected)
+			assertion := Equal(tc.expected, tc.customEqs...)
 			if err := assertion.Assert(tc.ok); err != nil {
 				t.Errorf("unexpected error: %s", err)
 			}

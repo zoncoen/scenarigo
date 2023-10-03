@@ -238,6 +238,28 @@ steps:
       message: hello
 ```
 
+Scenarigo allows [template string](#template-string) as expected values.
+Besides, you can write assertions by conditional expressions with the actual value `$`.
+
+```yaml
+title: check /message
+steps:
+- title: GET /message
+  protocol: http
+  request:
+    method: GET
+    url: http://example.com/message
+    query:
+      id: 1
+  expect:
+    code: OK
+    header:
+      Content-Type: application/json; charset=utf-8
+    body:
+      id: {{int($) > 0}}
+      message: '{{"hello" + " world"}}'
+```
+
 ### Variables
 
 The `vars` field defines variables that can be referred by [template string](#template-string) like `'{{vars.id}}'`.
@@ -413,7 +435,7 @@ INT           = "0" | ("1"..."9" {DECIMAL_DIGIT})
 FLOAT         = INT "." DECIMAL_DIGIT {DECIMAL_DIGIT}
 BOOL          = "true" | "false"
 STRING        = `"` {UNICODE_VALUE} `"`
-IDENT         = LETTER {LETTER | DECIMAL_DIGIT | "-" | "_"} - RESERVED
+IDENT         = (LETTER {LETTER | DECIMAL_DIGIT | "-" | "_"} | "$") - RESERVED
 
 DECIMAL_DIGIT = "0"..."9"
 UNICODE_VALUE = UNICODE_CHAR | ESCAPED_CHAR

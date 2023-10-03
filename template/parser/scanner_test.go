@@ -330,6 +330,36 @@ func TestScanner_Scan(t *testing.T) {
 					},
 				},
 			},
+			"$.a IDENT": {
+				src: "{{$.a}}",
+				expected: []result{
+					{
+						pos: 1,
+						tok: token.LDBRACE,
+						lit: "{{",
+					},
+					{
+						pos: 3,
+						tok: token.IDENT,
+						lit: "$",
+					},
+					{
+						pos: 4,
+						tok: token.PERIOD,
+						lit: ".",
+					},
+					{
+						pos: 5,
+						tok: token.IDENT,
+						lit: "a",
+					},
+					{
+						pos: 6,
+						tok: token.RDBRACE,
+						lit: "}}",
+					},
+				},
+			},
 			"parameter with raw string": {
 				src: "prefix-{{test}}-suffix",
 				expected: []result{

@@ -278,6 +278,15 @@ func TestTemplate_Execute(t *testing.T) {
 			},
 			expect: "pre-test-suf",
 		},
+		"callable": {
+			str: "{{f(a, b)}}",
+			data: map[string]interface{}{
+				"f": &joinFunc{},
+				"a": "foo",
+				"b": "bar",
+			},
+			expect: "foobar",
+		},
 		"not found": {
 			str:         "{{a.b[1]}}",
 			expectError: `".a.b[1]" not found`,
@@ -1499,6 +1508,10 @@ func (*joinFunc) UnmarshalArg(unmarshal func(interface{}) error) (interface{}, e
 		return nil, err
 	}
 	return &arg, nil
+}
+
+func (*joinFunc) Call(strs ...string) (string, error) {
+	return strings.Join(strs, ""), nil
 }
 
 type callFunc struct{}

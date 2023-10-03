@@ -38,7 +38,7 @@ func (c *Context) ExtractByKey(key string) (interface{}, bool) {
 	case nameEnv:
 		return env, true
 	case nameAssert:
-		return assertions, true
+		return &assertions{c.RequestContext()}, true
 	}
 	return nil, false
 }

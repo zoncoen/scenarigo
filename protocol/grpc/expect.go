@@ -49,19 +49,17 @@ func (e *Expect) Build(ctx *context.Context) (assert.Assertion, error) {
 		codePath = "status.code"
 		expectCode = e.Status.Code
 	}
-	executedCode, err := ctx.ExecuteTemplate(expectCode)
+	codeAssertion, err := assert.Build(ctx.RequestContext(), expectCode, assert.FromTemplate(ctx))
 	if err != nil {
-		return nil, errors.WrapPathf(err, codePath, "invalid expect response: %s", err)
+		return nil, errors.WrapPathf(err, codePath, "invalid expect status code")
 	}
-	codeAssertion := assert.Build(executedCode)
 
 	var statusMsgAssertion assert.Assertion
 	if e.Status.Message != "" {
-		executedMsg, err := ctx.ExecuteTemplate(e.Status.Message)
+		statusMsgAssertion, err = assert.Build(ctx.RequestContext(), e.Status.Message, assert.FromTemplate(ctx))
 		if err != nil {
-			return nil, errors.WrapPathf(err, "status.message", "invalid expect response: %s", err)
+			return nil, errors.WrapPathf(err, "status.message", "invalid expect status message")
 		}
-		statusMsgAssertion = assert.Build(executedMsg)
 	}
 
 	statusDetailAssertions, err := e.buildStatusDetailAssertions(ctx)
@@ -78,11 +76,10 @@ func (e *Expect) Build(ctx *context.Context) (assert.Assertion, error) {
 		return nil, errors.WrapPathf(err, "trailer", "invalid expect trailer")
 	}
 
-	expectMsg, err := ctx.ExecuteTemplate(e.Message)
+	msgAssertion, err := assert.Build(ctx.RequestContext(), e.Message, assert.FromTemplate(ctx))
 	if err != nil {
-		return nil, errors.WrapPathf(err, "message", "invalid expect response: %s", err)
+		return nil, errors.WrapPathf(err, "message", "invalid expect response message")
 	}
-	msgAssertion := assert.Build(expectMsg)
 
 	return assert.AssertionFunc(func(v interface{}) error {
 		resp, ok := v.(response)
@@ -124,21 +121,23 @@ func (e *Expect) buildStatusDetailAssertions(ctx *context.Context) ([]assert.Ass
 				return nil, errors.ErrorPath(fmt.Sprintf("status.details[%d]", i), "an element of status.details list must be a map of size 1 with the detail message name as the key and the value as the detail message object")
 			}
 			for k, v := range d {
-				executed, err := ctx.ExecuteTemplate(k)
+				fullName, err := assert.Build(ctx.RequestContext(), k, assert.FromTemplate(ctx), assert.WithEqualers(
+					assert.EqualerFunc(func(x, y any) (bool, error) {
+						if s, ok := x.(string); ok {
+							return true, assert.Equal(protoreflect.FullName(s)).Assert(y)
+						}
+						return false, nil
+					}),
+				))
 				if err != nil {
-					return nil, errors.WrapPath(err, fmt.Sprintf("status.details[%d].'%s'", i, k), "failed to execute template")
+					return nil, errors.WrapPathf(err, fmt.Sprintf("status.details[%d].'%s'", i, k), "invalid expect status detail message name")
 				}
-				var fullName assert.Assertion
-				if s, ok := executed.(string); ok {
-					fullName = assert.Build(protoreflect.FullName(s))
-				} else {
-					fullName = assert.Build(executed)
-				}
-				executed, err = ctx.ExecuteTemplate(v)
+
+				fields, err := assert.Build(ctx.RequestContext(), v, assert.FromTemplate(ctx))
 				if err != nil {
-					return nil, errors.WrapPath(err, fmt.Sprintf("status.details[%d].'%s'", i, k), "failed to execute template")
+					return nil, errors.WrapPathf(err, fmt.Sprintf("status.details[%d].'%s'", i, k), "invalid expect status detail")
 				}
-				fields := assert.Build(executed)
+
 				statusDetailAssertions[i] = assert.AssertionFunc(func(v interface{}) error {
 					m, ok := v.(proto.Message)
 					if !ok {

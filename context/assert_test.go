@@ -1,6 +1,7 @@
 package context
 
 import (
+	"context"
 	"strconv"
 	"strings"
 	"testing"
@@ -16,13 +17,9 @@ func TestAssertions(t *testing.T) {
 		var i interface{}
 		decode(&i)
 		return func(r testutil.Reporter, v interface{}) error {
-			a, err := template.Execute(i, map[string]interface{}{
-				"assert": assertions,
-			})
-			if err != nil {
-				r.Fatalf("failed to execute template: %s", err)
-			}
-			return assert.Build(a).Assert(v)
+			return assert.MustBuild(context.Background(), i, assert.FromTemplate(map[string]interface{}{
+				"assert": &assertions{context.Background()},
+			})).Assert(v)
 		}
 	}
 	testutil.RunParameterizedTests(
@@ -70,12 +67,15 @@ func TestLeftArrowFunc(t *testing.T) {
 				t.Fatalf("failed to unmarshal: %s", err)
 			}
 			v, err := template.Execute(i, map[string]interface{}{
-				"f": leftArrowFunc(buildArg(assert.Contains)),
+				"f": &leftArrowFunc{
+					ctx: context.Background(),
+					f:   buildArg(context.Background(), assert.Contains),
+				},
 			})
 			if err != nil {
 				t.Fatalf("failed to execute: %s", err)
 			}
-			assertion := assert.Build(v)
+			assertion := assert.MustBuild(context.Background(), v)
 			if err := assertion.Assert(tc.ok); err != nil {
 				t.Errorf("unexpected error: %s", err)
 			}

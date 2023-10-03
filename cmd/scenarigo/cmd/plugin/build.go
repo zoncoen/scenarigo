@@ -429,6 +429,9 @@ func (pb *pluginBuilder) build(cmd *cobra.Command, goCmd string, overrideKeys []
 	if err := updateGoMod(cmd, goCmd, pb.name, pb.gomodPath, overrideKeys, overrides); err != nil {
 		return err
 	}
+	if err := os.RemoveAll(pb.out); err != nil {
+		return fmt.Errorf("failed to delete the old plugin %s: %w", pb.out, err)
+	}
 	if err := execute(ctx, pb.dir, goCmd, "build", "-buildmode=plugin", "-o", pb.out, pb.src); err != nil {
 		return fmt.Errorf(`"go build -buildmode=plugin -o %s %s" failed: %w`, pb.out, pb.src, err)
 	}

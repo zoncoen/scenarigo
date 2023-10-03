@@ -138,6 +138,17 @@ func TestParser_Parse(t *testing.T) {
 					Rdbrace: 7,
 				},
 			},
+			"$ ident": {
+				src: "{{$}}",
+				expected: &ast.ParameterExpr{
+					Ldbrace: 1,
+					X: &ast.Ident{
+						NamePos: 3,
+						Name:    "$",
+					},
+					Rdbrace: 4,
+				},
+			},
 			"multi parameter": {
 				src: "{{one}}{{two}}{{three}}",
 				expected: &ast.BinaryExpr{
@@ -735,6 +746,18 @@ func TestParser_Parse(t *testing.T) {
 			"selector index after .": {
 				src: "{{ test.[0] }}",
 				pos: 9,
+			},
+			"invalid $$ ident": {
+				src: "{{$$}}",
+				pos: 4,
+			},
+			"invalid $a ident": {
+				src: "{{$a}}",
+				pos: 4,
+			},
+			"invalid a$ ident": {
+				src: "{{a$}}",
+				pos: 4,
 			},
 		}
 		for name, test := range tests {

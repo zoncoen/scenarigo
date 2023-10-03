@@ -8,7 +8,7 @@ steps:
   expect:
     code: OK
     body:
-      message: aaa
+      message: '{{vars.global}}'
   bind:
     vars:
       message: '{{response.message}}'

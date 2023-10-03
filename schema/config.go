@@ -19,6 +19,7 @@ import (
 // Config represents a configuration.
 type Config struct {
 	SchemaVersion   string                           `yaml:"schemaVersion,omitempty"`
+	Vars            map[string]any                   `yaml:"vars,omitempty"`
 	Scenarios       []string                         `yaml:"scenarios,omitempty"`
 	PluginDirectory string                           `yaml:"pluginDirectory,omitempty"`
 	Plugins         OrderedMap[string, PluginConfig] `yaml:"plugins,omitempty"`

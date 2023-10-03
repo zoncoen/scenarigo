@@ -13,7 +13,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"sort"
 	"strings"
 	"testing"
@@ -49,7 +48,7 @@ func init() {
 }
 
 func TestBuild(t *testing.T) {
-	goVersion := strings.TrimPrefix(runtime.Version(), "go")
+	goVersion := strings.TrimPrefix(goVer, "go")
 
 	// Old Go versions need to trim patch versions.
 	v, err := semver.NewVersion(goVersion)
@@ -93,7 +92,7 @@ go %s
 	}
 	gomodWithRequire := b.String()
 
-	goCmd, err := findGoCmd(context.Background())
+	goCmd, err := findGoCmd(context.Background(), false)
 	if err != nil {
 		t.Fatalf("failed to find go command: %s", err)
 	}
@@ -1128,29 +1127,36 @@ func getModuleVersions(t *testing.T) map[string]string {
 
 func TestFindGoCmd(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		goVersion := runtime.Version()
 		tests := map[string]struct {
 			cmds   map[string]string
 			expect string
+			tip    bool
 		}{
 			"found go command": {
 				cmds: map[string]string{
-					"go": fmt.Sprintf("go version %s linux/amd64", goVersion),
+					"go": fmt.Sprintf("go version %s linux/amd64", goVer),
 				},
 				expect: "go",
 			},
-			fmt.Sprintf("found %s command", goVersion): {
+			fmt.Sprintf("found %s command", goVer): {
 				cmds: map[string]string{
-					goVersion: fmt.Sprintf("go version %s linux/amd64", goVersion),
+					goVer: fmt.Sprintf("go version %s linux/amd64", goVer),
 				},
-				expect: goVersion,
+				expect: goVer,
 			},
-			fmt.Sprintf("different go version but %s found", goVersion): {
+			fmt.Sprintf("different go version but %s found", goVer): {
 				cmds: map[string]string{
-					"go":      "go version go1.15 linux/amd64",
-					goVersion: fmt.Sprintf("go version %s linux/amd64", goVersion),
+					"go":  "go version go1.15 linux/amd64",
+					goVer: fmt.Sprintf("go version %s linux/amd64", goVer),
 				},
-				expect: goVersion,
+				expect: goVer,
+			},
+			"found gotip command": {
+				cmds: map[string]string{
+					"gotip": fmt.Sprintf("go version %s linux/amd64", goVer),
+				},
+				expect: "gotip",
+				tip:    true,
 			},
 		}
 		for name, test := range tests {
@@ -1161,7 +1167,7 @@ func TestFindGoCmd(t *testing.T) {
 					createExecutable(t, filepath.Join(tmpDir, cmd), stdout)
 				}
 				t.Setenv("PATH", tmpDir)
-				goCmd, err := findGoCmd(context.Background())
+				goCmd, err := findGoCmd(context.Background(), test.tip)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -1194,7 +1200,7 @@ func TestFindGoCmd(t *testing.T) {
 					createExecutable(t, filepath.Join(tmpDir, cmd), stdout)
 				}
 				t.Setenv("PATH", tmpDir)
-				_, err := findGoCmd(context.Background())
+				_, err := findGoCmd(context.Background(), false)
 				if err == nil {
 					t.Fatal("no error")
 				}
@@ -1813,7 +1819,7 @@ replace google.golang.org/grpc v1.46.0 => google.golang.org/grpc v1.40.0
 
 			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
-			goCmd, err := findGoCmd(ctx)
+			goCmd, err := findGoCmd(ctx, false)
 			if err != nil {
 				t.Fatalf("failed to find go command: %s", err)
 			}

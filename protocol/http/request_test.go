@@ -456,7 +456,7 @@ func TestRequest_buildRequest(t *testing.T) {
 			if err != nil {
 				t.Fatalf("unexpected error: %s", err)
 			}
-			if diff := cmp.Diff(test.expectReq(t), req, cmp.FilterPath(func(path cmp.Path) bool {
+			if diff := cmp.Diff(test.expectReq(t), req, cmp.AllowUnexported(http.Request{}), cmp.FilterPath(func(path cmp.Path) bool {
 				return path.String() == "ctx"
 			}, cmp.Ignore())); diff != "" {
 				t.Errorf("request differs (-want +got):\n%s", diff)

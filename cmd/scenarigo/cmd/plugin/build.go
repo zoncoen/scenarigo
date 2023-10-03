@@ -28,12 +28,18 @@ import (
 
 var (
 	goVer        string
+	tip          bool
 	goMajorMinor string
 	gomodVer     string
 )
 
 func init() {
 	goVer = runtime.Version()
+	if strings.HasPrefix(goVer, "devel ") {
+		// gotip
+		goVer = strings.Split(strings.TrimPrefix(goVer, "devel "), "-")[0]
+		tip = true
+	}
 	e := strings.Split(strings.TrimPrefix(goVer, "go"), ".")
 	if len(e) < 2 {
 		panic(fmt.Sprintf("%q is invalid Go version", goVer))
@@ -92,7 +98,7 @@ func buildRun(cmd *cobra.Command, args []string) error {
 		return errors.New("config file not found")
 	}
 
-	goCmd, err := findGoCmd(ctx(cmd))
+	goCmd, err := findGoCmd(ctx(cmd), tip)
 	if err != nil {
 		return err
 	}
@@ -164,7 +170,7 @@ func buildRun(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func findGoCmd(ctx context.Context) (string, error) {
+func findGoCmd(ctx context.Context, tip bool) (string, error) {
 	goCmd, err := exec.LookPath("go")
 	var verr error
 	if err == nil {
@@ -176,6 +182,13 @@ func findGoCmd(ctx context.Context) (string, error) {
 	if goCmd, err := exec.LookPath(goVer); err == nil {
 		if err := checkGoVersion(ctx, goCmd, goVer); err == nil {
 			return goCmd, nil
+		}
+	}
+	if tip {
+		if goCmd, err := exec.LookPath("gotip"); err == nil {
+			if err := checkGoVersion(ctx, goCmd, goVer); err == nil {
+				return goCmd, nil
+			}
 		}
 	}
 	if err == nil {
@@ -256,7 +269,12 @@ func checkGoVersion(ctx context.Context, goCmd, ver string) error {
 	}
 	items := strings.Split(stdout.String(), " ")
 	if len(items) != 4 {
-		return errors.New("invalid version output or scenarigo bug")
+		if len(items) > 4 && items[2] == "devel" {
+			// gotip
+			items[2] = strings.Split(items[3], "-")[0]
+		} else {
+			return errors.New("invalid version output or scenarigo bug")
+		}
 	}
 	if v := items[2]; v != ver {
 		//nolint:revive

@@ -17,7 +17,7 @@
                             >  9 |     code: OK
                                              ^
                               10 |     body:
-                              11 |       message: aaa
+                              11 |       message: '{{vars.global}}'
                               12 |   bind:
 FAIL
 FAIL	testdata/testcases/scenarios/include/scenario.yaml	0.000s

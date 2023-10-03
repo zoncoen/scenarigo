@@ -89,12 +89,17 @@ steps:
     method: POST
     url: "{{env.TEST_ADDR}}/echo"
     body:
-      message: "hello"
+      message: '{{vars.msg}}'
   expect:
     code: 200
     body:
       message: "hello"
 `,
+			config: &schema.Config{
+				Vars: map[string]any{
+					"msg": "hello",
+				},
+			},
 			setup: func(ctx *context.Context) func(*context.Context) {
 				mux := http.NewServeMux()
 				mux.HandleFunc("/echo", func(w http.ResponseWriter, r *http.Request) {
@@ -256,6 +261,22 @@ func TestWithConfig(t *testing.T) {
 		"empty": {
 			config: &schema.Config{},
 			expect: &Runner{
+				scenarioFiles: []string{},
+				rootDir:       wd,
+			},
+		},
+		"vars": {
+			config: &schema.Config{
+				Vars: map[string]any{
+					"aaa": "foo",
+					"bbb": 123,
+				},
+			},
+			expect: &Runner{
+				vars: map[string]any{
+					"aaa": "foo",
+					"bbb": 123,
+				},
 				scenarioFiles: []string{},
 				rootDir:       wd,
 			},

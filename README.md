@@ -70,6 +70,10 @@ $ scenarigo config init
 ```yaml scenarigo.yaml
 schemaVersion: config/v1
 
+# global variables
+vars:
+  endpoint: http://api.example.com
+
 scenarios: [] # Specify test scenario files and directories.
 
 pluginDirectory: ./gen    # Specify the root directory of plugins.

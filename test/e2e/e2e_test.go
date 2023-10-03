@@ -73,6 +73,9 @@ func TestE2E(t *testing.T) {
 					}
 
 					config := &schema.Config{
+						Vars: map[string]any{
+							"global": `{{"aaa"}}`,
+						},
 						PluginDirectory: "testdata/gen/plugins",
 						Plugins:         schema.NewOrderedMap[string, schema.PluginConfig](),
 					}

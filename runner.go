@@ -31,6 +31,7 @@ func init() {
 
 // Runner represents a test runner.
 type Runner struct {
+	vars            map[string]any
 	pluginDir       *string
 	plugins         schema.OrderedMap[string, schema.PluginConfig]
 	scenarioFiles   []string
@@ -66,6 +67,8 @@ func WithConfig(config *schema.Config) func(*Runner) error {
 		if config == nil {
 			return nil
 		}
+
+		r.vars = config.Vars
 
 		r.rootDir = config.Root
 		scenarios := make([]string, len(config.Scenarios))
@@ -195,6 +198,9 @@ func (r *Runner) ScenarioFiles() []string {
 // Run runs all tests.
 func (r *Runner) Run(ctx *context.Context) {
 	// setup context
+	if r.vars != nil {
+		ctx = ctx.WithVars(r.vars)
+	}
 	if r.pluginDir != nil {
 		ctx = ctx.WithPluginDir(*r.pluginDir)
 	}

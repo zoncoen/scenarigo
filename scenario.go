@@ -70,6 +70,20 @@ func RunScenario(ctx *context.Context, s *schema.Scenario) *context.Context {
 			if failed {
 				stepCtx.Reporter().SkipNow()
 			}
+			if run, err := executeIf(ctx, step.If); err != nil {
+				stepCtx.Reporter().Fatal(
+					errors.WithNodeAndColored(
+						errors.WithPath(
+							err,
+							fmt.Sprintf("steps[%d].if", idx),
+						),
+						stepCtx.Node(),
+						stepCtx.EnabledColor(),
+					),
+				)
+			} else if !run {
+				stepCtx.Reporter().SkipNow()
+			}
 
 			if step.Timeout != nil && *step.Timeout > 0 {
 				reqCtx, cancel := gocontext.WithTimeout(stepCtx.RequestContext(), time.Duration(*step.Timeout))
@@ -116,6 +130,21 @@ func RunScenario(ctx *context.Context, s *schema.Scenario) *context.Context {
 	}
 
 	return scnCtx
+}
+
+func executeIf(ctx *context.Context, expr string) (bool, error) {
+	if expr == "" {
+		return true, nil
+	}
+	v, err := ctx.ExecuteTemplate(expr)
+	if err != nil {
+		return false, fmt.Errorf("failed to execute: %w", err)
+	}
+	run, ok := v.(bool)
+	if !ok {
+		return false, fmt.Errorf("must be bool but got %T", v)
+	}
+	return run, nil
 }
 
 func runStepWithTimeout(ctx *context.Context, scenario *schema.Scenario, step *schema.Step, idx int) *context.Context {

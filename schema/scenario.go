@@ -67,6 +67,7 @@ type Step struct {
 	ID                      string                    `yaml:"id,omitempty" validate:"alphanum"`
 	Title                   string                    `yaml:"title,omitempty"`
 	Description             string                    `yaml:"description,omitempty"`
+	If                      string                    `yaml:"if,omitempty"`
 	Vars                    map[string]interface{}    `yaml:"vars,omitempty"`
 	Protocol                string                    `yaml:"protocol,omitempty"`
 	Request                 protocol.Invoker          `yaml:"request,omitempty"`
@@ -91,6 +92,7 @@ type stepUnmarshaller struct {
 	ID                      string                 `yaml:"id,omitempty"`
 	Title                   string                 `yaml:"title,omitempty"`
 	Description             string                 `yaml:"description,omitempty"`
+	If                      string                 `yaml:"if,omitempty"`
 	Vars                    map[string]interface{} `yaml:"vars,omitempty"`
 	Protocol                string                 `yaml:"protocol,omitempty"`
 	Include                 string                 `yaml:"include,omitempty"`
@@ -115,6 +117,7 @@ func (s *Step) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	s.ID = unmarshaled.ID
 	s.Title = unmarshaled.Title
 	s.Description = unmarshaled.Description
+	s.If = unmarshaled.If
 	s.Vars = unmarshaled.Vars
 	s.Protocol = unmarshaled.Protocol
 	s.Include = unmarshaled.Include

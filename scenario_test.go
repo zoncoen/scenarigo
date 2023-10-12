@@ -57,3 +57,67 @@ func createTempScenario(t *testing.T, scenario string) string {
 	}
 	return f.Name()
 }
+
+func TestExecuteIf(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		tests := map[string]struct {
+			vars   map[string]any
+			expr   string
+			expect bool
+		}{
+			"empty": {
+				expect: true,
+			},
+			"no vars": {
+				expr:   "{{true}}",
+				expect: true,
+			},
+			"with vars": {
+				vars: map[string]any{
+					"foo": true,
+				},
+				expr:   "{{vars.foo}}",
+				expect: true,
+			},
+		}
+		for name, test := range tests {
+			test := test
+			t.Run(name, func(t *testing.T) {
+				ctx := context.FromT(t).WithVars(test.vars)
+				got, err := executeIf(ctx, test.expr)
+				if err != nil {
+					t.Fatalf("unexpected error: %s", err)
+				}
+				if expect := test.expect; got != expect {
+					t.Errorf("expected %t but got %t", expect, got)
+				}
+			})
+		}
+	})
+	t.Run("failure", func(t *testing.T) {
+		tests := map[string]struct {
+			expr        string
+			expectError string
+		}{
+			"invalid template": {
+				expr:        "{{",
+				expectError: `failed to execute: failed to parse "{{": col 3: expected '}}', found 'EOF'`,
+			},
+			"not bool": {
+				expr:        "{{1}}",
+				expectError: "must be bool but got string",
+			},
+		}
+		for name, test := range tests {
+			test := test
+			t.Run(name, func(t *testing.T) {
+				ctx := context.FromT(t)
+				if _, err := executeIf(ctx, test.expr); err == nil {
+					t.Fatal("no error")
+				} else if got, expect := err.Error(), test.expectError; got != expect {
+					t.Errorf("expected %q but got %q", expect, got)
+				}
+			})
+		}
+	})
+}

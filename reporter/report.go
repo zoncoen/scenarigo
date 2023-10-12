@@ -85,6 +85,10 @@ func generateSubStepReports(r Reporter) []SubStepReport {
 	return reports
 }
 
+func TestResultString(r Reporter) string {
+	return testResult(r).String()
+}
+
 func testResult(r Reporter) TestResult {
 	if r.Failed() {
 		return TestResultFailed

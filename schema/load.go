@@ -190,6 +190,9 @@ func loadScenariosFromFileAST(f *ast.File) ([]*Scenario, error) {
 		}
 		s.filepath = f.Name
 		s.Node = doc.Body
+		if err := s.Validate(); err != nil {
+			return nil, fmt.Errorf("validation error: %s: %w", s.filepath, err)
+		}
 		scenarios = append(scenarios, &s)
 	}
 	return scenarios, nil

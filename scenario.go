@@ -9,12 +9,16 @@ import (
 	"github.com/zoncoen/scenarigo/context"
 	"github.com/zoncoen/scenarigo/errors"
 	"github.com/zoncoen/scenarigo/plugin"
+	"github.com/zoncoen/scenarigo/reporter"
 	"github.com/zoncoen/scenarigo/schema"
 )
 
 // RunScenario runs a test scenario s.
 func RunScenario(ctx *context.Context, s *schema.Scenario) *context.Context {
 	ctx = ctx.WithScenarioFilepath(s.Filepath())
+	steps := context.NewSteps()
+	ctx = ctx.WithSteps(steps)
+
 	var setups setupFuncList
 	if s.Plugins != nil {
 		plugs := map[string]interface{}{}
@@ -58,33 +62,36 @@ func RunScenario(ctx *context.Context, s *schema.Scenario) *context.Context {
 	var failed bool
 	for idx, step := range s.Steps {
 		step := step
+		var stepCtx *context.Context
 		ok := context.RunWithRetry(scnCtx, step.Title, func(ctx *context.Context) {
+			stepCtx = ctx
+
 			// following steps are skipped if the previous step failed
 			if failed {
-				ctx.Reporter().SkipNow()
+				stepCtx.Reporter().SkipNow()
 			}
 
 			if step.Timeout != nil && *step.Timeout > 0 {
-				reqCtx, cancel := gocontext.WithTimeout(ctx.RequestContext(), time.Duration(*step.Timeout))
+				reqCtx, cancel := gocontext.WithTimeout(stepCtx.RequestContext(), time.Duration(*step.Timeout))
 				defer cancel()
-				ctx = ctx.WithRequestContext(reqCtx)
+				stepCtx = stepCtx.WithRequestContext(reqCtx)
 			}
 
-			ctx = runStepWithTimeout(ctx, s, step, idx)
+			stepCtx = runStepWithTimeout(stepCtx, s, step, idx)
 
 			// bind values to the scenario context for enable to access from following steps
 			if step.Bind.Vars != nil {
-				vars, err := ctx.ExecuteTemplate(step.Bind.Vars)
+				vars, err := stepCtx.ExecuteTemplate(step.Bind.Vars)
 				if err != nil {
-					ctx.Reporter().Fatal(
+					stepCtx.Reporter().Fatal(
 						errors.WithNodeAndColored(
 							errors.WrapPath(
 								err,
 								fmt.Sprintf("steps[%d].bind.vars", idx),
 								"invalid bind",
 							),
-							ctx.Node(),
-							ctx.EnabledColor(),
+							stepCtx.Node(),
+							stepCtx.EnabledColor(),
 						),
 					)
 				}
@@ -93,6 +100,14 @@ func RunScenario(ctx *context.Context, s *schema.Scenario) *context.Context {
 		}, step.Retry)
 		if !failed {
 			failed = !ok
+		}
+		if stepCtx == nil {
+			continue
+		}
+		if step.ID != "" {
+			steps.Add(step.ID, &context.Step{ //nolint:exhaustruct
+				Result: reporter.TestResultString(stepCtx.Reporter()),
+			})
 		}
 	}
 

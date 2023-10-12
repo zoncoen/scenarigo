@@ -95,6 +95,27 @@ func TestLoadScenarios(t *testing.T) {
 						Vars:        map[string]interface{}{"message": "hello"},
 						Steps: []*Step{
 							{
+								ID:          "POST-say_01",
+								Title:       "POST /say",
+								Description: "check to respond same message",
+								Vars:        nil,
+								Protocol:    "test",
+								Request: &request{
+									"body": map[string]interface{}{
+										"message": "{{vars.message}}",
+									},
+								},
+								Expect: &expect{
+									"body": yaml.MapSlice{
+										yaml.MapItem{
+											Key:   "message",
+											Value: "{{request.body}}",
+										},
+									},
+								},
+							},
+							{
+								ID:          "POST-say_02",
 								Title:       "POST /say",
 								Description: "check to respond same message",
 								Vars:        nil,
@@ -358,6 +379,34 @@ func TestLoadScenarios(t *testing.T) {
 			"unknown protocol": {
 				path:   "testdata/unknown-protocol.yaml",
 				expect: "failed to decode YAML: unknown protocol: unknown",
+			},
+			"validation error: invalid step id": {
+				path: "testdata/invalid-step-id.yaml",
+				expect: `validation error: testdata/invalid-step-id.yaml: step id must contain only alphanumeric characters, -, or _
+       3 | vars:
+       4 |   message: hello
+       5 | steps:
+    >  6 | - id: POST say
+                 ^
+       7 |   title: POST /say
+       8 |   description: check to respond same message
+       9 |   protocol: test
+      10 |
+`,
+			},
+			"validation error: dup step id": {
+				path: "testdata/invalid-dup-step-id.yaml",
+				expect: `validation error: testdata/invalid-dup-step-id.yaml: step id "POST-say" is duplicated
+      13 |   expect:
+      14 |     body:
+      15 |       message: "{{request.body}}"
+    > 16 | - id: POST-say
+                 ^
+      17 |   title: POST /say
+      18 |   description: check to respond same message
+      19 |   protocol: test
+      20 |
+`,
 			},
 			"ytt disabled": {
 				path: "testdata/ytt/scenario.yaml",

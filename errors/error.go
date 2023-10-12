@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/fatih/color"
 	"github.com/goccy/go-yaml"
 	"github.com/goccy/go-yaml/ast"
 	"github.com/goccy/go-yaml/printer"
@@ -141,6 +142,11 @@ func WithQuery(err error, q *query.Query) error {
 		Err:  err,
 		Path: q.String(),
 	}
+}
+
+// WithNode set ast.Node to error if errors instance is PathError or MultiPathError.
+func WithNode(err error, node ast.Node) error {
+	return WithNodeAndColored(err, node, !color.NoColor)
 }
 
 // WithNodeAndColored set ast.Node and colored to error if errors instance is PathError or MultiPathError.

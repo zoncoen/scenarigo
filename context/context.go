@@ -15,6 +15,7 @@ type (
 	keyPluginDir        struct{}
 	keyPlugins          struct{}
 	keyVars             struct{}
+	keySteps            struct{}
 	keyRequest          struct{}
 	keyResponse         struct{}
 	keyYAMLNode         struct{}
@@ -153,6 +154,27 @@ func (c *Context) Vars() Vars {
 	vs, ok := c.ctx.Value(keyVars{}).(Vars)
 	if ok {
 		return vs
+	}
+	return nil
+}
+
+// WithSteps returns a copy of c with steps.
+func (c *Context) WithSteps(steps *Steps) *Context {
+	if steps == nil {
+		return c
+	}
+	return newContext(
+		context.WithValue(c.ctx, keySteps{}, steps),
+		c.reqCtx,
+		c.reporter,
+	)
+}
+
+// Steps returns the steps.
+func (c *Context) Steps() *Steps {
+	v, ok := c.ctx.Value(keySteps{}).(*Steps)
+	if ok {
+		return v
 	}
 	return nil
 }

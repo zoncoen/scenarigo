@@ -244,6 +244,13 @@ func checkReport(t *testing.T, r Reporter, expect *TestReport) {
 	}
 }
 
+func TestTestResultString(t *testing.T) {
+	r := run(func(r Reporter) {}, WithWriter(&nopWriter{}))
+	if got, expect := TestResultString(r), "passed"; got != expect {
+		t.Errorf("expect %q but got %q", expect, got)
+	}
+}
+
 func TestTestResult(t *testing.T) {
 	tests := []struct {
 		result TestResult

@@ -85,6 +85,10 @@ func RunScenario(ctx *context.Context, s *schema.Scenario) *context.Context {
 				stepCtx.Reporter().SkipNow()
 			}
 
+			if step.ContinueOnError {
+				reporter.NoFailurePropagation(stepCtx.Reporter())
+			}
+
 			if step.Timeout != nil && *step.Timeout > 0 {
 				reqCtx, cancel := gocontext.WithTimeout(stepCtx.RequestContext(), time.Duration(*step.Timeout))
 				defer cancel()
@@ -112,8 +116,8 @@ func RunScenario(ctx *context.Context, s *schema.Scenario) *context.Context {
 				scnCtx = scnCtx.WithVars(vars)
 			}
 		}, step.Retry)
-		if !failed {
-			failed = !ok
+		if !ok && !step.ContinueOnError {
+			failed = true
 		}
 		if stepCtx == nil {
 			continue

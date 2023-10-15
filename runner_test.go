@@ -78,6 +78,31 @@ func TestRunner(t *testing.T) {
 				}
 			},
 		},
+		"continue on error": {
+			config: &schema.Config{
+				Scenarios: []string{
+					filepath.Join("testdata", "continue_on_error.yaml"),
+				},
+			},
+			setup: func(ctx *context.Context) func(*context.Context) {
+				mux := http.NewServeMux()
+				mux.HandleFunc("/echo", func(w http.ResponseWriter, r *http.Request) {
+					defer r.Body.Close()
+					w.Header().Set("Content-Type", "application/json")
+					_, _ = io.Copy(w, r.Body)
+				})
+
+				s := httptest.NewServer(mux)
+				if err := os.Setenv("TEST_ADDR", s.URL); err != nil {
+					ctx.Reporter().Fatalf("unexpected error: %s", err)
+				}
+
+				return func(*context.Context) {
+					s.Close()
+					os.Unsetenv("TEST_ADDR")
+				}
+			},
+		},
 		"run with yaml": {
 			yaml: `
 ---
@@ -134,35 +159,38 @@ steps:
 			},
 		},
 	}
-	for _, test := range tests {
-		var opts []func(*Runner) error
-		if test.path != "" {
-			opts = append(opts, WithScenarios(test.path))
-		}
-		if test.yaml != "" {
-			opts = append(opts, WithScenariosFromReader(strings.NewReader(test.yaml)))
-		}
-		if test.config != nil {
-			opts = append(opts, WithConfig(test.config))
-		}
-		runner, err := NewRunner(opts...)
-		if err != nil {
-			t.Fatal(err)
-		}
-		var b bytes.Buffer
-		ok := reporter.Run(func(rptr reporter.Reporter) {
-			ctx := context.New(rptr)
-			if test.setup != nil {
-				teardown := test.setup(ctx)
-				if teardown != nil {
-					defer teardown(ctx)
-				}
+	for name, test := range tests {
+		test := test
+		t.Run(name, func(t *testing.T) {
+			var opts []func(*Runner) error
+			if test.path != "" {
+				opts = append(opts, WithScenarios(test.path))
 			}
-			runner.Run(ctx)
-		}, reporter.WithWriter(&b))
-		if !ok {
-			t.Fatalf("scenario failed:\n%s", b.String())
-		}
+			if test.yaml != "" {
+				opts = append(opts, WithScenariosFromReader(strings.NewReader(test.yaml)))
+			}
+			if test.config != nil {
+				opts = append(opts, WithConfig(test.config))
+			}
+			runner, err := NewRunner(opts...)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var b bytes.Buffer
+			ok := reporter.Run(func(rptr reporter.Reporter) {
+				ctx := context.New(rptr)
+				if test.setup != nil {
+					teardown := test.setup(ctx)
+					if teardown != nil {
+						defer teardown(ctx)
+					}
+				}
+				runner.Run(ctx)
+			}, reporter.WithWriter(&b))
+			if !ok {
+				t.Fatalf("scenario failed:\n%s", b.String())
+			}
+		})
 	}
 }
 

@@ -39,6 +39,7 @@ type Reporter interface {
 	Run(name string, f func(r Reporter)) bool
 
 	runWithRetry(string, func(t Reporter), RetryPolicy) bool
+	setNoFailurePropagation()
 
 	// for test reports
 	getName() string
@@ -63,6 +64,11 @@ func run(f func(r Reporter), opts ...Option) *reporter {
 	return r
 }
 
+// NoFailurePropagation prevents propagation of the failure to the parent.
+func NoFailurePropagation(r Reporter) {
+	r.setNoFailurePropagation()
+}
+
 // reporter is an implementation of Reporter that
 // records its mutations for later inspection in tests.
 type reporter struct {
@@ -82,9 +88,10 @@ type reporter struct {
 	barrier chan bool // To signal parallel subtests they may start.
 	done    chan bool // To signal a test is done.
 
-	testing     bool
-	retryPolicy RetryPolicy
-	retryable   bool
+	testing              bool
+	retryPolicy          RetryPolicy
+	retryable            bool
+	noFailurePropagation bool
 }
 
 func newReporter() *reporter {
@@ -103,7 +110,7 @@ func (r *reporter) Name() string {
 
 // Fail marks the function as having failed but continues execution.
 func (r *reporter) Fail() {
-	if r.parent != nil && !r.retryable {
+	if r.parent != nil && !r.retryable && !r.noFailurePropagation {
 		r.parent.Fail()
 	}
 	atomic.StoreInt32(&r.failed, 1)
@@ -320,6 +327,7 @@ func (r *reporter) run(f func(r Reporter)) {
 			retried = true
 			r.Logf("retry after %s", d)
 		})
+		r.noFailurePropagation = child.noFailurePropagation
 		if retried && err != nil {
 			r.Error("retry limit exceeded")
 		}
@@ -411,7 +419,7 @@ func printReport(r *reporter) {
 
 func collectOutput(r *reporter) []string {
 	var results []string
-	if r.Failed() || r.context.verbose {
+	if (r.Failed() && !r.noFailurePropagation) || r.context.verbose {
 		prefix := strings.Repeat("    ", r.depth-1)
 		status := "PASS"
 		c := r.passColor()
@@ -465,6 +473,10 @@ func pad(s string, padding string) string {
 		b.WriteString(l)
 	}
 	return b.String()
+}
+
+func (r *reporter) setNoFailurePropagation() {
+	r.noFailurePropagation = true
 }
 
 func (r *reporter) getName() string {

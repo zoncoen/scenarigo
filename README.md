@@ -391,6 +391,55 @@ Note: `maxInterval` caps the retry interval, not the randomized interval.
 |9|180s|[90s, 270s]|
 |10|180s|[90s, 270s]|
 
+### Using conditions to control step execution
+
+You can use `if` field to prevent a step from execution unless a condition is met. The template expression must return a boolean value. For example, you can access the results of other steps like `{{steps.step_id.result}}`. There are three result kinds of steps: `passed`, `failed`, and `skipped`.
+
+Scenarigo doesn't execute subsequent steps if a step fails in default. If you want to continue running the test scenario even if a step fails, set true to the `continueOnError` field.
+
+For example, the second step will be executed in the following test scenario when the first step fails only.
+
+```yaml
+schemaVersion: scenario/v1
+title: create item if not found
+vars:
+  itemName: foo
+  itemPrice: 100
+steps:
+- id: find # need to set id to access the result of this step
+  title: find by name
+  continueOnError: true # the errors of this step don't fail the test scenario
+  protocol: http
+  request:
+    method: GET
+    url: 'http://example.com/items?name={{vars.itemName}}'
+  expect:
+    code: OK
+    body:
+      name: '{{vars.itemName}}'
+  bind:
+    vars:
+      itemId: '{{response.id}}'
+- title: create
+  if: '{{steps.find.result == "failed"}}' # this step will be executed when the find step fails only
+  protocol: http
+  request:
+    method: POST
+    url: 'http://example.com/items'
+    header:
+      Content-Type: application/json
+    body:
+      name: '{{vars.itemName}}'
+      price: '{{vars.itemPrice}}'
+  expect:
+    code: OK
+    body:
+      name: '{{vars.itemName}}'
+  bind:
+    vars:
+      itemId: '{{response.id}}'
+```
+
 ## Template String
 
 Scenarigo provides the original template string feature which is evaluated at runtime. You can use expressions with a pair of double braces `{{}}` in YAML strings. All expression return an arbitrary value.
@@ -879,6 +928,7 @@ The template feature provides functions to convert types.
 |request|request data|
 |response|response data|
 |assert|assert functions|
+|steps|results of steps|
 
 ### Predefined Functions
 

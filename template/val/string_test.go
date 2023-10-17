@@ -279,3 +279,40 @@ func TestString_Add(t *testing.T) {
 		})
 	}
 }
+
+func TestString_Size(t *testing.T) {
+	tests := map[string]struct {
+		v           String
+		expect      Value
+		expectError string
+	}{
+		"unibyte": {
+			v:      String("test"),
+			expect: Int(4),
+		},
+		"multibyte": {
+			v:      String("テスト"),
+			expect: Int(3),
+		},
+	}
+	for name, test := range tests {
+		test := test
+		t.Run(name, func(t *testing.T) {
+			got, err := test.v.Size()
+			if test.expectError == "" && err != nil {
+				t.Fatalf("unexpected error: %s", err)
+			}
+			if test.expectError != "" {
+				if err == nil {
+					t.Fatal("expected error but got no error")
+				}
+				if got, expected := err.Error(), test.expectError; !strings.Contains(got, expected) {
+					t.Errorf("expected error %q but got %q", expected, got)
+				}
+			}
+			if diff := cmp.Diff(test.expect, got, cmp.AllowUnexported(Any{})); diff != "" {
+				t.Errorf("diff: (-want +got)\n%s", diff)
+			}
+		})
+	}
+}

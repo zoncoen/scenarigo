@@ -287,6 +287,31 @@ func TestTemplate_Execute(t *testing.T) {
 			},
 			expect: "foobar",
 		},
+		"size(string)": {
+			str:    `{{size("test")}}`,
+			expect: int64(4),
+		},
+		"size([]int)": {
+			str: `{{size(v)}}`,
+			data: map[string]interface{}{
+				"v": []int{0},
+			},
+			expect: int64(1),
+		},
+		"size(struct)": {
+			str: `{{size(v)}}`,
+			data: map[string]interface{}{
+				"v": struct{}{},
+			},
+			expectError: "failed to execute: {{size(v)}}: size(any[struct {}]) is not defined",
+		},
+		"size(nil)": {
+			str: `{{size(v)}}`,
+			data: map[string]any{
+				"v": nil,
+			},
+			expectError: "failed to execute: {{size(v)}}: size(nil) is not defined",
+		},
 		"not found": {
 			str:         "{{a.b[1]}}",
 			expectError: `".a.b[1]" not found`,

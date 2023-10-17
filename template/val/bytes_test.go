@@ -258,3 +258,40 @@ func TestBytes_Add(t *testing.T) {
 		})
 	}
 }
+
+func TestBytes_Size(t *testing.T) {
+	tests := map[string]struct {
+		v           Bytes
+		expect      Value
+		expectError string
+	}{
+		"unibyte": {
+			v:      Bytes([]byte("test")),
+			expect: Int(4),
+		},
+		"multibyte": {
+			v:      Bytes([]byte("テスト")),
+			expect: Int(9),
+		},
+	}
+	for name, test := range tests {
+		test := test
+		t.Run(name, func(t *testing.T) {
+			got, err := test.v.Size()
+			if test.expectError == "" && err != nil {
+				t.Fatalf("unexpected error: %s", err)
+			}
+			if test.expectError != "" {
+				if err == nil {
+					t.Fatal("expected error but got no error")
+				}
+				if got, expected := err.Error(), test.expectError; !strings.Contains(got, expected) {
+					t.Errorf("expected error %q but got %q", expected, got)
+				}
+			}
+			if diff := cmp.Diff(test.expect, got, cmp.AllowUnexported(Any{})); diff != "" {
+				t.Errorf("diff: (-want +got)\n%s", diff)
+			}
+		})
+	}
+}

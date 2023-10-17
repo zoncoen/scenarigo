@@ -74,3 +74,8 @@ func (b Bytes) Add(v Value) (Value, error) {
 	}
 	return nil, ErrOperationNotDefined
 }
+
+// Size implements Sizer interface.
+func (b Bytes) Size() (Value, error) {
+	return Int(len(b)), nil
+}

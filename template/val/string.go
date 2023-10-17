@@ -113,3 +113,8 @@ func (s String) Add(v Value) (Value, error) {
 	}
 	return nil, ErrOperationNotDefined
 }
+
+// Size implements Sizer interface.
+func (s String) Size() (Value, error) {
+	return Int(utf8.RuneCountInString(string(s))), nil
+}

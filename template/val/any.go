@@ -3,6 +3,8 @@ package val
 import (
 	"fmt"
 	"reflect"
+
+	"github.com/zoncoen/scenarigo/internal/reflectutil"
 )
 
 var anyType = createAnyType(nil)
@@ -53,4 +55,14 @@ func equal(x, y reflect.Value) (bool, bool) {
 		return reflectEqual(x, y), true
 	}
 	return false, false
+}
+
+// Size implements Sizer interface.
+func (a Any) Size() (Value, error) {
+	v := reflectutil.Elem(reflect.ValueOf(a.v))
+	switch v.Kind() {
+	case reflect.Array, reflect.Slice, reflect.Map:
+		return Int(v.Len()), nil
+	}
+	return nil, fmt.Errorf("size(%s) is not defined", a.Type().Name())
 }

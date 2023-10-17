@@ -408,6 +408,25 @@ func TestLoadScenarios(t *testing.T) {
       20 |
 `,
 			},
+			"validation error: no protocol": {
+				path: "testdata/invalid-no-protocol.yaml",
+				expect: `validation error: testdata/invalid-no-protocol.yaml: no protocol
+       1 | title: test
+       2 | steps:
+    >  3 | - title: foo
+                  ^
+`,
+			},
+			"validation error: unknown protocol": {
+				path: "testdata/invalid-unknown-protocol.yaml",
+				expect: `validation error: testdata/invalid-unknown-protocol.yaml: protocol "aaa" not found
+       1 | title: test
+       2 | steps:
+       3 | - title: foo
+    >  4 |   protocol: aaa
+                       ^
+`,
+			},
 			"ytt disabled": {
 				path: "testdata/ytt/scenario.yaml",
 				expect: `ytt feature is not enabled

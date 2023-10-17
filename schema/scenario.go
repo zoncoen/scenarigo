@@ -42,22 +42,35 @@ func (s *Scenario) Filepath() string {
 func (s *Scenario) Validate() error {
 	ids := map[string]struct{}{}
 	for i, stp := range s.Steps {
-		if stp.ID == "" {
-			continue
+		if stp.ID != "" {
+			if !stepIDRegexp.MatchString(stp.ID) {
+				return errors.WithNode(
+					errors.ErrorPath(fmt.Sprintf("steps[%d].id", i), "step id must contain only alphanumeric characters, -, or _"),
+					s.Node,
+				)
+			}
+			if _, ok := ids[stp.ID]; ok {
+				return errors.WithNode(
+					errors.ErrorPathf(fmt.Sprintf("steps[%d].id", i), "step id %q is duplicated", stp.ID),
+					s.Node,
+				)
+			}
+			ids[stp.ID] = struct{}{}
 		}
-		if !stepIDRegexp.MatchString(stp.ID) {
-			return errors.WithNode(
-				errors.ErrorPath(fmt.Sprintf("steps[%d].id", i), "step id must contain only alphanumeric characters, -, or _"),
-				s.Node,
-			)
+
+		if stp.Include == "" && stp.Ref == nil {
+			if stp.Protocol == "" {
+				return errors.WithNode(
+					errors.ErrorPath(fmt.Sprintf("steps[%d]", i), "no protocol"),
+					s.Node,
+				)
+			} else if protocol.Get(stp.Protocol) == nil {
+				return errors.WithNode(
+					errors.ErrorPathf(fmt.Sprintf("steps[%d].protocol", i), "protocol %q not found", stp.Protocol),
+					s.Node,
+				)
+			}
 		}
-		if _, ok := ids[stp.ID]; ok {
-			return errors.WithNode(
-				errors.ErrorPathf(fmt.Sprintf("steps[%d].id", i), "step id %q is duplicated", stp.ID),
-				s.Node,
-			)
-		}
-		ids[stp.ID] = struct{}{}
 	}
 	return nil
 }

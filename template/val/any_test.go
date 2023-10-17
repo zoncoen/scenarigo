@@ -159,3 +159,53 @@ func TestAny_Equal(t *testing.T) {
 		})
 	}
 }
+
+func TestAny_Size(t *testing.T) {
+	s := []int{0, 1}
+	tests := map[string]struct {
+		v           Any
+		expect      Value
+		expectError string
+	}{
+		"array": {
+			v:      Any{[1]int{0}},
+			expect: Int(1),
+		},
+		"slice": {
+			v:      Any{s},
+			expect: Int(2),
+		},
+		"map": {
+			v:      Any{map[string]string{"foo": "bar"}},
+			expect: Int(1),
+		},
+		"*slice": {
+			v:      Any{&s},
+			expect: Int(2),
+		},
+		"int": {
+			v:           Any{0},
+			expectError: "size(any[int]) is not defined",
+		},
+	}
+	for name, test := range tests {
+		test := test
+		t.Run(name, func(t *testing.T) {
+			got, err := test.v.Size()
+			if test.expectError == "" && err != nil {
+				t.Fatalf("unexpected error: %s", err)
+			}
+			if test.expectError != "" {
+				if err == nil {
+					t.Fatal("expected error but got no error")
+				}
+				if got, expected := err.Error(), test.expectError; !strings.Contains(got, expected) {
+					t.Errorf("expected error %q but got %q", expected, got)
+				}
+			}
+			if diff := cmp.Diff(test.expect, got, cmp.AllowUnexported(Any{})); diff != "" {
+				t.Errorf("diff: (-want +got)\n%s", diff)
+			}
+		})
+	}
+}

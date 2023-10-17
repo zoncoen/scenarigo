@@ -378,7 +378,7 @@ For example, the retry intervals will be like the following table with the above
 
 Note: `maxInterval` caps the retry interval, not the randomized interval.
 
-|retry #|retry interval|randomized interval range|
+|Retry #|Retry interval|Randomized interval range|
 |---|---|---|
 |1|1s|[0.5s, 1.5s]|
 |2|2s|[1s, 3s]|
@@ -448,7 +448,7 @@ ESCAPED_CHAR  = "\" `"`
 LETTER        = "a"..."Z"
 TYPES         = "int" | "uint" | "float" | "bool" | "string" |
                 "bytes" | "time" | "duration" | "any"
-RESERVED      = BOOL | TYPES | "type" | "defined"
+RESERVED      = BOOL | TYPES | "type" | "defined" | "size"
 ```
 
 ### Types
@@ -871,7 +871,7 @@ The template feature provides functions to convert types.
 
 ### Predefined Variables
 
-|variables|description|
+|Variables|Description|
 |---|---|
 |vars|user-defined variables|
 |plugins|loaded plugins|
@@ -882,10 +882,44 @@ The template feature provides functions to convert types.
 
 ### Predefined Functions
 
-|function|description|example|
-|---|---|---|
-|type|returns the abstract type of expression in string|`type(0) == "int"`|
-|defined|tells whether a variable is defined or not|`defined(a) ? a : b`|
+<table>
+  <thead>
+    <tr>
+      <th>Function</th>
+      <th>Description</th>
+      <th>Example</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>type</td>
+      <td>returns the abstract type of expression in string</td>
+      <td><code>type(0) == "int"</code></td>
+    </tr>
+    <tr>
+      <td>defined</td>
+      <td>tells whether a variable is defined or not</td>
+      <td><code>defined(a) ? a : b</code></td>
+    </tr>
+    <tr>
+      <td rowspan=4>size</td>
+      <td>returns the string length</td>
+      <td><code>size("foo")</code></td>
+    </tr>
+    <tr>
+      <td>returns the bytes length</td>
+      <td><code>size(bytes("foo"))</code></td>
+    </tr>
+    <tr>
+      <td>returns the number of list elements</td>
+      <td><code>size(items)</code></td>
+    </tr>
+    <tr>
+      <td>returns the number of map elements</td>
+      <td><code>size(index)</code></td>
+    </tr>
+  </tbody>
+</table>
 
 ## Plugin
 

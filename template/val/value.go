@@ -67,3 +67,8 @@ type Divider interface {
 type Modder interface {
 	Mod(Value) (Value, error)
 }
+
+// Sizer is an interface that supports 'size()' overloads.
+type Sizer interface {
+	Size() (Value, error)
+}

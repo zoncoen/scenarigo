@@ -32,6 +32,10 @@ func extract(node ast.Node, data interface{}) (interface{}, error) {
 		return nil, errors.Wrap(err, "failed to create query from AST")
 	}
 
+	f, err := q.Extract(functions)
+	if err == nil {
+		return f, nil
+	}
 	v, err := q.Extract(typeFunctions)
 	if err == nil {
 		return v, nil

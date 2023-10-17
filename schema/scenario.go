@@ -2,11 +2,18 @@
 package schema
 
 import (
-	"github.com/goccy/go-yaml/ast"
-	"github.com/pkg/errors"
+	"fmt"
+	"regexp"
 
+	"github.com/goccy/go-yaml/ast"
+
+	"github.com/zoncoen/scenarigo/errors"
 	"github.com/zoncoen/scenarigo/protocol"
 )
+
+const stepIDPattern = `^[a-zA-Z0-9\-_]+$`
+
+var stepIDRegexp = regexp.MustCompile(stepIDPattern)
 
 // Scenario represents a test scenario.
 type Scenario struct {
@@ -31,10 +38,37 @@ func (s *Scenario) Filepath() string {
 	return s.filepath
 }
 
+// Validate validates a scenario.
+func (s *Scenario) Validate() error {
+	ids := map[string]struct{}{}
+	for i, stp := range s.Steps {
+		if stp.ID == "" {
+			continue
+		}
+		if !stepIDRegexp.MatchString(stp.ID) {
+			return errors.WithNode(
+				errors.ErrorPath(fmt.Sprintf("steps[%d].id", i), "step id must contain only alphanumeric characters, -, or _"),
+				s.Node,
+			)
+		}
+		if _, ok := ids[stp.ID]; ok {
+			return errors.WithNode(
+				errors.ErrorPathf(fmt.Sprintf("steps[%d].id", i), "step id %q is duplicated", stp.ID),
+				s.Node,
+			)
+		}
+		ids[stp.ID] = struct{}{}
+	}
+	return nil
+}
+
 // Step represents a step of scenario.
 type Step struct {
+	ID                      string                    `yaml:"id,omitempty" validate:"alphanum"`
 	Title                   string                    `yaml:"title,omitempty"`
 	Description             string                    `yaml:"description,omitempty"`
+	If                      string                    `yaml:"if,omitempty"`
+	ContinueOnError         bool                      `yaml:"continueOnError,omitempty"`
 	Vars                    map[string]interface{}    `yaml:"vars,omitempty"`
 	Protocol                string                    `yaml:"protocol,omitempty"`
 	Request                 protocol.Invoker          `yaml:"request,omitempty"`
@@ -56,8 +90,11 @@ func (r *rawMessage) UnmarshalYAML(b []byte) error {
 }
 
 type stepUnmarshaller struct {
+	ID                      string                 `yaml:"id,omitempty"`
 	Title                   string                 `yaml:"title,omitempty"`
 	Description             string                 `yaml:"description,omitempty"`
+	If                      string                 `yaml:"if,omitempty"`
+	ContinueOnError         bool                   `yaml:"continueOnError,omitempty"`
 	Vars                    map[string]interface{} `yaml:"vars,omitempty"`
 	Protocol                string                 `yaml:"protocol,omitempty"`
 	Include                 string                 `yaml:"include,omitempty"`
@@ -79,8 +116,11 @@ func (s *Step) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		return err
 	}
 
+	s.ID = unmarshaled.ID
 	s.Title = unmarshaled.Title
 	s.Description = unmarshaled.Description
+	s.If = unmarshaled.If
+	s.ContinueOnError = unmarshaled.ContinueOnError
 	s.Vars = unmarshaled.Vars
 	s.Protocol = unmarshaled.Protocol
 	s.Include = unmarshaled.Include

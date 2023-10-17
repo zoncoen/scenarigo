@@ -35,6 +35,17 @@ func TestContext_ExtractKey(t *testing.T) {
 			query:  "vars.foo",
 			expect: "bar",
 		},
+		"steps": {
+			ctx: func(ctx *Context) *Context {
+				steps := NewSteps()
+				steps.Add("foo", &Step{
+					Result: "passed",
+				})
+				return ctx.WithSteps(steps)
+			},
+			query:  "steps.foo.result",
+			expect: "passed",
+		},
 		"request": {
 			ctx: func(ctx *Context) *Context {
 				return ctx.WithRequest(vars)
@@ -61,7 +72,7 @@ func TestContext_ExtractKey(t *testing.T) {
 			if test.ctx != nil {
 				ctx = test.ctx(ctx)
 			}
-			q, err := query.ParseString(test.query)
+			q, err := query.ParseString(test.query, query.ExtractByStructTag("json", "yaml"))
 			if err != nil {
 				t.Fatalf("unexpected error: %s", err)
 			}

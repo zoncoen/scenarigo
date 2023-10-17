@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/fatih/color"
 	"github.com/goccy/go-yaml/ast"
 	"github.com/goccy/go-yaml/parser"
 	"github.com/goccy/go-yaml/token"
@@ -230,8 +231,14 @@ func TestWithQuery(t *testing.T) {
 }
 
 func TestWithNodeAndColored(t *testing.T) {
+	noColor := color.NoColor
+	color.NoColor = false
+	t.Cleanup(func() {
+		color.NoColor = noColor
+	})
+
 	node := ast.String(token.String("a", "a", nil))
-	err := WithNodeAndColored(ErrorPath("a", "message"), node, true)
+	err := WithNode(ErrorPath("a", "message"), node)
 	var e *PathError
 	if !errors.As(err, &e) {
 		t.Fatalf("expect %T instance. but %T", e, err)

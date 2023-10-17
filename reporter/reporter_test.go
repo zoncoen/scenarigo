@@ -24,11 +24,28 @@ func TestReporter_Name(t *testing.T) {
 }
 
 func TestReporter_Fail(t *testing.T) {
-	r := newReporter()
-	r.Fail()
-	if expect, got := true, r.Failed(); got != expect {
-		t.Errorf("expected %t but got %t", expect, got)
-	}
+	Run(func(root Reporter) {
+		root.Run("no propagation", func(r Reporter) {
+			NoFailurePropagation(r)
+			r.Fail()
+			if expect, got := true, r.Failed(); got != expect {
+				t.Errorf("expected %t but got %t", expect, got)
+			}
+		})
+		if expect, got := false, root.Failed(); got != expect {
+			t.Errorf("expected %t but got %t", expect, got)
+		}
+
+		root.Run("propagation", func(r Reporter) {
+			r.Fail()
+			if expect, got := true, r.Failed(); got != expect {
+				t.Errorf("expected %t but got %t", expect, got)
+			}
+		})
+		if expect, got := true, root.Failed(); got != expect {
+			t.Errorf("expected %t but got %t", expect, got)
+		}
+	})
 }
 
 func TestReporter_Failed(t *testing.T) {

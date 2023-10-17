@@ -3,7 +3,7 @@ description: check echo-service
 vars:
   message: hello
 steps:
-- id: POST-say_01
+- id: POST-say
   title: POST /say
   description: check to respond same message
   protocol: test
@@ -13,7 +13,7 @@ steps:
   expect:
     body:
       message: "{{request.body}}"
-- id: POST-say_02
+- id: POST-say
   title: POST /say
   description: check to respond same message
   protocol: test

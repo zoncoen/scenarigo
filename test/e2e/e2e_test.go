@@ -6,7 +6,6 @@ package scenarigo
 import (
 	"bytes"
 	gocontext "context"
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -26,7 +25,6 @@ import (
 	"github.com/zoncoen/scenarigo/internal/testutil"
 	"github.com/zoncoen/scenarigo/logger"
 	"github.com/zoncoen/scenarigo/mock"
-	"github.com/zoncoen/scenarigo/mock/protocol"
 	"github.com/zoncoen/scenarigo/reporter"
 	"github.com/zoncoen/scenarigo/schema"
 	"github.com/zoncoen/scenarigo/testdata/gen/pb/test"
@@ -68,7 +66,7 @@ func TestE2E(t *testing.T) {
 			for _, scenario := range tc.Scenarios {
 				t.Run(scenario.Filename, func(t *testing.T) {
 					if scenario.Mocks != "" {
-						teardown := runMockServer(t, filepath.Join(dir, "mocks", scenario.Mocks), !scenario.Success)
+						teardown := runMockServer(t, filepath.Join(dir, "mocks", scenario.Mocks))
 						defer teardown(t)
 					}
 
@@ -172,7 +170,7 @@ func startGRPCServer(t *testing.T) func() {
 	}
 }
 
-func runMockServer(t *testing.T, filename string, ignoreMocksRemainError bool) func(*testing.T) {
+func runMockServer(t *testing.T, filename string) func(*testing.T) {
 	t.Helper()
 
 	f, err := os.Open(filename)
@@ -211,12 +209,6 @@ func runMockServer(t *testing.T, filename string, ignoreMocksRemainError bool) f
 		c, cancel := gocontext.WithTimeout(gocontext.Background(), time.Second)
 		defer cancel()
 		if err := srv.Stop(c); err != nil {
-			mrerr := &protocol.MocksRemainError{}
-			if errors.As(err, &mrerr) {
-				if ignoreMocksRemainError {
-					err = nil
-				}
-			}
 			if err != nil {
 				t.Fatalf("failed to stop: %s", err)
 			}

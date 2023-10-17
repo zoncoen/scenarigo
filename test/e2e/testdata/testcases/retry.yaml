@@ -1,7 +1,7 @@
 title: retry
 scenarios:
 - filename: retry/step-never.yaml
-  mocks: retry/step.yaml
+  mocks: retry/step-never.yaml
   success: false
   output:
     stdout: retry/step-never.txt

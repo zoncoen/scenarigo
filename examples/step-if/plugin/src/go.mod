@@ -1,8 +1,11 @@
-module github.com/zoncoen/scenarigo/examples/assert/plugin
+module github.com/zoncoen/scenarigo/examples/step-if/plugin
 
 go 1.20
 
-require github.com/zoncoen/scenarigo v0.15.1
+require (
+	github.com/google/uuid v1.3.0
+	github.com/zoncoen/scenarigo v0.15.1
+)
 
 require (
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect

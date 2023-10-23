@@ -21,19 +21,20 @@ You can write test scenarios as YAML files and executes them.
 
 ```yaml github.yaml
 title: get scenarigo repository
+vars:
+  user: zoncoen
+  repo: scenarigo
 steps:
-- title: GET https://api.github.com/repos/zoncoen/scenarigo
-  vars:
-    user: zoncoen
-    repo: scenarigo
+- title: get repository
   protocol: http
   request:
     method: GET
-    url: "https://api.github.com/repos/{{vars.user}}/{{vars.repo}}"
+    url: 'https://api.github.com/repos/{{vars.user}}/{{vars.repo}}'
   expect:
     code: OK
     body:
-      name: "{{vars.repo}}"
+      id: '{{int($) > 0}}'
+      name: '{{vars.repo}}'
 ```
 
 ## Installation

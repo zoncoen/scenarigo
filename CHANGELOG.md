@@ -1,5 +1,26 @@
 # CHANGELOG
 
+<a name="v0.16.0"></a>
+## [v0.16.0] - 2023-10-24
+### Bug Fixes
+- don't panic if the protocol is empty
+
+### Features
+- add continueOnError to prevent failure due to step errors
+- add if field for controlling step running
+- allow to access results of each step
+- enable to assert by template string expressions
+- cancel request contexts after each step
+- **assert:** enable to pass custom equalers
+- **config:** add global variables
+- **template:** add size() function
+- **template:** allow to call values having Call method as a function
+- **template:** allow '$' identifier
+
+### BREAKING CHANGE
+
+assert.Build function requires a context.Context value as an argument to avoid a goroutine leak.
+
 <a name="v0.15.1"></a>
 ## [v0.15.1] - 2023-09-15
 ### Code Refactoring
@@ -344,6 +365,7 @@ change protocl.Protocol interface
 - first release
 
 
+[v0.16.0]: https://github.com/zoncoen/scenarigo/compare/v0.15.1...v0.16.0
 [v0.15.1]: https://github.com/zoncoen/scenarigo/compare/v0.15.0...v0.15.1
 [v0.15.0]: https://github.com/zoncoen/scenarigo/compare/v0.14.2...v0.15.0
 [v0.14.2]: https://github.com/zoncoen/scenarigo/compare/v0.14.1...v0.14.2

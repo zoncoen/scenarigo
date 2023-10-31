@@ -22,7 +22,7 @@ $(BIN_DIR):
 	@mkdir -p $(BIN_DIR)
 
 PROTOC := $(BIN_DIR)/protoc
-PROTOC_VERSION := 21.12
+PROTOC_VERSION := 24.4
 PROTOC_OS := $(UNAME_OS)
 ifeq "$(UNAME_OS)" "Darwin"
 	PROTOC_OS = osx
@@ -41,11 +41,11 @@ $(PROTOC): | $(BIN_DIR)
 
 PROTOC_GEN_GO := $(BIN_DIR)/protoc-gen-go
 $(PROTOC_GEN_GO): | $(BIN_DIR)
-	@$(GO) install google.golang.org/protobuf/cmd/protoc-gen-go@v1.28.1
+	@$(GO) install google.golang.org/protobuf/cmd/protoc-gen-go@v1.31.0
 
 PROTOC_GEN_GO_GRPC := $(BIN_DIR)/protoc-gen-go-grpc
 $(PROTOC_GEN_GO_GRPC): | $(BIN_DIR)
-	@$(GO) install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.2.0
+	@$(GO) install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.3.0
 
 GOPROTOYAMLTAG := $(BIN_DIR)/goprotoyamltag
 $(GOPROTOYAMLTAG): | $(BIN_DIR)

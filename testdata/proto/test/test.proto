@@ -30,7 +30,11 @@ message EchoResponse {
     string message_body = 2;
     int64 received_at = 3;
     UserType user_type = 4;
-    State state = 5;
+    oneof user_id {
+        string customer_id = 5;
+        string staff_id = 6;
+    }
+    State state = 7;
     StringValue nullable_string = 11;
 }
 

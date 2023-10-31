@@ -10,6 +10,7 @@ import (
 	"github.com/goccy/go-yaml"
 	"github.com/golang/mock/gomock"
 	"github.com/google/go-cmp/cmp"
+	"github.com/sergi/go-diff/diffmatchpatch"
 	"github.com/zoncoen/scenarigo/context"
 	"github.com/zoncoen/scenarigo/internal/mockutil"
 	"github.com/zoncoen/scenarigo/internal/testutil"
@@ -19,6 +20,7 @@ import (
 	spb "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/testing/protocmp"
@@ -434,6 +436,64 @@ func TestBuildRequestBody(t *testing.T) {
 			}
 			if diff := cmp.Diff(tc.expect, &req, protocmp.Transform()); diff != "" {
 				t.Errorf("differs: (-want +got)\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestMDMarshaler_MarshalYAML(t *testing.T) {
+	tests := map[string]struct {
+		md       metadata.MD
+		expected string
+	}{
+		"nil": {
+			expected: `method: Foo
+metadata: {}
+`,
+		},
+		"empty": {
+			md: metadata.MD{},
+			expected: `method: Foo
+metadata: {}
+`,
+		},
+		"no -bin": {
+			md: metadata.MD{
+				"grpc-status": {codes.Internal.String()},
+			},
+			expected: `method: Foo
+metadata:
+  grpc-status:
+  - Internal
+`,
+		},
+		"has -bin": {
+			md: metadata.MD{
+				"grpc-status-details-bin": {"test", string("\xF4\x90\x80\x80")}, // U+10FFFF+1; out of range
+
+			},
+			expected: `method: Foo
+metadata:
+  grpc-status-details-bin:
+  - test
+  - f4908080
+`,
+		},
+	}
+	for name, test := range tests {
+		test := test
+		t.Run(name, func(t *testing.T) {
+			b, err := yaml.Marshal(Request{
+				Method:   "Foo",
+				Metadata: newMDMarshaler(test.md),
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got, expected := string(b), test.expected; got != expected {
+				dmp := diffmatchpatch.New()
+				diffs := dmp.DiffMain(expected, got, false)
+				t.Errorf("differs:\n%s", dmp.DiffPrettyText(diffs))
 			}
 		})
 	}

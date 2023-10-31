@@ -2,9 +2,11 @@ package grpc
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"reflect"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/goccy/go-yaml"
 	"google.golang.org/grpc"
@@ -32,8 +34,8 @@ type Request struct {
 
 type response struct {
 	Status  responseStatus  `yaml:"status,omitempty"`
-	Header  metadata.MD     `yaml:"header,omitempty"`
-	Trailer metadata.MD     `yaml:"trailer,omitempty"`
+	Header  *mdMarshaler    `yaml:"header,omitempty"`
+	Trailer *mdMarshaler    `yaml:"trailer,omitempty"`
 	Message interface{}     `yaml:"message,omitempty"`
 	rvalues []reflect.Value `yaml:"-"`
 }
@@ -42,6 +44,31 @@ type responseStatus struct {
 	Code    string        `yaml:"code,omitempty"`
 	Message string        `yaml:"message,omitempty"`
 	Details yaml.MapSlice `yaml:"details,omitempty"`
+}
+
+func newMDMarshaler(md metadata.MD) *mdMarshaler { return (*mdMarshaler)(&md) }
+
+type mdMarshaler metadata.MD
+
+func (m *mdMarshaler) MarshalYAML() ([]byte, error) {
+	mp := make(metadata.MD, len(*m))
+	for k, vs := range *m {
+		vs := vs
+		if !strings.HasSuffix(k, "-bin") {
+			mp[k] = vs
+			continue
+		}
+		s := make([]string, len(vs))
+		for i, v := range vs {
+			v := v
+			if !utf8.ValidString(v) {
+				v = hex.EncodeToString([]byte(v))
+			}
+			s[i] = v
+		}
+		mp[k] = s
+	}
+	return yaml.Marshal(mp)
 }
 
 const (
@@ -169,13 +196,16 @@ func invoke(ctx *context.Context, method reflect.Value, r *Request) (*context.Co
 			}
 
 			ctx = ctx.WithRequest(req)
-			reqMD, _ := metadata.FromOutgoingContext(reqCtx)
 			//nolint:exhaustruct
-			if b, err := yaml.Marshal(Request{
-				Method:   r.Method,
-				Metadata: reqMD,
-				Message:  req,
-			}); err == nil {
+			dumpReq := &Request{
+				Method:  r.Method,
+				Message: req,
+			}
+			reqMD, _ := metadata.FromOutgoingContext(reqCtx)
+			if len(reqMD) > 0 {
+				dumpReq.Metadata = newMDMarshaler(reqMD)
+			}
+			if b, err := yaml.Marshal(dumpReq); err == nil {
 				ctx.Reporter().Logf("request:\n%s", r.addIndent(string(b), indentNum))
 			} else {
 				ctx.Reporter().Logf("failed to dump request:\n%s", err)
@@ -206,10 +236,14 @@ func invoke(ctx *context.Context, method reflect.Value, r *Request) (*context.Co
 			Message: "",
 			Details: nil,
 		},
-		Header:  header,
-		Trailer: trailer,
 		Message: message,
 		rvalues: rvalues,
+	}
+	if len(header) > 0 {
+		resp.Header = newMDMarshaler(header)
+	}
+	if len(trailer) > 0 {
+		resp.Trailer = newMDMarshaler(trailer)
 	}
 	if err != nil {
 		if sts, ok := status.FromError(err); ok {

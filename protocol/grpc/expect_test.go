@@ -103,11 +103,11 @@ func TestExpect_Build(t *testing.T) {
 					},
 				},
 				v: response{
-					Header: metadata.MD{
+					Header: newMDMarshaler(metadata.MD{
 						"content-type": []string{
 							"application/grpc",
 						},
-					},
+					}),
 					rvalues: []reflect.Value{
 						reflect.ValueOf(&test.EchoResponse{}),
 						reflect.Zero(reflectutil.TypeError),
@@ -125,11 +125,11 @@ func TestExpect_Build(t *testing.T) {
 					},
 				},
 				v: response{
-					Trailer: metadata.MD{
+					Trailer: newMDMarshaler(metadata.MD{
 						"content-type": []string{
 							"application/grpc",
 						},
-					},
+					}),
 					rvalues: []reflect.Value{
 						reflect.ValueOf(&test.EchoResponse{}),
 						reflect.Zero(reflectutil.TypeError),
@@ -282,16 +282,16 @@ func TestExpect_Build(t *testing.T) {
 							},
 						}).Err()),
 					},
-					Header: metadata.MD{
+					Header: newMDMarshaler(metadata.MD{
 						"content-type": []string{
 							"application/grpc",
 						},
-					},
-					Trailer: metadata.MD{
+					}),
+					Trailer: newMDMarshaler(metadata.MD{
 						"version": []string{
 							"v1.0.0",
 						},
-					},
+					}),
 				},
 			},
 		}
@@ -451,11 +451,11 @@ func TestExpect_Build(t *testing.T) {
 					},
 				},
 				v: response{
-					Header: metadata.MD{
+					Header: newMDMarshaler(metadata.MD{
 						"content-type": []string{
 							"application/grpc",
 						},
-					},
+					}),
 					rvalues: []reflect.Value{
 						reflect.ValueOf(&test.EchoResponse{}),
 						reflect.Zero(reflectutil.TypeError),
@@ -474,11 +474,11 @@ func TestExpect_Build(t *testing.T) {
 					},
 				},
 				v: response{
-					Header: metadata.MD{
+					Header: newMDMarshaler(metadata.MD{
 						"content-type": []string{
 							"application/grpc",
 						},
-					},
+					}),
 					rvalues: []reflect.Value{
 						reflect.ValueOf(&test.EchoResponse{}),
 						reflect.Zero(reflectutil.TypeError),
@@ -497,11 +497,11 @@ func TestExpect_Build(t *testing.T) {
 					},
 				},
 				v: response{
-					Header: metadata.MD{
+					Header: newMDMarshaler(metadata.MD{
 						"content-type": []string{
 							"application/grpc",
 						},
-					},
+					}),
 					rvalues: []reflect.Value{
 						reflect.ValueOf(&test.EchoResponse{}),
 						reflect.Zero(reflectutil.TypeError),
@@ -520,11 +520,11 @@ func TestExpect_Build(t *testing.T) {
 					},
 				},
 				v: response{
-					Trailer: metadata.MD{
+					Trailer: newMDMarshaler(metadata.MD{
 						"content-type": []string{
 							"application/grpc",
 						},
-					},
+					}),
 					rvalues: []reflect.Value{
 						reflect.ValueOf(&test.EchoResponse{}),
 						reflect.Zero(reflectutil.TypeError),
@@ -543,11 +543,11 @@ func TestExpect_Build(t *testing.T) {
 					},
 				},
 				v: response{
-					Trailer: metadata.MD{
+					Trailer: newMDMarshaler(metadata.MD{
 						"content-type": []string{
 							"application/grpc",
 						},
-					},
+					}),
 					rvalues: []reflect.Value{
 						reflect.ValueOf(&test.EchoResponse{}),
 						reflect.Zero(reflectutil.TypeError),

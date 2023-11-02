@@ -42,7 +42,7 @@ steps:
 ### go install command (recommend)
 
 ```shell
-$ go install github.com/zoncoen/scenarigo/cmd/scenarigo@v0.16.1
+$ go install github.com/zoncoen/scenarigo/cmd/scenarigo@v0.16.2
 ```
 
 ### from release page

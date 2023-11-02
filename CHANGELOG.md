@@ -1,5 +1,10 @@
 # CHANGELOG
 
+<a name="v0.16.2"></a>
+## [v0.16.2] - 2023-11-02
+### Bug Fixes
+- **template:** don't convert int to string
+
 <a name="v0.16.1"></a>
 ## [v0.16.1] - 2023-11-01
 ### Features
@@ -370,6 +375,7 @@ change protocl.Protocol interface
 - first release
 
 
+[v0.16.2]: https://github.com/zoncoen/scenarigo/compare/v0.16.1...v0.16.2
 [v0.16.1]: https://github.com/zoncoen/scenarigo/compare/v0.16.0...v0.16.1
 [v0.16.0]: https://github.com/zoncoen/scenarigo/compare/v0.15.1...v0.16.0
 [v0.15.1]: https://github.com/zoncoen/scenarigo/compare/v0.15.0...v0.15.1

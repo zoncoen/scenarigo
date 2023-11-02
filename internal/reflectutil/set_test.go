@@ -148,6 +148,16 @@ func TestConvert(t *testing.T) {
 			v:      reflect.ValueOf(nil),
 			expect: nil,
 		},
+		"failed to convert int to string": {
+			target: reflect.TypeOf(""),
+			v:      reflect.ValueOf(1),
+			expect: 1,
+		},
+		"failed to convert uint to string": {
+			target: reflect.TypeOf(""),
+			v:      reflect.ValueOf(uint(1)),
+			expect: uint(1),
+		},
 	}
 	for name, test := range tests {
 		test := test

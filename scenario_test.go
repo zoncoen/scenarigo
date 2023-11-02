@@ -105,7 +105,7 @@ func TestExecuteIf(t *testing.T) {
 			},
 			"not bool": {
 				expr:        "{{1}}",
-				expectError: "must be bool but got string",
+				expectError: "must be bool but got int64",
 			},
 		}
 		for name, test := range tests {

@@ -1,4 +1,24 @@
 ---
+title: equal
+steps:
+- protocol: http
+  vars:
+    id: 1
+  request:
+    method: GET
+    url: '{{env.TEST_ADDR}}'
+    header:
+      content-type: application/json
+    body:
+      id: 1
+      message: 'hello'
+  expect:
+    code: '{{assert.and("OK")}}'
+    body:
+      id: '{{vars.id}}' # int from vars
+      message: hello
+
+---
 title: and
 steps:
 - protocol: http

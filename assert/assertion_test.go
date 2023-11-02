@@ -195,7 +195,7 @@ deps:
 		}
 		if err := assertion.Assert(1); err == nil {
 			t.Error("no error")
-		} else if got, expect := err.Error(), "assertion result must be a boolean value but got string"; got != expect {
+		} else if got, expect := err.Error(), "assertion result must be a boolean value but got int64"; got != expect {
 			t.Errorf("expect %q but got %q", expect, got)
 		}
 	})

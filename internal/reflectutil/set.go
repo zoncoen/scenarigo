@@ -58,24 +58,34 @@ func Convert(t reflect.Type, v reflect.Value) (_ reflect.Value, _ bool, retErr e
 		}
 	}
 
-	if v.Type().ConvertibleTo(t) {
+	if convertibleTo(v.Type(), t) {
 		return v.Convert(t), true, nil
 	}
 	if v.Type().Kind() == reflect.Ptr {
 		if e := v.Elem(); e.IsValid() {
-			if e.Type().ConvertibleTo(t) {
+			if convertibleTo(e.Type(), t) {
 				return v.Elem().Convert(t), true, nil
 			}
 		}
 	} else {
 		ptr := reflect.New(v.Type())
 		ptr.Elem().Set(v)
-		if ptr.Type().ConvertibleTo(t) {
+		if convertibleTo(ptr.Type(), t) {
 			return ptr.Convert(t), true, nil
 		}
 	}
 
 	return v, false, nil
+}
+
+func convertibleTo(src reflect.Type, dst reflect.Type) bool {
+	if dst.Kind() == reflect.String {
+		switch src.Kind() {
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			return false
+		}
+	}
+	return src.ConvertibleTo(dst)
 }
 
 // ConvertInterface returns the value v converted to type t.

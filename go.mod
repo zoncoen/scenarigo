@@ -18,7 +18,7 @@ require (
 	github.com/vmware-tanzu/carvel-ytt v0.45.4
 	github.com/zoncoen/query-go v1.2.1
 	github.com/zoncoen/query-go/extractor/yaml v0.1.1
-	golang.org/x/mod v0.13.0
+	golang.org/x/mod v0.14.0
 	golang.org/x/sync v0.4.0
 	golang.org/x/text v0.13.0
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230822172742-b8732ec3820d

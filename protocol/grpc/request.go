@@ -8,13 +8,16 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/goccy/go-yaml"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
+
+	"github.com/goccy/go-yaml"
+	"github.com/zoncoen/query-go"
+	yamlextractor "github.com/zoncoen/query-go/extractor/yaml"
 
 	"github.com/zoncoen/scenarigo/context"
 	"github.com/zoncoen/scenarigo/errors"
@@ -32,6 +35,25 @@ type Request struct {
 	Body interface{} `yaml:"body,omitempty"`
 }
 
+// RequestExtractor represents a request dump.
+type RequestExtractor Request
+
+// ExtractByKey implements query.KeyExtractor interface.
+func (r RequestExtractor) ExtractByKey(key string) (interface{}, bool) {
+	q := query.New(
+		query.ExtractByStructTag("yaml", "json"),
+		query.CustomExtractFunc(yamlextractor.MapSliceExtractFunc(false)),
+	).Key(key)
+	if v, err := q.Extract(Request(r)); err == nil {
+		return v, true
+	}
+	// for backward compatibility
+	if v, err := q.Extract(r.Message); err == nil {
+		return v, true
+	}
+	return nil, false
+}
+
 type response struct {
 	Status  responseStatus  `yaml:"status,omitempty"`
 	Header  *mdMarshaler    `yaml:"header,omitempty"`
@@ -44,6 +66,25 @@ type responseStatus struct {
 	Code    string        `yaml:"code,omitempty"`
 	Message string        `yaml:"message,omitempty"`
 	Details yaml.MapSlice `yaml:"details,omitempty"`
+}
+
+// ResponseExtractor represents a response dump.
+type ResponseExtractor response
+
+// ExtractByKey implements query.KeyExtractor interface.
+func (r ResponseExtractor) ExtractByKey(key string) (interface{}, bool) {
+	q := query.New(
+		query.ExtractByStructTag("yaml", "json"),
+		query.CustomExtractFunc(yamlextractor.MapSliceExtractFunc(false)),
+	).Key(key)
+	if v, err := q.Extract(response(r)); err == nil {
+		return v, true
+	}
+	// for backward compatibility
+	if v, err := q.Extract(r.Message); err == nil {
+		return v, true
+	}
+	return nil, false
 }
 
 func newMDMarshaler(md metadata.MD) *mdMarshaler { return (*mdMarshaler)(&md) }
@@ -195,7 +236,6 @@ func invoke(ctx *context.Context, method reflect.Value, r *Request) (*context.Co
 				return ctx, nil, errors.WrapPathf(err, "message", "failed to build request message")
 			}
 
-			ctx = ctx.WithRequest(req)
 			//nolint:exhaustruct
 			dumpReq := &Request{
 				Method:  r.Method,
@@ -205,6 +245,7 @@ func invoke(ctx *context.Context, method reflect.Value, r *Request) (*context.Co
 			if len(reqMD) > 0 {
 				dumpReq.Metadata = newMDMarshaler(reqMD)
 			}
+			ctx = ctx.WithRequest((*RequestExtractor)(dumpReq))
 			if b, err := yaml.Marshal(dumpReq); err == nil {
 				ctx.Reporter().Logf("request:\n%s", r.addIndent(string(b), indentNum))
 			} else {
@@ -268,7 +309,7 @@ func invoke(ctx *context.Context, method reflect.Value, r *Request) (*context.Co
 			}
 		}
 	}
-	ctx = ctx.WithResponse(message)
+	ctx = ctx.WithResponse((*ResponseExtractor)(&resp))
 	if b, err := yaml.Marshal(resp); err == nil {
 		ctx.Reporter().Logf("response:\n%s", r.addIndent(string(b), indentNum))
 	} else {

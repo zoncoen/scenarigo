@@ -44,7 +44,7 @@ func (e *Expect) Build(ctx *context.Context) (assert.Assertion, error) {
 		if !ok {
 			return errors.Errorf("expected response but got %T", v)
 		}
-		if err := assertCode(codeAssertion, res.status); err != nil {
+		if err := assertCode(codeAssertion, res.Status); err != nil {
 			return errors.WithPath(err, "code")
 		}
 		if err := headerAssertion.Assert(res.Header); err != nil {

@@ -10,7 +10,10 @@ import (
 	"github.com/goccy/go-yaml"
 	"github.com/golang/mock/gomock"
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/sergi/go-diff/diffmatchpatch"
+	"github.com/zoncoen/query-go"
+	yamlextractor "github.com/zoncoen/query-go/extractor/yaml"
 	"github.com/zoncoen/scenarigo/context"
 	"github.com/zoncoen/scenarigo/internal/mockutil"
 	"github.com/zoncoen/scenarigo/internal/testutil"
@@ -26,6 +29,141 @@ import (
 	"google.golang.org/protobuf/testing/protocmp"
 	"google.golang.org/protobuf/types/known/anypb"
 )
+
+func TestRequestExtractor(t *testing.T) {
+	req := &RequestExtractor{
+		Method: "Echo",
+		Metadata: metadata.MD{
+			"foo": []string{"FOO"},
+		},
+		Message: map[string]string{"messageBody": "hey"},
+	}
+	tests := map[string]struct {
+		query       string
+		expect      any
+		expectError string
+	}{
+		"method": {
+			query:  ".method",
+			expect: req.Method,
+		},
+		"metadata": {
+			query:  ".metadata.foo[0]",
+			expect: "FOO",
+		},
+		"message": {
+			query:  ".message.messageBody",
+			expect: "hey",
+		},
+		"message (backward compatibility)": {
+			query:  ".messageBody",
+			expect: "hey",
+		},
+		"not found": {
+			query:       ".message.aaa",
+			expectError: `".message.aaa" not found`,
+		},
+	}
+	for name, test := range tests {
+		test := test
+		t.Run(name, func(t *testing.T) {
+			q, err := query.ParseString(
+				test.query,
+				query.ExtractByStructTag("yaml", "json"),
+				query.CustomExtractFunc(yamlextractor.MapSliceExtractFunc(false)),
+			)
+			if err != nil {
+				t.Fatal(err)
+			}
+			v, err := q.Extract(req)
+			if test.expectError == "" && err != nil {
+				t.Fatalf("unexpected error: %s", err)
+			}
+			if test.expectError != "" {
+				if err == nil {
+					t.Fatal("no error")
+				} else if !strings.Contains(err.Error(), test.expectError) {
+					t.Fatalf("expect %q but got %q", test.expectError, err)
+				}
+			}
+			if got, expect := v, test.expect; got != expect {
+				t.Fatalf("expect %v but got %v", expect, got)
+			}
+		})
+	}
+}
+
+func TestResponseExtractor(t *testing.T) {
+	resp := &ResponseExtractor{
+		Status: responseStatus{
+			Code: "OK",
+		},
+		Header: &mdMarshaler{
+			"foo": []string{"FOO"},
+		},
+		Trailer: &mdMarshaler{
+			"bar": []string{"BAR"},
+		},
+		Message: map[string]string{"messageBody": "hey"},
+	}
+	tests := map[string]struct {
+		query       string
+		expect      any
+		expectError string
+	}{
+		"status": {
+			query:  ".status.code",
+			expect: resp.Status.Code,
+		},
+		"header": {
+			query:  ".header.foo[0]",
+			expect: "FOO",
+		},
+		"trailer": {
+			query:  ".trailer.bar[0]",
+			expect: "BAR",
+		},
+		"message": {
+			query:  ".message.messageBody",
+			expect: "hey",
+		},
+		"message (backward compatibility)": {
+			query:  ".messageBody",
+			expect: "hey",
+		},
+		"not found": {
+			query:       ".message.aaa",
+			expectError: `".message.aaa" not found`,
+		},
+	}
+	for name, test := range tests {
+		test := test
+		t.Run(name, func(t *testing.T) {
+			q, err := query.ParseString(
+				test.query,
+				query.ExtractByStructTag("yaml", "json"),
+				query.CustomExtractFunc(yamlextractor.MapSliceExtractFunc(false)),
+			)
+			if err != nil {
+				t.Fatal(err)
+			}
+			v, err := q.Extract(resp)
+			if test.expectError == "" && err != nil {
+				t.Fatalf("unexpected error: %s", err)
+			}
+			if test.expectError != "" {
+				if err == nil {
+					t.Fatal("no error")
+				} else if !strings.Contains(err.Error(), test.expectError) {
+					t.Fatalf("expect %q but got %q", test.expectError, err)
+				}
+			}
+			if got, expect := v, test.expect; got != expect {
+				t.Fatalf("expect %v but got %v", expect, got)
+			}
+		})
+	}
+}
 
 func TestRequest_Invoke(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
@@ -69,10 +207,12 @@ func TestRequest_Invoke(t *testing.T) {
 			}
 
 			// ensure that ctx.WithRequest and ctx.WithResponse are called
-			if diff := cmp.Diff(req, ctx.Request(), protocmp.Transform()); diff != "" {
+			r.Client = ""
+			r.Message = req
+			if diff := cmp.Diff((*RequestExtractor)(r), ctx.Request(), protocmp.Transform()); diff != "" {
 				t.Errorf("differs: (-want +got)\n%s", diff)
 			}
-			if diff := cmp.Diff(resp, ctx.Response(), protocmp.Transform()); diff != "" {
+			if diff := cmp.Diff((*ResponseExtractor)(&typedResult), ctx.Response(), protocmp.Transform(), cmpopts.IgnoreFields(ResponseExtractor{}, "rvalues")); diff != "" {
 				t.Errorf("differs: (-want +got)\n%s", diff)
 			}
 		})
@@ -113,7 +253,9 @@ func TestRequest_Invoke(t *testing.T) {
 			}
 
 			// ensure that ctx.WithRequest and ctx.WithResponse are called
-			if diff := cmp.Diff(req, ctx.Request(), protocmp.Transform()); diff != "" {
+			r.Client = ""
+			r.Message = req
+			if diff := cmp.Diff((*RequestExtractor)(r), ctx.Request(), protocmp.Transform()); diff != "" {
 				t.Errorf("differs: (-want +got)\n%s", diff)
 			}
 		})

@@ -9,7 +9,7 @@
   expect:
     code: OK
     body:
-      message: "{{request.message}}"
+      message: "{{request.body.message}}"
   timeout: 10s
 
 - title: invalid method

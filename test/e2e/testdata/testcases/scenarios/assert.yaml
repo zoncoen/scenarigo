@@ -11,4 +11,4 @@ steps:
     code: 200
     body:
       id: '{{int($) != 0}}'
-      message: '{{request.message}}'
+      message: '{{request.body.message}}'

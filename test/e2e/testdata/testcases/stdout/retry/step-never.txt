@@ -7,6 +7,14 @@
                   header:
                     User-Agent:
                     - scenarigo/v1.0.0
+                response:
+                  status: 500 Internal Server Error
+                  statusCode: 500
+                  header:
+                    Content-Length:
+                    - "0"
+                    Date:
+                    - Mon, 01 Jan 0001 00:00:00 GMT
                 elapsed time: 0.000000 sec
                 expected OK but got Internal Server Error
                        6 |     method: GET

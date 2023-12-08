@@ -10,6 +10,8 @@
                   body:
                     message: hello
                 response:
+                  status: 200 OK
+                  statusCode: 200
                   header:
                     Content-Length:
                     - "28"
@@ -27,13 +29,13 @@
                       12 |     body:
                     > 13 |       id: '{{int($) != 0}}'
                                      ^
-                      14 |       message: '{{request.message}}'
+                      14 |       message: '{{request.body.message}}'
                 
                 expected hello but got bye
                       11 |     code: 200
                       12 |     body:
                       13 |       id: '{{int($) != 0}}'
-                    > 14 |       message: '{{request.message}}'
+                    > 14 |       message: '{{request.body.message}}'
                                           ^
 FAIL
 FAIL	testdata/testcases/scenarios/assert.yaml	0.000s

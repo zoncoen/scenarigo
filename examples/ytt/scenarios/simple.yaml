@@ -15,4 +15,4 @@ steps:
       message: #@ msg
   expect:
     body:
-      message: "{{request.message}}"
+      message: "{{request.body.message}}"

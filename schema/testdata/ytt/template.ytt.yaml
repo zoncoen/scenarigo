@@ -15,7 +15,7 @@ steps:
       message: "{{vars.message}}"
   expect:
     body:
-      message: "{{request.message}}"
+      message: "{{request.body.message}}"
   #@ if/end hasattr(params, "timeout"):
   timeout: #@ params.timeout
 #@ end

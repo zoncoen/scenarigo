@@ -12,7 +12,7 @@ steps:
       message: "{{vars.message}}"
   expect:
     body:
-      message: "{{request.body}}"
+      message: "{{request.body.body}}"
 - id: POST-say_02
   title: POST /say
   description: check to respond same message
@@ -22,4 +22,4 @@ steps:
       message: "{{vars.message}}"
   expect:
     body:
-      message: "{{request.body}}"
+      message: "{{request.body.body}}"

@@ -109,7 +109,7 @@ func TestLoadScenarios(t *testing.T) {
 									"body": yaml.MapSlice{
 										yaml.MapItem{
 											Key:   "message",
-											Value: "{{request.body}}",
+											Value: "{{request.body.body}}",
 										},
 									},
 								},
@@ -129,7 +129,7 @@ func TestLoadScenarios(t *testing.T) {
 									"body": yaml.MapSlice{
 										yaml.MapItem{
 											Key:   "message",
-											Value: "{{request.body}}",
+											Value: "{{request.body.body}}",
 										},
 									},
 								},
@@ -161,7 +161,7 @@ func TestLoadScenarios(t *testing.T) {
 									"body": yaml.MapSlice{
 										yaml.MapItem{
 											Key:   "message",
-											Value: "{{request.body}}",
+											Value: "{{request.body.body}}",
 										},
 									},
 								},
@@ -241,7 +241,7 @@ func TestLoadScenarios(t *testing.T) {
 									"body": yaml.MapSlice{
 										yaml.MapItem{
 											Key:   "message",
-											Value: "{{request.message}}",
+											Value: "{{request.body.message}}",
 										},
 									},
 								},
@@ -285,7 +285,7 @@ func TestLoadScenarios(t *testing.T) {
 									"body": yaml.MapSlice{
 										yaml.MapItem{
 											Key:   "message",
-											Value: "{{request.message}}",
+											Value: "{{request.body.message}}",
 										},
 									},
 								},
@@ -312,7 +312,7 @@ func TestLoadScenarios(t *testing.T) {
 									"body": yaml.MapSlice{
 										yaml.MapItem{
 											Key:   "message",
-											Value: "{{request.message}}",
+											Value: "{{request.body.message}}",
 										},
 									},
 								},
@@ -399,7 +399,7 @@ func TestLoadScenarios(t *testing.T) {
 				expect: `validation error: testdata/invalid-dup-step-id.yaml: step id "POST-say" is duplicated
       13 |   expect:
       14 |     body:
-      15 |       message: "{{request.body}}"
+      15 |       message: "{{request.body.body}}"
     > 16 | - id: POST-say
                  ^
       17 |   title: POST /say
@@ -508,7 +508,7 @@ steps:
         message: "{{vars.message}}"
     expect:
       body:
-        message: "{{request.body}}"
+        message: "{{request.body.body}}"
 `,
 				scenarios: []*Scenario{
 					{
@@ -530,7 +530,7 @@ steps:
 									"body": yaml.MapSlice{
 										yaml.MapItem{
 											Key:   "message",
-											Value: "{{request.body}}",
+											Value: "{{request.body.body}}",
 										},
 									},
 								},

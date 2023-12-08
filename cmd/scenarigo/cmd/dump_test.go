@@ -30,7 +30,7 @@ steps:
   expect:
     code: "200"
     body:
-      message: "{{request.message}}"
+      message: "{{request.body.message}}"
 ---
 title: /echo
 steps:
@@ -46,7 +46,7 @@ steps:
   expect:
     code: "200"
     body:
-      message: "{{request.message}}"
+      message: "{{request.body.message}}"
 `,
 		},
 		"with args": {
@@ -65,7 +65,7 @@ steps:
   expect:
     code: "200"
     body:
-      message: "{{request.message}}"
+      message: "{{request.body.message}}"
 `,
 		},
 	}

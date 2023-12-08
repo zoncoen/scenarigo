@@ -565,7 +565,7 @@ steps:
       message: "{{vars.message}}"
   expect:
     body:
-      message: "{{request.message}}"
+      message: "{{request.body.message}}"
 `,
 			},
 			"disable ytt integration": {
@@ -591,7 +591,7 @@ steps:
       message: "{{vars.message}}"
   expect:
     body:
-      message: "{{request.message}}"
+      message: "{{request.body.message}}"
 `,
 			},
 			"invalid but disable ytt integration": {
@@ -617,7 +617,7 @@ steps:
       message: "{{vars.message}}"
   expect:
     body:
-      message: "{{request.message}}"
+      message: "{{request.body.message}}"
 `,
 			},
 		}

@@ -14,5 +14,5 @@ steps:
       message: hello
   expect:
     body:
-      message: '{{request.message}}'
+      message: '{{request.body.message}}'
       recievedAt: '{{time($) > time("2023-01-01T00:00:00+09:00")}}'

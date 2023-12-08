@@ -11,4 +11,4 @@ steps:
       message: '{{vars.global}}'
   bind:
     vars:
-      message: '{{response.message}}'
+      message: '{{response.body.message}}'

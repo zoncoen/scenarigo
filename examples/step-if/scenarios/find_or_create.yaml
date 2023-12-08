@@ -19,7 +19,7 @@ steps:
       name: '{{vars.itemName}}'
   bind:
     vars:
-      itemId: '{{response.id}}'
+      itemId: '{{response.body.id}}'
 - title: create
   if: '{{steps.find.result == "failed"}}' # this step will be executed when the find step fails only
   protocol: http
@@ -37,7 +37,7 @@ steps:
       name: '{{vars.itemName}}'
   bind:
     vars:
-      itemId: '{{response.id}}'
+      itemId: '{{response.body.id}}'
 - title: find by id
   protocol: http
   request:

@@ -13,6 +13,8 @@ import (
 
 	"github.com/goccy/go-yaml"
 	"github.com/mattn/go-encoding"
+	"github.com/zoncoen/query-go"
+	yamlextractor "github.com/zoncoen/query-go/extractor/yaml"
 	"github.com/zoncoen/scenarigo/context"
 	"github.com/zoncoen/scenarigo/errors"
 	"github.com/zoncoen/scenarigo/internal/reflectutil"
@@ -33,10 +35,49 @@ type Request struct {
 	Body   interface{} `yaml:"body,omitempty"`
 }
 
+// RequestExtractor represents a request dump.
+type RequestExtractor Request
+
+// ExtractByKey implements query.KeyExtractor interface.
+func (r RequestExtractor) ExtractByKey(key string) (interface{}, bool) {
+	q := query.New(
+		query.ExtractByStructTag("yaml", "json"),
+		query.CustomExtractFunc(yamlextractor.MapSliceExtractFunc(false)),
+	).Key(key)
+	if v, err := q.Extract(Request(r)); err == nil {
+		return v, true
+	}
+	// for backward compatibility
+	if v, err := q.Extract(r.Body); err == nil {
+		return v, true
+	}
+	return nil, false
+}
+
 type response struct {
-	Header map[string][]string `yaml:"header,omitempty"`
-	Body   interface{}         `yaml:"body,omitempty"`
-	status string              `yaml:"-"` // http.Response.Status format e.g. "200 OK"
+	Status     string              `yaml:"status,omitempty"` // http.Response.Status format e.g. "200 OK"
+	StatusCode int                 `yaml:"statusCode,omitempty"`
+	Header     map[string][]string `yaml:"header,omitempty"`
+	Body       interface{}         `yaml:"body,omitempty"`
+}
+
+// ResponseExtractor represents a response dump.
+type ResponseExtractor response
+
+// ExtractByKey implements query.KeyExtractor interface.
+func (r ResponseExtractor) ExtractByKey(key string) (interface{}, bool) {
+	q := query.New(
+		query.ExtractByStructTag("yaml", "json"),
+		query.CustomExtractFunc(yamlextractor.MapSliceExtractFunc(false)),
+	).Key(key)
+	if v, err := q.Extract(response(r)); err == nil {
+		return v, true
+	}
+	// for backward compatibility
+	if v, err := q.Extract(r.Body); err == nil {
+		return v, true
+	}
+	return nil, false
 }
 
 const (
@@ -67,14 +108,15 @@ func (r *Request) Invoke(ctx *context.Context) (*context.Context, interface{}, e
 		return ctx, nil, err
 	}
 
-	ctx = ctx.WithRequest(reqBody)
 	//nolint:exhaustruct
-	if b, err := yaml.Marshal(Request{
+	reqDump := &Request{
 		Method: req.Method,
 		URL:    req.URL.String(),
 		Header: req.Header,
 		Body:   reqBody,
-	}); err == nil {
+	}
+	ctx = ctx.WithRequest((*RequestExtractor)(reqDump))
+	if b, err := yaml.Marshal(reqDump); err == nil {
 		ctx.Reporter().Logf("request:\n%s", r.addIndent(string(b), indentNum))
 	} else {
 		ctx.Reporter().Logf("failed to dump request:\n%s", err)
@@ -92,9 +134,10 @@ func (r *Request) Invoke(ctx *context.Context) (*context.Context, interface{}, e
 	}
 
 	rvalue := response{
-		Header: resp.Header,
-		Body:   nil,
-		status: resp.Status,
+		Status:     resp.Status,
+		StatusCode: resp.StatusCode,
+		Header:     resp.Header,
+		Body:       nil,
 	}
 	if len(b) > 0 {
 		unmarshaler := unmarshaler.Get(resp.Header.Get("Content-Type"))
@@ -103,12 +146,12 @@ func (r *Request) Invoke(ctx *context.Context) (*context.Context, interface{}, e
 			return ctx, nil, errors.Errorf("failed to unmarshal response body as %s: %s: %s", unmarshaler.MediaType(), string(b), err)
 		}
 		rvalue.Body = respBody
-		ctx = ctx.WithResponse(respBody)
-		if b, err := yaml.Marshal(rvalue); err == nil {
-			ctx.Reporter().Logf("response:\n%s", r.addIndent(string(b), indentNum))
-		} else {
-			ctx.Reporter().Logf("failed to dump response:\n%s", err)
-		}
+	}
+	ctx = ctx.WithResponse((*ResponseExtractor)(&rvalue))
+	if b, err := yaml.Marshal(rvalue); err == nil {
+		ctx.Reporter().Logf("response:\n%s", r.addIndent(string(b), indentNum))
+	} else {
+		ctx.Reporter().Logf("failed to dump response:\n%s", err)
 	}
 	return ctx, rvalue, nil
 }

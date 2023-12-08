@@ -68,6 +68,8 @@ ok  	testdata/scenarios/pass.yaml	0.000s
                   body:
                     message: request
                 response:
+                  status: 200 OK
+                  statusCode: 200
                   header:
                     Content-Length:
                     - "23"
@@ -127,6 +129,8 @@ FAIL
                   body:
                     message: request
                 response:
+                  status: 200 OK
+                  statusCode: 200
                   header:
                     Content-Length:
                     - "23"

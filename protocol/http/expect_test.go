@@ -17,7 +17,7 @@ func TestExpect_Build(t *testing.T) {
 			"default": {
 				expect: &Expect{},
 				response: response{
-					status: "200 OK",
+					Status: "200 OK",
 				},
 			},
 			"status code": {
@@ -25,7 +25,7 @@ func TestExpect_Build(t *testing.T) {
 					Code: "404",
 				},
 				response: response{
-					status: "404 Not Found",
+					Status: "404 Not Found",
 				},
 			},
 			"status code string": {
@@ -33,7 +33,7 @@ func TestExpect_Build(t *testing.T) {
 					Code: "Not Found",
 				},
 				response: response{
-					status: "404 Not Found",
+					Status: "404 Not Found",
 				},
 			},
 			"status code (template)": {
@@ -41,7 +41,7 @@ func TestExpect_Build(t *testing.T) {
 					Code: `{{"Not Found"}}`,
 				},
 				response: response{
-					status: "404 Not Found",
+					Status: "404 Not Found",
 				},
 			},
 			"header": {
@@ -57,7 +57,7 @@ func TestExpect_Build(t *testing.T) {
 					Header: map[string][]string{
 						"Content-Type": {"application/json"},
 					},
-					status: "200 OK",
+					Status: "200 OK",
 				},
 			},
 			"response body": {
@@ -70,7 +70,7 @@ func TestExpect_Build(t *testing.T) {
 					},
 				},
 				response: response{
-					status: "200 OK",
+					Status: "200 OK",
 					Body:   map[string]string{"foo": "bar"},
 				},
 			},
@@ -85,7 +85,7 @@ func TestExpect_Build(t *testing.T) {
 					},
 				},
 				response: response{
-					status: "200 OK",
+					Status: "200 OK",
 					Body:   map[string]string{"foo": "bar"},
 				},
 			},
@@ -114,7 +114,7 @@ func TestExpect_Build(t *testing.T) {
 						"Content-Type": {"application/json"},
 					},
 					Body:   map[string]string{"foo": "bar"},
-					status: "200 OK",
+					Status: "200 OK",
 				},
 			},
 		}
@@ -174,7 +174,7 @@ func TestExpect_Build(t *testing.T) {
 			"wrong status code": {
 				expect: &Expect{},
 				response: response{
-					status: "404 Not Found",
+					Status: "404 Not Found",
 				},
 				expectAssertError: true,
 			},
@@ -188,7 +188,7 @@ func TestExpect_Build(t *testing.T) {
 					},
 				},
 				response: response{
-					status: "200 OK",
+					Status: "200 OK",
 				},
 				expectAssertError: true,
 			},
@@ -207,7 +207,7 @@ func TestExpect_Build(t *testing.T) {
 							"application/json",
 						},
 					},
-					status: "200 OK",
+					Status: "200 OK",
 				},
 				expectAssertError: true,
 			},
@@ -226,7 +226,7 @@ func TestExpect_Build(t *testing.T) {
 							"application/json",
 						},
 					},
-					status: "200 OK",
+					Status: "200 OK",
 				},
 				expectAssertError: true,
 			},

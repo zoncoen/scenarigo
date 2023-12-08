@@ -12,13 +12,153 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/pkg/errors"
 	"golang.org/x/text/encoding/japanese"
 
+	"github.com/zoncoen/query-go"
+	yamlextractor "github.com/zoncoen/query-go/extractor/yaml"
 	"github.com/zoncoen/scenarigo/context"
 	"github.com/zoncoen/scenarigo/internal/testutil"
 	"github.com/zoncoen/scenarigo/reporter"
+	"github.com/zoncoen/scenarigo/version"
 )
+
+func TestRequestExtractor(t *testing.T) {
+	req := &RequestExtractor{
+		Method: http.MethodPost,
+		URL:    "http://example.com",
+		Header: http.Header{
+			"Accept-Encoding": {"gzip"},
+		},
+		Body: map[string]string{"message": "hey"},
+	}
+	tests := map[string]struct {
+		query       string
+		expect      any
+		expectError string
+	}{
+		"method": {
+			query:  ".method",
+			expect: req.Method,
+		},
+		"url": {
+			query:  ".url",
+			expect: req.URL,
+		},
+		"header": {
+			query:  ".header.Accept-Encoding[0]",
+			expect: "gzip",
+		},
+		"body": {
+			query:  ".body.message",
+			expect: "hey",
+		},
+		"body (backward compatibility)": {
+			query:  ".message",
+			expect: "hey",
+		},
+		"not found": {
+			query:       ".body.aaa",
+			expectError: `".body.aaa" not found`,
+		},
+	}
+	for name, test := range tests {
+		test := test
+		t.Run(name, func(t *testing.T) {
+			q, err := query.ParseString(
+				test.query,
+				query.ExtractByStructTag("yaml", "json"),
+				query.CustomExtractFunc(yamlextractor.MapSliceExtractFunc(false)),
+			)
+			if err != nil {
+				t.Fatal(err)
+			}
+			v, err := q.Extract(req)
+			if test.expectError == "" && err != nil {
+				t.Fatalf("unexpected error: %s", err)
+			}
+			if test.expectError != "" {
+				if err == nil {
+					t.Fatal("no error")
+				} else if !strings.Contains(err.Error(), test.expectError) {
+					t.Fatalf("expect %q but got %q", test.expectError, err)
+				}
+			}
+			if got, expect := v, test.expect; got != expect {
+				t.Fatalf("expect %v but got %v", expect, got)
+			}
+		})
+	}
+}
+
+func TestResponseExtractor(t *testing.T) {
+	resp := &ResponseExtractor{
+		Status:     "200 OK",
+		StatusCode: 200,
+		Header: http.Header{
+			"Content-Type": {"application/json"},
+		},
+		Body: map[string]string{"message": "hey"},
+	}
+	tests := map[string]struct {
+		query       string
+		expect      any
+		expectError string
+	}{
+		"status": {
+			query:  ".status",
+			expect: resp.Status,
+		},
+		"statusCode": {
+			query:  ".statusCode",
+			expect: resp.StatusCode,
+		},
+		"header": {
+			query:  ".header.Content-Type[0]",
+			expect: "application/json",
+		},
+		"body": {
+			query:  ".body.message",
+			expect: "hey",
+		},
+		"body (backward compatibility)": {
+			query:  ".message",
+			expect: "hey",
+		},
+		"not found": {
+			query:       ".body.aaa",
+			expectError: `".body.aaa" not found`,
+		},
+	}
+	for name, test := range tests {
+		test := test
+		t.Run(name, func(t *testing.T) {
+			q, err := query.ParseString(
+				test.query,
+				query.ExtractByStructTag("yaml", "json"),
+				query.CustomExtractFunc(yamlextractor.MapSliceExtractFunc(false)),
+			)
+			if err != nil {
+				t.Fatal(err)
+			}
+			v, err := q.Extract(resp)
+			if test.expectError == "" && err != nil {
+				t.Fatalf("unexpected error: %s", err)
+			}
+			if test.expectError != "" {
+				if err == nil {
+					t.Fatal("no error")
+				} else if !strings.Contains(err.Error(), test.expectError) {
+					t.Fatalf("expect %q but got %q", test.expectError, err)
+				}
+			}
+			if got, expect := v, test.expect; got != expect {
+				t.Fatalf("expect %v but got %v", expect, got)
+			}
+		})
+	}
+}
 
 type transport struct {
 	f func(*http.Request) (*http.Response, error)
@@ -124,16 +264,26 @@ func TestRequest_Invoke(t *testing.T) {
 	defer srv.Close()
 
 	tests := map[string]struct {
-		vars     interface{}
-		request  *Request
-		response response
+		vars        interface{}
+		request     *Request
+		response    response
+		requestDump *RequestExtractor
 	}{
 		"default": {
 			request: &Request{
 				URL: srv.URL,
 			},
 			response: response{
-				status: "200 OK",
+				Status:     "200 OK",
+				StatusCode: 200,
+			},
+			requestDump: &RequestExtractor{
+				Method: http.MethodGet,
+				URL:    srv.URL,
+				Header: http.Header{
+					"Accept-Encoding": {"gzip"},
+					"User-Agent":      {fmt.Sprintf("scenarigo/%s", version.String())},
+				},
 			},
 		},
 		"POST": {
@@ -145,8 +295,19 @@ func TestRequest_Invoke(t *testing.T) {
 				Body:   map[string]string{"message": "hey"},
 			},
 			response: response{
-				status: "200 OK",
-				Body:   map[string]interface{}{"message": "hey", "id": "123"},
+				Status:     "200 OK",
+				StatusCode: 200,
+				Body:       map[string]interface{}{"message": "hey", "id": "123"},
+			},
+			requestDump: &RequestExtractor{
+				Method: http.MethodPost,
+				URL:    srv.URL + "/echo?id=123",
+				Header: http.Header{
+					"Accept-Encoding": {"gzip"},
+					"Authorization":   {auth},
+					"User-Agent":      {fmt.Sprintf("scenarigo/%s", version.String())},
+				},
+				Body: map[string]string{"message": "hey"},
 			},
 		},
 		"lower case method": {
@@ -158,8 +319,19 @@ func TestRequest_Invoke(t *testing.T) {
 				Body:   map[string]string{"message": "hey"},
 			},
 			response: response{
-				status: "200 OK",
-				Body:   map[string]interface{}{"message": "hey", "id": "123"},
+				Status:     "200 OK",
+				StatusCode: 200,
+				Body:       map[string]interface{}{"message": "hey", "id": "123"},
+			},
+			requestDump: &RequestExtractor{
+				Method: http.MethodPost,
+				URL:    srv.URL + "/echo?id=123",
+				Header: http.Header{
+					"Accept-Encoding": {"gzip"},
+					"Authorization":   {auth},
+					"User-Agent":      {fmt.Sprintf("scenarigo/%s", version.String())},
+				},
+				Body: map[string]string{"message": "hey"},
 			},
 		},
 		"POST (gzipped)": {
@@ -173,8 +345,19 @@ func TestRequest_Invoke(t *testing.T) {
 				Body: map[string]string{"message": "hey"},
 			},
 			response: response{
-				status: "200 OK",
-				Body:   map[string]interface{}{"message": "hey", "id": "123"},
+				Status:     "200 OK",
+				StatusCode: 200,
+				Body:       map[string]interface{}{"message": "hey", "id": "123"},
+			},
+			requestDump: &RequestExtractor{
+				Method: http.MethodPost,
+				URL:    srv.URL + "/echo/gzipped?id=123",
+				Header: http.Header{
+					"Accept-Encoding": {"gzip"},
+					"Authorization":   {auth},
+					"User-Agent":      {fmt.Sprintf("scenarigo/%s", version.String())},
+				},
+				Body: map[string]string{"message": "hey"},
 			},
 		},
 		"POST (Shift_JIS)": {
@@ -188,8 +371,19 @@ func TestRequest_Invoke(t *testing.T) {
 				Body: map[string]string{"message": "hey"},
 			},
 			response: response{
-				status: "200 OK",
-				Body:   map[string]interface{}{"message": "hey", "id": "123"},
+				Status:     "200 OK",
+				StatusCode: 200,
+				Body:       map[string]interface{}{"message": "hey", "id": "123"},
+			},
+			requestDump: &RequestExtractor{
+				Method: http.MethodPost,
+				URL:    srv.URL + "/echo/shift_jis?id=123",
+				Header: http.Header{
+					"Accept-Encoding": {"gzip"},
+					"Authorization":   {auth},
+					"User-Agent":      {fmt.Sprintf("scenarigo/%s", version.String())},
+				},
+				Body: map[string]string{"message": "hey"},
 			},
 		},
 		"with vars": {
@@ -207,8 +401,19 @@ func TestRequest_Invoke(t *testing.T) {
 				Body:   map[string]string{"message": "{{vars.message}}"},
 			},
 			response: response{
-				status: "200 OK",
-				Body:   map[string]interface{}{"message": "hey", "id": "123"},
+				Status:     "200 OK",
+				StatusCode: 200,
+				Body:       map[string]interface{}{"message": "hey", "id": "123"},
+			},
+			requestDump: &RequestExtractor{
+				Method: http.MethodPost,
+				URL:    srv.URL + "/echo?id=123",
+				Header: http.Header{
+					"Accept-Encoding": {"gzip"},
+					"Authorization":   {auth},
+					"User-Agent":      {fmt.Sprintf("scenarigo/%s", version.String())},
+				},
+				Body: map[string]string{"message": "hey"},
 			},
 		},
 		"custom client": {
@@ -228,8 +433,18 @@ func TestRequest_Invoke(t *testing.T) {
 				Body:   map[string]string{"message": "hey"},
 			},
 			response: response{
-				status: "200 OK",
-				Body:   map[string]interface{}{"message": "hey", "id": "123"},
+				Status:     "200 OK",
+				StatusCode: 200,
+				Body:       map[string]interface{}{"message": "hey", "id": "123"},
+			},
+			requestDump: &RequestExtractor{
+				Method: http.MethodPost,
+				URL:    srv.URL + "/echo?id=123",
+				Header: http.Header{
+					"Authorization": {auth},
+					"User-Agent":    {fmt.Sprintf("scenarigo/%s", version.String())},
+				},
+				Body: map[string]string{"message": "hey"},
 			},
 		},
 	}
@@ -258,10 +473,10 @@ func TestRequest_Invoke(t *testing.T) {
 			}
 
 			// ensure that ctx.WithRequest and ctx.WithResponse are called
-			if diff := cmp.Diff(test.request.Body, ctx.Request()); diff != "" {
+			if diff := cmp.Diff(test.requestDump, ctx.Request()); diff != "" {
 				t.Errorf("differs: (-want +got)\n%s", diff)
 			}
-			if diff := cmp.Diff(test.response.Body, ctx.Response()); diff != "" {
+			if diff := cmp.Diff((*ResponseExtractor)(&test.response), ctx.Response(), cmpopts.IgnoreFields(ResponseExtractor{}, "Header")); diff != "" {
 				t.Errorf("differs: (-want +got)\n%s", diff)
 			}
 		})
@@ -397,6 +612,8 @@ func TestRequest_Invoke_Log(t *testing.T) {
           body:
             message: hey
         response:
+          status: 200 OK
+          statusCode: 200
           header:
             Content-Length:
             - "18"

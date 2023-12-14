@@ -1,6 +1,7 @@
 package template
 
 import (
+	"context"
 	"strconv"
 
 	"github.com/pkg/errors"
@@ -15,12 +16,12 @@ type errNotDefined struct {
 	error
 }
 
-func lookup(node ast.Node, data interface{}) (interface{}, error) {
+func lookup(ctx context.Context, node ast.Node, data interface{}) (interface{}, error) {
 	v, err := extract(node, data)
 	if err != nil {
 		return nil, err
 	}
-	return Execute(v, data)
+	return Execute(ctx, v, data)
 }
 
 func extract(node ast.Node, data interface{}) (interface{}, error) {

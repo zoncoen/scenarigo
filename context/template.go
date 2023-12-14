@@ -6,5 +6,5 @@ import (
 
 // ExecuteTemplate executes template strings in context.
 func (c *Context) ExecuteTemplate(i interface{}) (interface{}, error) {
-	return template.Execute(i, c)
+	return template.Execute(c.RequestContext(), i, c)
 }

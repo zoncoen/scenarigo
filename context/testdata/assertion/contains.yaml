@@ -21,14 +21,20 @@ ng:
 
 ---
 name: left arrow function
-yaml: |-
-  {{assert.contains <-}}:
+yaml:
+  '{{assert.contains <-}}':
     name: Alice
+    age: '{{int($) > 10}}'
 ok:
 -
   - name: Alice
+    age: 20
   - name: Bob
 ng:
 -
   - name: Bob
   - name: Charlie
+-
+  - name: Alice
+    age: 10
+  - name: Bob

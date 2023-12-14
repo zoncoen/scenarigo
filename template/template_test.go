@@ -1,6 +1,7 @@
 package template
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"reflect"
@@ -1243,7 +1244,9 @@ func runExecute(t *testing.T, tests map[string]executeTestCase) {
 			if err != nil {
 				t.Fatalf("unexpected error: %s", err)
 			}
-			i, err := tmpl.Execute(test.data)
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			defer cancel()
+			i, err := tmpl.Execute(ctx, test.data)
 			if test.expectError == "" && err != nil {
 				t.Fatalf("unexpected error: %s", err)
 			}
@@ -1368,7 +1371,9 @@ suffix: -suf
 			} else {
 				data["dump"] = &dumpFunc{}
 			}
-			v, err := tmpl.Execute(data)
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			defer cancel()
+			v, err := tmpl.Execute(ctx, data)
 			if err != nil {
 				t.Fatalf("unexpected error: %s", err)
 			}
@@ -1429,7 +1434,9 @@ func TestTemplate_ExecuteDirect(t *testing.T) {
 	for name, test := range tests {
 		test := test
 		t.Run(name, func(t *testing.T) {
-			i, err := Execute(test.i, test.data)
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			defer cancel()
+			i, err := Execute(ctx, test.i, test.data)
 			if !test.expectError && err != nil {
 				t.Fatalf("unexpected error: %s", err)
 			}

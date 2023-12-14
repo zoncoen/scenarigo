@@ -4,7 +4,6 @@ package assert
 import (
 	"context"
 	"fmt"
-	"sync"
 
 	"github.com/goccy/go-yaml"
 	"github.com/zoncoen/query-go"
@@ -104,23 +103,37 @@ func build(ctx context.Context, q *query.Query, expect any, opt *buildOpt) ([]As
 	case yaml.MapSlice:
 		for _, item := range v {
 			item := item
-			k, err := template.Execute(item.Key, opt.tmplData)
+			k, err := template.Execute(ctx, item.Key, opt.tmplData)
 			if err != nil {
 				return nil, err
 			}
-			key := fmt.Sprintf("%s", k)
-			as, err := build(ctx, q.Key(key), item.Value, opt)
-			if err != nil {
-				return nil, err
+			if f, ok := k.(*template.FuncCall); ok {
+				if len(v) != 1 {
+					return nil, errors.New("invalid left arrow function call")
+				}
+				res, err := f.Do(ctx, item.Value, opt.tmplData)
+				if err != nil {
+					return nil, errors.Wrap(err, "failed to execute left arrow function")
+				}
+				as, err := build(ctx, q, res, opt)
+				if err != nil {
+					return nil, errors.WithPath(err, fmt.Sprint(item.Key))
+				}
+				assertions = append(assertions, as...)
+			} else {
+				as, err := build(ctx, q.Key(fmt.Sprintf("%s", k)), item.Value, opt)
+				if err != nil {
+					return nil, errors.WithPath(err, fmt.Sprint(item.Key))
+				}
+				assertions = append(assertions, as...)
 			}
-			assertions = append(assertions, as...)
 		}
 	case []interface{}:
 		for i, elm := range v {
 			elm := elm
 			as, err := build(ctx, q.Index(i), elm, opt)
 			if err != nil {
-				return nil, err
+				return nil, errors.WithPath(err, fmt.Sprintf("[%d]", i))
 			}
 			assertions = append(assertions, as...)
 		}
@@ -141,6 +154,8 @@ func build(ctx context.Context, q *query.Query, expect any, opt *buildOpt) ([]As
 			}))
 		case func(*query.Query) Assertion:
 			assertions = append(assertions, v(q))
+		case template.Lazy:
+			assertions = append(assertions, lazyAssertion(q, v))
 		default:
 			as, err := build(ctx, q, Equal(v, opt.eqs...), opt)
 			if err != nil {
@@ -153,120 +168,32 @@ func build(ctx context.Context, q *query.Query, expect any, opt *buildOpt) ([]As
 }
 
 func buildAssertion(ctx context.Context, q *query.Query, expect any, opt *buildOpt) ([]Assertion, error) {
-	wc, done := executeTemplate(ctx, expect, opt.tmplData)
-
-	select {
-	case result := <-done:
-		if result.err != nil {
-			return nil, result.err
-		}
-		if s, ok := result.v.(string); ok {
-			result.v = Equal(s, opt.eqs...)
-		}
-		return build(ctx, q, result.v, opt)
-	case <-wc.blocked():
-		// Delay template evaluation because the actual value is required.
-		var once sync.Once
-		a := AssertionFunc(func(val interface{}) error {
-			var c *waitContext
-			once.Do(func() {
-				// already executing
-				c = wc
-			})
-			if c == nil {
-				// re-execution is required from the second time onwards
-				c, done = executeTemplate(ctx, expect, opt.tmplData)
-			}
-
-			if err := c.set(val); err != nil {
-				return err
-			}
-			result := <-done
-			if result.err != nil {
-				return result.err
-			}
-			if pass, err := convert(result.v, false); err == nil {
-				if pass {
-					return nil
-				}
-				return errors.New("assertion error")
-			}
-			return fmt.Errorf("assertion result must be a boolean value but got %T", result.v)
-		})
-		return build(ctx, q, a, opt)
-	}
-}
-
-func executeTemplate(ctx context.Context, tmpl any, data any) (*waitContext, chan templateResult) {
-	wc := newWaitContext(ctx, data)
-	done := make(chan templateResult)
-	go func() {
-		v, err := template.Execute(tmpl, wc)
-		done <- templateResult{
-			v:   v,
-			err: err,
-		}
-	}()
-	return wc, done
-}
-
-type templateResult struct {
-	v   any
-	err error
-}
-
-type waitContext struct {
-	any                // base data
-	extractActualValue func() (any, bool)
-	ready              chan any
-	blocked            func() <-chan struct{}
-	setOnce            sync.Once
-}
-
-func newWaitContext(ctx context.Context, base any) *waitContext {
-	block, cancel := context.WithCancel(context.Background())
-	ready := make(chan any, 1)
-	//nolint:exhaustruct
-	return &waitContext{
-		any: base,
-		extractActualValue: onceValues(func() (any, bool) {
-			cancel()
-			select {
-			case v := <-ready:
-				return v, true
-			case <-ctx.Done():
-				return nil, false
-			}
-		}),
-		ready:   ready,
-		blocked: block.Done, //nolint:contextcheck
-	}
-}
-
-func (c *waitContext) set(v any) error {
-	var first bool
-	c.setOnce.Do(func() {
-		first = true
-		c.ready <- v
-	})
-	if first {
-		return nil
-	}
-	return errors.New("set an actual value twice")
-}
-
-// ExtractByKey implements query.KeyExtractor interface.
-func (c *waitContext) ExtractByKey(key string) (any, bool) {
-	if key == "$" {
-		return c.extractActualValue()
-	}
-	k := query.New(
-		query.ExtractByStructTag("yaml", "json"),
-		query.CustomExtractFunc(yamlextractor.MapSliceExtractFunc(false)),
-	).Key(key)
-	res, err := k.Extract(c.any)
+	v, err := template.Execute(ctx, expect, opt.tmplData)
 	if err != nil {
-		return nil, false
+		return nil, err
 	}
-	return res, true
+	if s, ok := v.(string); ok {
+		v = Equal(s, opt.eqs...)
+	}
+	return build(ctx, q, v, opt)
+}
+
+func lazyAssertion(q *query.Query, f template.Lazy) Assertion {
+	return AssertionFunc(func(val interface{}) error {
+		v, err := q.Extract(val)
+		if err != nil {
+			return err
+		}
+		res, err := f(v)
+		if err != nil {
+			return errors.WithQuery(err, q)
+		}
+		if pass, err := convert(res, false); err == nil {
+			if pass {
+				return nil
+			}
+			return errors.ErrorQueryf(q, "assertion error")
+		}
+		return errors.ErrorQueryf(q, "assertion result must be a boolean value but got %T", res)
+	})
 }

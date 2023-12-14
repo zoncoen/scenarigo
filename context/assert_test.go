@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/goccy/go-yaml"
 	"github.com/zoncoen/scenarigo/assert"
@@ -14,11 +15,13 @@ import (
 
 func TestAssertions(t *testing.T) {
 	executor := func(r testutil.Reporter, decode func(interface{})) func(testutil.Reporter, interface{}) error {
-		var i interface{}
-		decode(&i)
 		return func(r testutil.Reporter, v interface{}) error {
-			return assert.MustBuild(context.Background(), i, assert.FromTemplate(map[string]interface{}{
-				"assert": &assertions{context.Background()},
+			var i interface{}
+			decode(&i)
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			defer cancel()
+			return assert.MustBuild(ctx, i, assert.FromTemplate(map[string]interface{}{
+				"assert": &assertions{ctx},
 			})).Assert(v)
 		}
 	}
@@ -66,9 +69,11 @@ func TestLeftArrowFunc(t *testing.T) {
 			if err := yaml.Unmarshal([]byte(tc.yaml), &i); err != nil {
 				t.Fatalf("failed to unmarshal: %s", err)
 			}
-			v, err := template.Execute(i, map[string]interface{}{
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			defer cancel()
+			v, err := template.Execute(ctx, i, map[string]interface{}{
 				"f": &leftArrowFunc{
-					ctx: context.Background(),
+					ctx: ctx,
 					f:   buildArg(context.Background(), assert.Contains),
 				},
 			})

@@ -3,12 +3,9 @@ package assert
 import (
 	"context"
 	"strings"
-	"sync"
 	"testing"
-	"time"
 
 	"github.com/goccy/go-yaml"
-	"github.com/zoncoen/query-go"
 	"github.com/zoncoen/scenarigo/errors"
 )
 
@@ -22,7 +19,7 @@ deps:
     patch: 3
   tags:
     - go
-    - test`
+    - '{{$ == "test"}}'`
 	var in interface{}
 	if err := yaml.NewDecoder(strings.NewReader(str), yaml.UseOrderedMap()).Decode(&in); err != nil {
 		t.Fatalf("unexpected error: %s", err)
@@ -199,58 +196,4 @@ deps:
 			t.Errorf("expect %q but got %q", expect, got)
 		}
 	})
-}
-
-func TestWaitContext(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-
-	wc := newWaitContext(ctx, map[string]string{"foo": "FOO"})
-	if got, expect := extract(t, "$.foo", wc), "FOO"; got != expect {
-		t.Fatalf("expect %q but got %q", expect, got)
-	}
-
-	// wait until setting a value
-	var wg sync.WaitGroup
-	wg.Add(2)
-	go func() {
-		defer wg.Done()
-		if got, expect := extract(t, "$.$", wc), "BAR"; got != expect {
-			t.Errorf("expect %q but got %q", expect, got)
-		}
-	}()
-	go func() {
-		defer wg.Done()
-		if got, expect := extract(t, "$.$", wc), "BAR"; got != expect {
-			t.Errorf("expect %q but got %q", expect, got)
-		}
-	}()
-
-	if err := wc.set("BAR"); err != nil {
-		t.Fatalf("failed to set: %s", err)
-	}
-	wg.Wait()
-
-	// extract after setting
-	if got, expect := extract(t, "$.$", wc), "BAR"; got != expect {
-		t.Fatalf("expect %q but got %q", expect, got)
-	}
-
-	// don't set twice
-	if err := wc.set("BAR"); err == nil {
-		t.Fatal("no error")
-	}
-}
-
-func extract(t *testing.T, s string, target any) any {
-	t.Helper()
-	q, err := query.ParseString(s)
-	if err != nil {
-		t.Fatalf("failed to parse query string: %s", err)
-	}
-	v, err := q.Extract(target)
-	if err != nil {
-		t.Fatalf("failed to extract: %s", err)
-	}
-	return v
 }

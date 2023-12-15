@@ -50,7 +50,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: GO_VERSION=${{ matrix.go-version }} make build/ci
     - name: Upload artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: artifact-${{ matrix.go-version }}
         path: ${{ github.workspace }}/dist/

@@ -68,7 +68,7 @@ jobs:
       with:
         fetch-depth: 0
         path: go/src/github.com/${{ github.repository }}
-    - uses: actions/download-artifact@v3
+    - uses: actions/download-artifact@v4
       with:
         path: ./go/src/github.com/${{ github.repository }}/dist/
     - name: Move artifacts

@@ -366,3 +366,49 @@ unexpected error: invalid b
 		}
 	})
 }
+
+func TestPathError_prependError(t *testing.T) {
+	tests := map[string]struct {
+		base   string
+		path   string
+		expect string
+	}{
+		"empty": {
+			base:   "",
+			path:   "",
+			expect: "",
+		},
+		"prepend to empty": {
+			base:   "",
+			path:   "foo",
+			expect: ".foo",
+		},
+		"key without .": {
+			base:   ".bar",
+			path:   "foo",
+			expect: ".foo.bar",
+		},
+		"key with .": {
+			base:   ".bar",
+			path:   ".foo",
+			expect: ".foo.bar",
+		},
+		"index": {
+			base:   "[1]",
+			path:   "[0]",
+			expect: "[0][1]",
+		},
+	}
+	for name, test := range tests {
+		test := test
+		t.Run(name, func(t *testing.T) {
+			pe := &PathError{
+				Path: test.base,
+			}
+			pe.prependPath(test.path)
+			if got, expect := pe.Path, test.expect; got != expect {
+				t.Errorf("expect %q but got %q", expect, got)
+			}
+		})
+	}
+}

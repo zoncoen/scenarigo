@@ -1,8 +1,10 @@
 package template
 
 import (
+	"context"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/goccy/go-yaml"
 	"github.com/google/go-cmp/cmp"
@@ -294,7 +296,9 @@ func TestExecute(t *testing.T) {
 	for name, test := range tests {
 		test := test
 		t.Run(name, func(t *testing.T) {
-			got, err := Execute(test.in, test.vars)
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			defer cancel()
+			got, err := Execute(ctx, test.in, test.vars)
 			if err != nil {
 				t.Fatalf("unexpected error: %s", err)
 			}

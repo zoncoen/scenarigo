@@ -24,3 +24,15 @@ ok:
 - xxx
 ng:
 - ''
+
+---
+name: left arrow function w/ assertion
+yaml:
+  '{{assert.or <-}}':
+  - xxx
+  - '{{$ == "yyy"}}'
+ok:
+- xxx
+- yyy
+ng:
+- ''

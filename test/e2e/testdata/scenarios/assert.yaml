@@ -49,11 +49,12 @@ steps:
     code: |-
       {{assert.and <-}}:
         - '200'
+        - '{{assert.notZero}}'
     body:
-      message: |-
-        {{assert.and <-}}:
-          - hello
-          - '{{assert.notZero}}'
+      message:
+        '{{assert.and <-}}':
+        - hello
+        - '{{assert.notZero}}'
 
 ---
 title: or
@@ -86,11 +87,12 @@ steps:
     code: |-
       {{assert.or <-}}:
         - '200'
+        - '400'
     body:
-      message: |-
-        {{assert.or <-}}:
-          - '{{"hello"}}'
-          - bye
+      message:
+        '{{assert.or <-}}':
+        - '{{"hello"}}'
+        - bye
 
 ---
 title: notZero

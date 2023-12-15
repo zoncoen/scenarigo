@@ -36,26 +36,29 @@ func As(err error, target interface{}) bool {
 
 // ErrorPathf create PathError instance with path and error message.
 func ErrorPathf(path, msg string, args ...interface{}) error {
-	return &PathError{
-		Path: fmt.Sprintf(".%s", path),
-		Err:  Errorf(msg, args...),
+	pe := &PathError{
+		Err: Errorf(msg, args...),
 	}
+	pe.prependPath(path)
+	return pe
 }
 
 // ErrorQueryf create PathError instance by query.Query.
 func ErrorQueryf(q *query.Query, format string, args ...interface{}) error {
-	return &PathError{
-		Path: q.String(),
-		Err:  Errorf(format, args...),
+	pe := &PathError{
+		Err: Errorf(format, args...),
 	}
+	pe.prependPath(q.String())
+	return pe
 }
 
 // ErrorPath create PathError instance with path and error message.
 func ErrorPath(path, message string) error {
-	return &PathError{
-		Path: fmt.Sprintf(".%s", path),
-		Err:  New(message),
+	pe := &PathError{
+		Err: New(message),
 	}
+	pe.prependPath(path)
+	return pe
 }
 
 // Errors create MultiPathError by error instances.
@@ -83,13 +86,14 @@ func WrapPath(err error, path, message string) error {
 	var e Error
 	if errors.As(err, &e) {
 		e.wrapf(message)
-		e.appendPath(fmt.Sprintf(".%s", path))
+		e.prependPath(path)
 		return e
 	}
-	return &PathError{
-		Err:  Wrap(err, message),
-		Path: fmt.Sprintf(".%s", path),
+	pe := &PathError{
+		Err: Wrap(err, message),
 	}
+	pe.prependPath(path)
+	return pe
 }
 
 // Wrapf wrap error while paying attention to PathError and MultiPathError.
@@ -109,39 +113,42 @@ func WrapPathf(err error, path, message string, args ...interface{}) error {
 	var e Error
 	if errors.As(err, &e) {
 		e.wrapf(message, args...)
-		e.appendPath(fmt.Sprintf(".%s", path))
+		e.prependPath(path)
 		return e
 	}
-	return &PathError{
-		Err:  Wrapf(err, message, args...),
-		Path: fmt.Sprintf(".%s", path),
+	pe := &PathError{
+		Err: Wrapf(err, message, args...),
 	}
+	pe.prependPath(path)
+	return pe
 }
 
 // WithPath add path to error if errors instance is PathError or MultiPathError.
 func WithPath(err error, path string) error {
 	var e Error
 	if errors.As(err, &e) {
-		e.appendPath(fmt.Sprintf(".%s", path))
+		e.prependPath(path)
 		return e
 	}
-	return &PathError{
-		Err:  err,
-		Path: fmt.Sprintf(".%s", path),
+	pe := &PathError{
+		Err: err,
 	}
+	pe.prependPath(path)
+	return pe
 }
 
 // WithQuery add path by query.Query to error if errors instance is PathError or MultiPathError.
 func WithQuery(err error, q *query.Query) error {
 	var e Error
 	if errors.As(err, &e) {
-		e.appendPath(q.String())
+		e.prependPath(q.String())
 		return e
 	}
-	return &PathError{
-		Err:  err,
-		Path: q.String(),
+	pe := &PathError{
+		Err: err,
 	}
+	pe.prependPath(q.String())
+	return pe
 }
 
 // WithNode set ast.Node to error if errors instance is PathError or MultiPathError.
@@ -161,7 +168,7 @@ func WithNodeAndColored(err error, node ast.Node, colored bool) error {
 
 // Error represents interface for PathError and MultiPathError.
 type Error interface {
-	appendPath(string)
+	prependPath(string)
 	wrapf(string, ...interface{})
 	setNodeAndColored(ast.Node, bool)
 	Error() string
@@ -175,7 +182,13 @@ type PathError struct {
 	Err          error
 }
 
-func (e *PathError) appendPath(path string) {
+func (e *PathError) prependPath(path string) {
+	if path == "" {
+		return
+	}
+	if !strings.HasPrefix(path, ".") && !strings.HasPrefix(path, "[") {
+		path = fmt.Sprintf(".%s", path)
+	}
 	e.Path = path + e.Path
 }
 
@@ -260,13 +273,13 @@ func (e *MultiPathError) Error() string {
 	return mulerr.Error()
 }
 
-func (e *MultiPathError) appendPath(path string) {
+func (e *MultiPathError) prependPath(path string) {
 	for _, err := range e.Errs {
 		var e Error
 		if !errors.As(err, &e) {
 			continue
 		}
-		e.appendPath(path)
+		e.prependPath(path)
 	}
 }
 

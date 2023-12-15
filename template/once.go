@@ -1,6 +1,6 @@
 //go:build go1.21
 
-package assert
+package template
 
 import "sync"
 

@@ -1,6 +1,7 @@
 package template
 
 import (
+	"context"
 	"fmt"
 	"go/token"
 	"reflect"
@@ -17,12 +18,12 @@ import (
 //nolint:exhaustruct
 var (
 	yamlMapItemType = reflect.TypeOf(yaml.MapItem{})
-	lazyFuncType    = reflect.TypeOf(lazyFunc{})
+	funcCallType    = reflect.TypeOf(FuncCall{})
 )
 
 // Execute executes templates of i with data.
-func Execute(i, data interface{}) (interface{}, error) {
-	v, err := execute(reflect.ValueOf(i), data)
+func Execute(ctx context.Context, i, data interface{}) (interface{}, error) {
+	v, err := execute(ctx, reflect.ValueOf(i), data)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +48,7 @@ func structFieldName(field reflect.StructField) string {
 }
 
 //nolint:gocyclo,cyclop,maintidx
-func execute(in reflect.Value, data interface{}) (reflect.Value, error) {
+func execute(ctx context.Context, in reflect.Value, data interface{}) (reflect.Value, error) {
 	v := reflectutil.Elem(in)
 	switch v.Kind() {
 	case reflect.Invalid:
@@ -57,31 +58,24 @@ func execute(in reflect.Value, data interface{}) (reflect.Value, error) {
 			e := v.MapIndex(k)
 			if !isNil(e) {
 				keyStr := fmt.Sprint(k.Interface())
-				key, err := execute(k, data)
+				key, err := execute(ctx, k, data)
 				if err != nil {
 					return reflect.Value{}, errors.WithPath(err, keyStr)
 				}
 				// left arrow function
-				if ke := reflectutil.Elem(key); ke.IsValid() && ke.Type() == lazyFuncType && ke.CanInterface() {
+				if ke := reflectutil.Elem(key); ke.IsValid() && ke.Type() == funcCallType && ke.CanInterface() {
 					if len(v.MapKeys()) != 1 {
 						return reflect.Value{}, errors.New("invalid left arrow function call")
 					}
-					if !isNil(e) {
-						x, err := execute(e, data)
-						if err != nil {
-							return reflect.Value{}, errors.WithPath(err, keyStr)
-						}
-						e = x
-					}
-					f := ke.Interface().(lazyFunc) //nolint:forcetypeassert
-					res, err := executeLeftArrowFunction(f.f, e)
+					f := ke.Interface().(FuncCall) //nolint:forcetypeassert
+					res, err := executeLeftArrowFunction(ctx, f.Func, e, data)
 					if err != nil {
 						return reflect.Value{}, fmt.Errorf("failed to execute left arrow function: %w", err)
 					}
 					v = res
 					break
 				}
-				x, err := convert(e.Type())(execute(e, data))
+				x, err := convert(e.Type())(execute(ctx, e, data))
 				if err != nil {
 					return reflect.Value{}, errors.WithPath(err, keyStr)
 				}
@@ -101,26 +95,19 @@ func execute(in reflect.Value, data interface{}) (reflect.Value, error) {
 					keyStr := fmt.Sprint(key.Interface())
 					value := e.FieldByName("Value")
 					if !isNil(key) {
-						k, err := execute(key, data)
+						k, err := execute(ctx, key, data)
 						if err != nil {
 							return reflect.Value{}, errors.WithPath(err, keyStr)
 						}
 						key = k
 					}
 					// left arrow function
-					if ke := reflectutil.Elem(key); ke.IsValid() && ke.Type() == lazyFuncType && ke.CanInterface() {
+					if ke := reflectutil.Elem(key); ke.IsValid() && ke.Type() == funcCallType && ke.CanInterface() {
 						if v.Len() != 1 {
 							return reflect.Value{}, errors.New("invalid left arrow function call")
 						}
-						if !isNil(value) {
-							x, err := execute(value, data)
-							if err != nil {
-								return reflect.Value{}, errors.WithPath(err, keyStr)
-							}
-							value = x
-						}
-						f := ke.Interface().(lazyFunc) //nolint:forcetypeassert
-						res, err := executeLeftArrowFunction(f.f, value)
+						f := ke.Interface().(FuncCall) //nolint:forcetypeassert
+						res, err := executeLeftArrowFunction(ctx, f.Func, value, data)
 						if err != nil {
 							return reflect.Value{}, fmt.Errorf("failed to execute left arrow function: %w", err)
 						}
@@ -128,7 +115,7 @@ func execute(in reflect.Value, data interface{}) (reflect.Value, error) {
 						break
 					}
 				}
-				x, err := convert(e.Type())(execute(e, data))
+				x, err := convert(e.Type())(execute(ctx, e, data))
 				if err != nil {
 					return reflect.Value{}, errors.WithQuery(err, query.New(
 						query.ExtractByStructTag("yaml", "json"),
@@ -147,7 +134,7 @@ func execute(in reflect.Value, data interface{}) (reflect.Value, error) {
 				continue // skip unexported field
 			}
 			field := v.Field(i)
-			x, err := convert(field.Type())(execute(field, data))
+			x, err := convert(field.Type())(execute(ctx, field, data))
 			if err != nil {
 				fieldName := structFieldName(v.Type().Field(i))
 				return reflect.Value{}, errors.WithPath(err, fieldName)
@@ -162,7 +149,7 @@ func execute(in reflect.Value, data interface{}) (reflect.Value, error) {
 		if err != nil {
 			return reflect.Value{}, err
 		}
-		x, err := tmpl.Execute(data)
+		x, err := tmpl.Execute(ctx, data)
 		if err != nil {
 			return reflect.Value{}, err
 		}
@@ -188,7 +175,14 @@ func execute(in reflect.Value, data interface{}) (reflect.Value, error) {
 	return v, nil
 }
 
-func executeLeftArrowFunction(f Func, v reflect.Value) (reflect.Value, error) {
+func executeLeftArrowFunction(ctx context.Context, f Func, v reflect.Value, data any) (reflect.Value, error) {
+	if !isNil(v) {
+		x, err := execute(ctx, v, data)
+		if err != nil {
+			return reflect.Value{}, err
+		}
+		v = x
+	}
 	s := new(funcStash)
 	x, err := replaceFuncs(v, s)
 	if err != nil {
@@ -205,7 +199,7 @@ func executeLeftArrowFunction(f Func, v reflect.Value) (reflect.Value, error) {
 
 		// Restore functions that are replaced into strings.
 		// See the "HACK" comment of *Template.executeParameterExpr method.
-		arg, err := Execute(v, s)
+		arg, err := Execute(ctx, v, s)
 		if err != nil {
 			return fmt.Errorf("failed to restore functions: %w", err)
 		}

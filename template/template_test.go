@@ -60,6 +60,10 @@ func TestTemplate_Execute(t *testing.T) {
 			str:    "prefix-{{}}-suffix",
 			expect: "prefix--suffix",
 		},
+		"implicit concatenation": {
+			str:    `{{1}}2{{3}}`,
+			expect: "123",
+		},
 		"string": {
 			str:    `{{"foo"}}`,
 			expect: "foo",

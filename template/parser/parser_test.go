@@ -162,7 +162,7 @@ func TestParser_Parse(t *testing.T) {
 							Rdbrace: 6,
 						},
 						OpPos: 8,
-						Op:    token.ADD,
+						Op:    token.CONCAT,
 						Y: &ast.ParameterExpr{
 							Ldbrace: 8,
 							X: &ast.Ident{
@@ -173,7 +173,7 @@ func TestParser_Parse(t *testing.T) {
 						},
 					},
 					OpPos: 15,
-					Op:    token.ADD,
+					Op:    token.CONCAT,
 					Y: &ast.ParameterExpr{
 						Ldbrace: 15,
 						X: &ast.Ident{
@@ -194,7 +194,7 @@ func TestParser_Parse(t *testing.T) {
 							Value:    "prefix-",
 						},
 						OpPos: 8,
-						Op:    token.ADD,
+						Op:    token.CONCAT,
 						Y: &ast.ParameterExpr{
 							Ldbrace: 8,
 							X: &ast.Ident{
@@ -205,7 +205,7 @@ func TestParser_Parse(t *testing.T) {
 						},
 					},
 					OpPos: 16,
-					Op:    token.ADD,
+					Op:    token.CONCAT,
 					Y: &ast.BasicLit{
 						ValuePos: 16,
 						Kind:     token.STRING,
@@ -313,7 +313,7 @@ func TestParser_Parse(t *testing.T) {
 								Value:    "\n  message: ",
 							},
 							OpPos: 26,
-							Op:    token.ADD,
+							Op:    token.CONCAT,
 							Y: &ast.ParameterExpr{
 								Ldbrace: 26,
 								X: &ast.Ident{
@@ -360,7 +360,7 @@ func TestParser_Parse(t *testing.T) {
     `,
 									},
 									OpPos: 47,
-									Op:    token.ADD,
+									Op:    token.CONCAT,
 									Y: &ast.ParameterExpr{
 										Ldbrace: 47,
 										X: &ast.LeftArrowExpr{
@@ -380,7 +380,7 @@ func TestParser_Parse(t *testing.T) {
       text: `,
 													},
 													OpPos: 94,
-													Op:    token.ADD,
+													Op:    token.CONCAT,
 													Y: &ast.ParameterExpr{
 														Ldbrace: 94,
 														X: &ast.Ident{
@@ -392,7 +392,7 @@ func TestParser_Parse(t *testing.T) {
 													},
 												},
 												OpPos: 103,
-												Op:    token.ADD,
+												Op:    token.CONCAT,
 												Y: &ast.BasicLit{
 													ValuePos: 103,
 													Kind:     token.STRING,
@@ -405,7 +405,7 @@ func TestParser_Parse(t *testing.T) {
 									},
 								},
 								OpPos: 124,
-								Op:    token.ADD,
+								Op:    token.CONCAT,
 								Y: &ast.BasicLit{
 									ValuePos: 124,
 									Kind:     token.STRING,
@@ -413,7 +413,7 @@ func TestParser_Parse(t *testing.T) {
 								},
 							},
 							OpPos: 127,
-							Op:    token.ADD,
+							Op:    token.CONCAT,
 							Y: &ast.BasicLit{
 								ValuePos: 127,
 								Kind:     token.STRING,

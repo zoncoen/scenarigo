@@ -269,6 +269,18 @@ func (t *Template) executeBinaryOperation(op token.Token, x, y val.Value, yExpr 
 			}
 			return oneOf(i, val.Int(1), val.Int(0))
 		}
+	case token.CONCAT:
+		if _, ok := x.(val.String); !ok {
+			if v, err := val.GetType("string").Convert(x); err == nil {
+				x = v
+			}
+		}
+		if _, ok := y.(val.String); !ok {
+			if v, err := val.GetType("string").Convert(y); err == nil {
+				y = v
+			}
+		}
+		fallthrough
 	case token.ADD:
 		if o, ok := x.(val.Adder); ok {
 			// hack for strings of left arrow functions

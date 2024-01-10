@@ -112,7 +112,7 @@ L:
 			x = &ast.BinaryExpr{
 				X:     x,
 				OpPos: pos,
-				Op:    token.ADD,
+				Op:    token.CONCAT,
 				Y:     y,
 			}
 		case token.QUESTION:

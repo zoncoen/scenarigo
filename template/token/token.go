@@ -42,6 +42,7 @@ const (
 	QUESTION  // ?
 	COLON     // :
 	LARROW    // <-
+	CONCAT    // implicit concatenation
 	LINEBREAK // end of a larrow expression argument
 
 	DEFINED // defined
@@ -116,6 +117,8 @@ func (t Token) String() string {
 		return ":"
 	case LARROW:
 		return "<-"
+	case CONCAT:
+		return "implicitly concatenate"
 	case LINEBREAK:
 		return "line break"
 	case DEFINED:

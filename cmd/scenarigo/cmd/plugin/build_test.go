@@ -78,7 +78,7 @@ go %s
 `, m, goVersion)
 	}
 
-	tmpl, err := template.ParseFiles("testdata/go1.17.mod.tmpl")
+	tmpl, err := template.ParseFiles("testdata/go.mod.tmpl")
 	if err != nil {
 		t.Fatal(err)
 	}

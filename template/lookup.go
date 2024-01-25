@@ -6,8 +6,8 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/zoncoen/query-go"
-	yamlextractor "github.com/zoncoen/query-go/extractor/yaml"
 
+	"github.com/zoncoen/scenarigo/internal/queryutil"
 	"github.com/zoncoen/scenarigo/template/ast"
 	"github.com/zoncoen/scenarigo/template/token"
 )
@@ -25,10 +25,7 @@ func lookup(ctx context.Context, node ast.Node, data interface{}) (interface{}, 
 }
 
 func extract(node ast.Node, data interface{}) (interface{}, error) {
-	q, err := buildQuery(query.New(
-		query.ExtractByStructTag("yaml", "json"),
-		query.CustomExtractFunc(yamlextractor.MapSliceExtractFunc(false)),
-	), node)
+	q, err := buildQuery(queryutil.New(), node)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create query from AST")
 	}

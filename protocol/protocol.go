@@ -5,8 +5,11 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/zoncoen/query-go"
+
 	"github.com/zoncoen/scenarigo/assert"
 	"github.com/zoncoen/scenarigo/context"
+	"github.com/zoncoen/scenarigo/internal/queryutil"
 )
 
 var (
@@ -19,6 +22,9 @@ func Register(p Protocol) {
 	m.Lock()
 	defer m.Unlock()
 	registry[strings.ToLower(p.Name())] = p
+	if pr, ok := p.(QueryOptionsProvider); ok {
+		queryutil.AppendOptions(pr.QueryOptions()...)
+	}
 }
 
 // Unregister unregisters the protocol from the registry.
@@ -54,4 +60,9 @@ type Invoker interface {
 // AssertionBuilder builds the assertion for the result of Invoke.
 type AssertionBuilder interface {
 	Build(*context.Context) (assert.Assertion, error)
+}
+
+// QueryOptionsProvider is the interface that provides custom querying options.
+type QueryOptionsProvider interface {
+	QueryOptions() []query.Option
 }

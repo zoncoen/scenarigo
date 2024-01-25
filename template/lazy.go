@@ -4,10 +4,8 @@ import (
 	"context"
 	"sync"
 
-	"github.com/zoncoen/query-go"
-	yamlextractor "github.com/zoncoen/query-go/extractor/yaml"
-
 	"github.com/zoncoen/scenarigo/errors"
+	"github.com/zoncoen/scenarigo/internal/queryutil"
 )
 
 // Lazy represents a value with lazy initialization.
@@ -104,10 +102,7 @@ func (c *waitContext) ExtractByKey(key string) (any, bool) {
 	if key == "$" {
 		return c.extractActualValue()
 	}
-	k := query.New(
-		query.ExtractByStructTag("yaml", "json"),
-		query.CustomExtractFunc(yamlextractor.MapSliceExtractFunc(false)),
-	).Key(key)
+	k := queryutil.New().Key(key)
 	res, err := k.Extract(c.any)
 	if err != nil {
 		return nil, false

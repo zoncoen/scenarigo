@@ -16,11 +16,10 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/goccy/go-yaml"
-	"github.com/zoncoen/query-go"
-	yamlextractor "github.com/zoncoen/query-go/extractor/yaml"
 
 	"github.com/zoncoen/scenarigo/context"
 	"github.com/zoncoen/scenarigo/errors"
+	"github.com/zoncoen/scenarigo/internal/queryutil"
 	"github.com/zoncoen/scenarigo/internal/reflectutil"
 )
 
@@ -40,10 +39,7 @@ type RequestExtractor Request
 
 // ExtractByKey implements query.KeyExtractor interface.
 func (r RequestExtractor) ExtractByKey(key string) (interface{}, bool) {
-	q := query.New(
-		query.ExtractByStructTag("yaml", "json"),
-		query.CustomExtractFunc(yamlextractor.MapSliceExtractFunc(false)),
-	).Key(key)
+	q := queryutil.New().Key(key)
 	if v, err := q.Extract(Request(r)); err == nil {
 		return v, true
 	}
@@ -73,10 +69,7 @@ type ResponseExtractor response
 
 // ExtractByKey implements query.KeyExtractor interface.
 func (r ResponseExtractor) ExtractByKey(key string) (interface{}, bool) {
-	q := query.New(
-		query.ExtractByStructTag("yaml", "json"),
-		query.CustomExtractFunc(yamlextractor.MapSliceExtractFunc(false)),
-	).Key(key)
+	q := queryutil.New().Key(key)
 	if v, err := q.Extract(response(r)); err == nil {
 		return v, true
 	}

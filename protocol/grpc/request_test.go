@@ -13,9 +13,9 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/sergi/go-diff/diffmatchpatch"
 	"github.com/zoncoen/query-go"
-	yamlextractor "github.com/zoncoen/query-go/extractor/yaml"
 	"github.com/zoncoen/scenarigo/context"
 	"github.com/zoncoen/scenarigo/internal/mockutil"
+	"github.com/zoncoen/scenarigo/internal/queryutil"
 	"github.com/zoncoen/scenarigo/internal/testutil"
 	"github.com/zoncoen/scenarigo/reporter"
 	testpb "github.com/zoncoen/scenarigo/testdata/gen/pb/test"
@@ -69,8 +69,7 @@ func TestRequestExtractor(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			q, err := query.ParseString(
 				test.query,
-				query.ExtractByStructTag("yaml", "json"),
-				query.CustomExtractFunc(yamlextractor.MapSliceExtractFunc(false)),
+				queryutil.Options()...,
 			)
 			if err != nil {
 				t.Fatal(err)
@@ -141,8 +140,7 @@ func TestResponseExtractor(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			q, err := query.ParseString(
 				test.query,
-				query.ExtractByStructTag("yaml", "json"),
-				query.CustomExtractFunc(yamlextractor.MapSliceExtractFunc(false)),
+				queryutil.Options()...,
 			)
 			if err != nil {
 				t.Fatal(err)

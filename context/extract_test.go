@@ -5,6 +5,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/zoncoen/query-go"
+	"github.com/zoncoen/scenarigo/internal/queryutil"
 	"github.com/zoncoen/scenarigo/reporter"
 )
 
@@ -72,7 +73,7 @@ func TestContext_ExtractKey(t *testing.T) {
 			if test.ctx != nil {
 				ctx = test.ctx(ctx)
 			}
-			q, err := query.ParseString(test.query, query.ExtractByStructTag("json", "yaml"))
+			q, err := query.ParseString(test.query, queryutil.Options()...)
 			if err != nil {
 				t.Fatalf("unexpected error: %s", err)
 			}

@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/goccy/go-yaml"
+
 	"github.com/zoncoen/scenarigo/protocol"
 )
 

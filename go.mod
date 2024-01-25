@@ -17,6 +17,7 @@ require (
 	github.com/spf13/cobra v1.8.0
 	github.com/vmware-tanzu/carvel-ytt v0.45.4
 	github.com/zoncoen/query-go v1.3.1
+	github.com/zoncoen/query-go/extractor/protobuf v0.1.3
 	github.com/zoncoen/query-go/extractor/yaml v0.2.1
 	golang.org/x/mod v0.14.0
 	golang.org/x/sync v0.6.0

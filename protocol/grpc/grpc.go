@@ -5,6 +5,8 @@ import (
 	"errors"
 
 	"github.com/goccy/go-yaml"
+	"github.com/zoncoen/query-go"
+	protobufextractor "github.com/zoncoen/query-go/extractor/protobuf"
 
 	"github.com/zoncoen/scenarigo/protocol"
 )
@@ -62,4 +64,12 @@ func (p *GRPC) UnmarshalExpect(b []byte) (protocol.AssertionBuilder, error) {
 	}
 
 	return &e, nil
+}
+
+// QueryOptions implements the QueryOptionsProvider interface.
+func (p *GRPC) QueryOptions() []query.Option {
+	return []query.Option{
+		query.CustomExtractFunc(protobufextractor.ExtractFunc()),
+		query.CustomIsInlineStructFieldFunc(protobufextractor.OneofIsInlineStructFieldFunc()),
+	}
 }

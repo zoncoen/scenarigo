@@ -7,7 +7,7 @@ require github.com/zoncoen/scenarigo v0.15.1
 require (
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
 	github.com/fatih/color v1.16.0 // indirect
-	github.com/goccy/go-yaml v1.11.2 // indirect
+	github.com/goccy/go-yaml v1.11.3 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/go-version v1.6.0 // indirect

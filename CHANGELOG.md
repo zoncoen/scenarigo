@@ -1,5 +1,21 @@
 # CHANGELOG
 
+<a name="v0.17.0"></a>
+## [v0.17.0] - 2024-01-26
+### Bug Fixes
+- **assert:** fix errors when using assert.(and|or)
+- **template:** convert into string in implicit concatenation
+
+### Features
+- **errors:** allow adding path index
+- **grpc:** enable querying by protobuf struct tag
+- **grpc:** enable to access metadata etc. via the request/response variable
+- **http:** enable to access header etc. via the request/response variable
+
+### BREAKING CHANGE
+
+template.Executefunction requires a context.Context value as an argument to avoid a goroutine leak.
+
 <a name="v0.16.2"></a>
 ## [v0.16.2] - 2023-11-02
 ### Bug Fixes
@@ -375,6 +391,7 @@ change protocl.Protocol interface
 - first release
 
 
+[v0.17.0]: https://github.com/zoncoen/scenarigo/compare/v0.16.2...v0.17.0
 [v0.16.2]: https://github.com/zoncoen/scenarigo/compare/v0.16.1...v0.16.2
 [v0.16.1]: https://github.com/zoncoen/scenarigo/compare/v0.16.0...v0.16.1
 [v0.16.0]: https://github.com/zoncoen/scenarigo/compare/v0.15.1...v0.16.0

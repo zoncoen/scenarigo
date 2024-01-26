@@ -9,6 +9,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/zoncoen/query-go"
+	"github.com/zoncoen/scenarigo/internal/queryutil"
 )
 
 func TestLazy(t *testing.T) {
@@ -120,7 +121,7 @@ func TestWaitContext(t *testing.T) {
 
 func extractVal(t *testing.T, s string, target any) any {
 	t.Helper()
-	q, err := query.ParseString(s)
+	q, err := query.ParseString(s, queryutil.Options()...)
 	if err != nil {
 		t.Fatalf("failed to parse query string: %s", err)
 	}

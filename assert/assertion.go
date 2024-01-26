@@ -7,9 +7,9 @@ import (
 
 	"github.com/goccy/go-yaml"
 	"github.com/zoncoen/query-go"
-	yamlextractor "github.com/zoncoen/query-go/extractor/yaml"
 
 	"github.com/zoncoen/scenarigo/errors"
+	"github.com/zoncoen/scenarigo/internal/queryutil"
 	"github.com/zoncoen/scenarigo/template"
 )
 
@@ -58,10 +58,7 @@ func Build(ctx context.Context, expect any, fs ...BuildOpt) (Assertion, error) {
 	var assertions []Assertion
 	if expect != nil {
 		var err error
-		assertions, err = build(ctx, query.New(
-			query.ExtractByStructTag("yaml", "json"),
-			query.CustomExtractFunc(yamlextractor.MapSliceExtractFunc(false)),
-		), expect, &opt)
+		assertions, err = build(ctx, queryutil.New(), expect, &opt)
 		if err != nil {
 			return nil, fmt.Errorf("failed to build assertion: %w", err)
 		}

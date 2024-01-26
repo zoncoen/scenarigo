@@ -11,6 +11,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/sergi/go-diff/diffmatchpatch"
 	"github.com/zoncoen/query-go"
+	"github.com/zoncoen/scenarigo/internal/queryutil"
 )
 
 func validatePath(t *testing.T, e *PathError, path string) {
@@ -61,7 +62,7 @@ func TestErrorPathf(t *testing.T) {
 }
 
 func TestErrorQueryf(t *testing.T) {
-	q, err := query.ParseString("path")
+	q, err := query.ParseString("path", queryutil.Options()...)
 	if err != nil {
 		t.Fatalf("%+v", err)
 	}
@@ -199,7 +200,7 @@ func TestWithPath(t *testing.T) {
 
 func TestWithQuery(t *testing.T) {
 	t.Run("add path by query to pkg/errors instance", func(t *testing.T) {
-		q, err := query.ParseString("path")
+		q, err := query.ParseString("path", queryutil.Options()...)
 		if err != nil {
 			t.Fatalf("%+v", err)
 		}
@@ -214,7 +215,7 @@ func TestWithQuery(t *testing.T) {
 		validatePath(t, e, "path")
 	})
 	t.Run("add path by query to PathError instance", func(t *testing.T) {
-		q, err := query.ParseString("b")
+		q, err := query.ParseString("b", queryutil.Options()...)
 		if err != nil {
 			t.Fatalf("%+v", err)
 		}

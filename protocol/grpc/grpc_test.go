@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/zoncoen/scenarigo/internal/queryutil"
 )
 
 func TestGRPC_UnmarshalRequest(t *testing.T) {
@@ -152,4 +153,50 @@ message: test`),
 			})
 		}
 	})
+}
+
+func TestGRPC_QueryOptions(t *testing.T) {
+	p := &GRPC{}
+	queryutil.AppendOptions(p.QueryOptions()...)
+	got, err := queryutil.New().Key("b").Key("bar_value").Extract(&OneofMessage{
+		Value: &OneofMessage_B_{
+			B: &OneofMessage_B{
+				BarValue: "yyy",
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("failed to extract: %s", err)
+	}
+	if diff := cmp.Diff("yyy", got); diff != "" {
+		t.Errorf("request differs (-want +got):\n%s", diff)
+	}
+}
+
+type OneofMessage struct {
+	Value isOneofMessage_Value `protobuf_oneof:"value"`
+}
+
+type isOneofMessage_Value interface {
+	isOneofMessage_Value()
+}
+
+type OneofMessage_A_ struct {
+	A *OneofMessage_A `protobuf:"bytes,1,opt,name=a,proto3,oneof"`
+}
+
+type OneofMessage_B_ struct {
+	B *OneofMessage_B `protobuf:"bytes,2,opt,name=b,proto3,oneof"`
+}
+
+func (*OneofMessage_A_) isOneofMessage_Value() {}
+
+func (*OneofMessage_B_) isOneofMessage_Value() {}
+
+type OneofMessage_A struct {
+	FooValue string `protobuf:"bytes,1,opt,name=foo_value,json=fooValue,proto3" json:"foo_value,omitempty"`
+}
+
+type OneofMessage_B struct {
+	BarValue string `protobuf:"bytes,1,opt,name=bar_value,json=barValue,proto3" json:"bar_value,omitempty"`
 }

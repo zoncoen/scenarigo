@@ -16,8 +16,9 @@ require (
 	github.com/sosedoff/gitkit v0.4.0
 	github.com/spf13/cobra v1.8.0
 	github.com/vmware-tanzu/carvel-ytt v0.45.4
-	github.com/zoncoen/query-go v1.2.1
-	github.com/zoncoen/query-go/extractor/yaml v0.1.1
+	github.com/zoncoen/query-go v1.3.1
+	github.com/zoncoen/query-go/extractor/protobuf v0.1.3
+	github.com/zoncoen/query-go/extractor/yaml v0.2.1
 	golang.org/x/mod v0.14.0
 	golang.org/x/sync v0.6.0
 	golang.org/x/text v0.14.0
@@ -36,8 +37,8 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	golang.org/x/crypto v0.17.0 // indirect
+	golang.org/x/crypto v0.18.0 // indirect
 	golang.org/x/net v0.18.0 // indirect
-	golang.org/x/sys v0.15.0 // indirect
+	golang.org/x/sys v0.16.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 )

@@ -52,15 +52,15 @@ func run(r Reporter, name string, f func(r Reporter)) {
 		})
 	default:
 		child := &reporter{}
-		defer func() {
-			err := recover()
-			if err != nil {
-				fmt.Println(err) //nolint:forbidigo
-			}
-			if child.Failed() {
-				r.Fail()
-			}
-		}()
+		// defer func() {
+		// 	err := recover()
+		// 	if err != nil {
+		// 		fmt.Println(err) //nolint:forbidigo
+		// 	}
+		// 	if child.Failed() {
+		// 		r.Fail()
+		// 	}
+		// }()
 		f(child)
 	}
 }

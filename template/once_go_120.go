@@ -18,12 +18,12 @@ func onceValues[T1, T2 any](f func() (T1, T2)) func() (T1, T2) {
 		r2    T2
 	)
 	g := func() {
-		defer func() {
-			p = recover()
-			if !valid {
-				panic(p)
-			}
-		}()
+		// defer func() {
+		// 	p = recover()
+		// 	if !valid {
+		// 		panic(p)
+		// 	}
+		// }()
 		r1, r2 = f()
 		valid = true
 	}

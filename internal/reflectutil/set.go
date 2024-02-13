@@ -16,9 +16,9 @@ func Set(target, v reflect.Value) (retErr error) {
 		return nil
 	}
 	defer func() {
-		if err := recover(); err != nil {
-			retErr = fmt.Errorf("can not set %s to %s: %s", v.Type().String(), target.Type().String(), err)
-		}
+		// if err := recover(); err != nil {
+		// 	retErr = fmt.Errorf("can not set %s to %s: %s", v.Type().String(), target.Type().String(), err)
+		// }
 	}()
 	if vv, ok, err := Convert(target.Type(), v); err == nil && ok {
 		v = vv
@@ -39,9 +39,9 @@ func Set(target, v reflect.Value) (retErr error) {
 // Convert returns the value v converted to type t.
 func Convert(t reflect.Type, v reflect.Value) (_ reflect.Value, _ bool, retErr error) {
 	defer func() {
-		if err := recover(); err != nil {
-			retErr = errors.Errorf("failed to convert %T to %s: %s", v.Interface(), t.Name(), err)
-		}
+		// if err := recover(); err != nil {
+		// 	retErr = errors.Errorf("failed to convert %T to %s: %s", v.Interface(), t.Name(), err)
+		// }
 	}()
 
 	if t == nil {

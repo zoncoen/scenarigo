@@ -88,7 +88,7 @@ func MustBuild(ctx context.Context, expect any, fs ...BuildOpt) Assertion {
 	assertion, err := Build(ctx, expect, fs...)
 	if err != nil {
 		return AssertionFunc(func(_ any) error {
-			return err
+			return fmt.Errorf("failed to build assertion: %w", err)
 		})
 	}
 	return assertion

@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"runtime"
-	"runtime/debug"
 	"strconv"
 	"strings"
 	"sync"
@@ -345,34 +344,34 @@ func (r *reporter) run(f func(r Reporter)) {
 }
 
 func (r *reporter) runFunc(f func(Reporter)) {
-	var finished bool
-	defer func() {
-		err := recover()
-		if !finished && err == nil {
-			err = errors.New("test executed panic(nil) or runtime.Goexit")
-		}
-		if err != nil {
-			if !r.Failed() && !r.Skipped() {
-				r.Error(err)
-				r.Error(string(debug.Stack()))
-			}
-		}
-	}()
+	// var finished bool
+	// defer func() {
+	// 	err := recover()
+	// 	if !finished && err == nil {
+	// 		err = errors.New("test executed panic(nil) or runtime.Goexit")
+	// 	}
+	// 	if err != nil {
+	// 		if !r.Failed() && !r.Skipped() {
+	// 			r.Error(err)
+	// 			r.Error(string(debug.Stack()))
+	// 		}
+	// 	}
+	// }()
 	f(r)
-	finished = true
+	// finished = true
 }
 
 func (r *reporter) start() func() {
 	r.durationMeasurer.start()
 	return func() {
 		r.durationMeasurer.stop()
-		err := recover()
-		if err != nil {
-			if !r.Failed() && !r.Skipped() {
-				r.Error(err)
-				r.Error(string(debug.Stack()))
-			}
-		}
+		// err := recover()
+		// if err != nil {
+		// 	if !r.Failed() && !r.Skipped() {
+		// 		r.Error(err)
+		// 		r.Error(string(debug.Stack()))
+		// 	}
+		// }
 
 		// Collect subtests which are running parallel.
 		subtests := make([]<-chan bool, 0, len(r.children))

@@ -52,9 +52,9 @@ func (t *Template) Execute(ctx context.Context, data interface{}) (interface{}, 
 
 func (t *Template) execute(ctx context.Context, data interface{}) (_ interface{}, retErr error) {
 	defer func() {
-		if err := recover(); err != nil {
-			retErr = fmt.Errorf("failed to execute: panic: %s", err)
-		}
+		// if err := recover(); err != nil {
+		// 	retErr = fmt.Errorf("failed to execute: panic: %s", err)
+		// }
 	}()
 	v, err := t.executeExpr(ctx, t.expr, data)
 	if err != nil {

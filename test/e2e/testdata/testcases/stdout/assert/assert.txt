@@ -1,6 +1,6 @@
---- FAIL: testdata/testcases/scenarios/assert.yaml (0.00s)
-    --- FAIL: testdata/testcases/scenarios/assert.yaml/assert (0.00s)
-        --- FAIL: testdata/testcases/scenarios/assert.yaml/assert/POST_/echo (0.00s)
+--- FAIL: testdata/testcases/scenarios/assert/assert.yaml (0.00s)
+    --- FAIL: testdata/testcases/scenarios/assert/assert.yaml/assert (0.00s)
+        --- FAIL: testdata/testcases/scenarios/assert/assert.yaml/assert/POST_/echo (0.00s)
                 request:
                   method: POST
                   url: http://[::]:12345/echo
@@ -38,5 +38,5 @@
                     > 14 |       message: '{{request.body.message}}'
                                           ^
 FAIL
-FAIL	testdata/testcases/scenarios/assert.yaml	0.000s
+FAIL	testdata/testcases/scenarios/assert/assert.yaml	0.000s
 FAIL

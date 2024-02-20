@@ -25,26 +25,22 @@
                       message: bar
                 elapsed time: 0.000000 sec
                 2 errors occurred: contains the value
-                      25 |     code: OK
-                      26 |     body:
                       27 |       messages:
-                    > 28 |         '{{assert.and <-}}':
-                                                      ^
+                      28 |         '{{assert.and <-}}':
                       29 |         - '{{assert.notContains <-}}':
-                      30 |             id: '1'
+                    > 30 |             id: '1'
+                                         ^
                       31 |             message: foo
-                      32 |
+                      32 |         - '{{assert.notContains <-}}':
+                      33 |             id: '2'
                 
                 contains the value
-                      25 |     code: OK
-                      26 |     body:
-                      27 |       messages:
-                    > 28 |         '{{assert.and <-}}':
-                                                      ^
-                      29 |         - '{{assert.notContains <-}}':
                       30 |             id: '1'
                       31 |             message: foo
-                      32 |
+                      32 |         - '{{assert.notContains <-}}':
+                    > 33 |             id: '2'
+                                         ^
+                      34 |             message: bar
 FAIL
 FAIL	testdata/testcases/scenarios/assert/not-contains.yaml	0.000s
 FAIL

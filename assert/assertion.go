@@ -108,13 +108,23 @@ func build(ctx context.Context, q *query.Query, expect any, opt *buildOpt) ([]As
 				if len(v) != 1 {
 					return nil, errors.New("invalid left arrow function call")
 				}
+				path := fmt.Sprintf(".'%s'", item.Key)
 				res, err := f.Do(ctx, item.Value, opt.tmplData)
 				if err != nil {
-					return nil, errors.Wrap(err, "failed to execute left arrow function")
+					return nil, errors.WithPath(errors.Wrap(err, "failed to execute left arrow function"), path)
 				}
 				as, err := build(ctx, q, res, opt)
 				if err != nil {
-					return nil, errors.WithPath(err, fmt.Sprint(item.Key))
+					return nil, errors.WithPath(err, path)
+				}
+				for i, a := range as {
+					a := a
+					as[i] = AssertionFunc(func(v any) error {
+						if err := a.Assert(v); err != nil {
+							return errors.ReplacePath(err, q.String(), q.String()+path)
+						}
+						return nil
+					})
 				}
 				assertions = append(assertions, as...)
 			} else {

@@ -3,8 +3,8 @@ package assert
 import (
 	"reflect"
 
-	"github.com/zoncoen/query-go"
 	"github.com/zoncoen/scenarigo/errors"
+	"github.com/zoncoen/scenarigo/internal/queryutil"
 	"github.com/zoncoen/scenarigo/internal/reflectutil"
 )
 
@@ -30,7 +30,7 @@ func NotContains(assertion Assertion) Assertion {
 			return err
 		}
 		if err := contains(assertion, vv); err == nil {
-			return errors.ErrorQueryf(query.New(), "contains the value")
+			return errors.ErrorQueryf(queryutil.New(), "contains the value")
 		}
 		return nil
 	})

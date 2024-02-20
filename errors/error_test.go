@@ -368,6 +368,36 @@ unexpected error: invalid b
 	})
 }
 
+func TestReplacePath(t *testing.T) {
+	t.Run("pkg/errors", func(t *testing.T) {
+		err := ReplacePath(errors.New("message"), "a", "a.b")
+		if err.Error() != "message" {
+			t.Fatalf("unexpected error message: %s", err.Error())
+		}
+	})
+	t.Run("PathError", func(t *testing.T) {
+		err := ReplacePath(ErrorPath("a.c", "message"), "a", "a.b")
+		if err.Error() != ".a.b.c: message" {
+			t.Fatalf("unexpected error message: %s", err.Error())
+		}
+		var e *PathError
+		if !errors.As(err, &e) {
+			t.Fatalf("expect %T instance. but %T", e, err)
+		}
+		validatePath(t, e, "a.b.c")
+	})
+	t.Run("MultiPathError", func(t *testing.T) {
+		err := ReplacePath(Errors(
+			ErrorPath("a.c", "message1"),
+			ErrorPath("a.d", "message2"),
+			errors.New("message3"),
+		), "a", "a.b")
+		if err.Error() != "3 errors occurred: .a.b.c: message1\n.a.b.d: message2\nmessage3" {
+			t.Fatalf("unexpected error message: %s", err.Error())
+		}
+	})
+}
+
 func TestPathError_prependError(t *testing.T) {
 	tests := map[string]struct {
 		base   string

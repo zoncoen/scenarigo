@@ -196,4 +196,181 @@ deps:
 			t.Errorf("expect %q but got %q", expect, got)
 		}
 	})
+	t.Run("left arrow function", func(t *testing.T) {
+		t.Run("success", func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			assertion, err := Build(ctx, yaml.MapSlice{
+				yaml.MapItem{
+					Key: "{{call <-}}",
+					Value: yaml.MapSlice{
+						yaml.MapItem{
+							Key:   "f",
+							Value: `{{toUpper}}`,
+						},
+						yaml.MapItem{
+							Key:   "arg",
+							Value: `{{"foo"}}`,
+						},
+					},
+				},
+			},
+				FromTemplate(map[string]any{
+					"call":    &callFunc{},
+					"toUpper": strings.ToUpper,
+				}),
+			)
+			if err != nil {
+				t.Fatalf("unexpected error: %s", err)
+			}
+			if err := assertion.Assert("FOO"); err != nil {
+				t.Errorf("unexpected error: %s", err)
+			}
+		})
+		t.Run("failure", func(t *testing.T) {
+			t.Run("build error: left arrow function not found", func(t *testing.T) {
+				ctx, cancel := context.WithCancel(context.Background())
+				defer cancel()
+				_, err := Build(ctx, yaml.MapSlice{
+					yaml.MapItem{
+						Key: "{{call <-}}",
+						Value: yaml.MapSlice{
+							yaml.MapItem{
+								Key:   "f",
+								Value: `{{toUpper}}`,
+							},
+							yaml.MapItem{
+								Key:   "arg",
+								Value: `{{"foo"}}`,
+							},
+						},
+					},
+				})
+				if err == nil {
+					t.Error("no error")
+				} else if got, expect := err.Error(), `failed to build assertion: failed to execute: {{call <-}}: ".call" not found`; got != expect {
+					t.Errorf("expect %q but got %q", expect, got)
+				}
+			})
+			t.Run("build error: faild to unmarshal left arrow function arg", func(t *testing.T) {
+				ctx, cancel := context.WithCancel(context.Background())
+				defer cancel()
+				_, err := Build(ctx, yaml.MapSlice{
+					yaml.MapItem{
+						Key: "{{call <-}}",
+						Value: yaml.MapSlice{
+							yaml.MapItem{
+								Key:   "func",
+								Value: `{{toUpper}}`,
+							},
+							yaml.MapItem{
+								Key:   "arg",
+								Value: `{{"foo"}}`,
+							},
+						},
+					},
+				},
+					FromTemplate(map[string]any{
+						"call":    &callFunc{},
+						"toUpper": strings.ToUpper,
+					}),
+				)
+				if err == nil {
+					t.Error("no error")
+				} else if got, expect := err.Error(), `failed to build assertion: .'{{call <-}}': failed to execute left arrow function: failed to unmarshal argument: [1:1] unknown field "func"
+    >  1 | func: "{{func-0}}"
+           ^
+       2 | arg: foo`; got != expect {
+					t.Errorf("expect %q but got %q", expect, got)
+				}
+			})
+			t.Run("build error: invalid left arrow function arg", func(t *testing.T) {
+				ctx, cancel := context.WithCancel(context.Background())
+				defer cancel()
+				_, err := Build(ctx, yaml.MapSlice{
+					yaml.MapItem{
+						Key: "{{call <-}}",
+						Value: yaml.MapSlice{
+							yaml.MapItem{
+								Key:   "f",
+								Value: `{{toUpper}}`,
+							},
+							yaml.MapItem{
+								Key:   "arg",
+								Value: `{{"foo"}}`,
+							},
+						},
+					},
+				},
+					FromTemplate(map[string]any{
+						"call": &callFunc{},
+					}),
+				)
+				if err == nil {
+					t.Error("no error")
+				} else if got, expect := err.Error(), `failed to build assertion: .'{{call <-}}'.'f': failed to execute left arrow function: failed to execute: {{toUpper}}: ".toUpper" not found`; got != expect {
+					t.Errorf("expect %q but got %q", expect, got)
+				}
+			})
+			t.Run("assertion error", func(t *testing.T) {
+				ctx, cancel := context.WithCancel(context.Background())
+				defer cancel()
+				assertion, err := Build(ctx, yaml.MapSlice{
+					yaml.MapItem{
+						Key: "{{call <-}}",
+						Value: yaml.MapSlice{
+							yaml.MapItem{
+								Key:   "f",
+								Value: `{{toUpper}}`,
+							},
+							yaml.MapItem{
+								Key:   "arg",
+								Value: `{{"foo"}}`,
+							},
+						},
+					},
+				},
+					FromTemplate(map[string]any{
+						"call":    &callFunc{},
+						"toUpper": strings.ToUpper,
+					}),
+				)
+				if err != nil {
+					t.Fatalf("unexpected error: %s", err)
+				}
+				if err := assertion.Assert("foo"); err == nil {
+					t.Error("no error")
+				} else if got, expect := err.Error(), ".'{{call <-}}': expected FOO but got foo"; got != expect {
+					t.Errorf("expect %q but got %q", expect, got)
+				}
+			})
+		})
+	})
+}
+
+type callFunc struct{}
+
+type callArg struct {
+	F   interface{} `yaml:"f"`
+	Arg string      `yaml:"arg"`
+}
+
+func (*callFunc) Exec(in interface{}) (interface{}, error) {
+	arg, ok := in.(*callArg)
+	if !ok {
+		return nil, errors.New("arg must be a callArg")
+	}
+	f, ok := arg.F.(func(string) string)
+	if !ok {
+		return nil, errors.New("arg.f must be a func(string) string")
+	}
+	return f(arg.Arg), nil
+}
+
+func (*callFunc) UnmarshalArg(unmarshal func(interface{}) error) (interface{}, error) {
+	var arg callArg
+	if err := unmarshal(&arg); err != nil {
+		return nil, err
+	}
+	return &arg, nil
 }

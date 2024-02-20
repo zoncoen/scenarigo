@@ -2,6 +2,7 @@ package assert
 
 import (
 	"github.com/zoncoen/scenarigo/errors"
+	"github.com/zoncoen/scenarigo/internal/queryutil"
 )
 
 // And returns a new assertion to ensure that value passes all assertions.
@@ -12,15 +13,18 @@ func And(assertions ...Assertion) Assertion {
 			return errors.New("empty assertion list")
 		}
 		errs := []error{}
-		for _, assertion := range assertions {
+		for i, assertion := range assertions {
 			assertion := assertion
 			err := assertion.Assert(v)
 			if err != nil {
-				errs = append(errs, err)
+				errs = append(errs, errors.WithQuery(err, queryutil.New().Index(i)))
 			}
 		}
 		if len(errs) == 0 {
 			return nil
+		}
+		if len(errs) == 1 {
+			return errs[0]
 		}
 		return errors.Errors(errs...)
 	})
@@ -34,13 +38,16 @@ func Or(assertions ...Assertion) Assertion {
 			return errors.New("empty assertion list")
 		}
 		errs := []error{}
-		for _, assertion := range assertions {
+		for i, assertion := range assertions {
 			assertion := assertion
 			err := assertion.Assert(v)
 			if err == nil {
 				return nil
 			}
-			errs = append(errs, err)
+			errs = append(errs, errors.WithQuery(err, queryutil.New().Index(i)))
+		}
+		if len(errs) == 1 {
+			return errors.Wrap(errs[0], "all assertions failed")
 		}
 		return errors.Wrap(errors.Errors(errs...), "all assertions failed")
 	})

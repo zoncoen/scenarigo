@@ -56,10 +56,10 @@ func execute(ctx context.Context, in reflect.Value, data interface{}) (reflect.V
 		for _, k := range v.MapKeys() {
 			e := v.MapIndex(k)
 			if !isNil(e) {
-				keyStr := fmt.Sprint(k.Interface())
+				keyStr := fmt.Sprintf(".'%s'", k.Interface())
 				key, err := execute(ctx, k, data)
 				if err != nil {
-					return reflect.Value{}, errors.WithPath(err, keyStr)
+					return reflect.Value{}, err
 				}
 				// left arrow function
 				if ke := reflectutil.Elem(key); ke.IsValid() && ke.Type() == funcCallType && ke.CanInterface() {
@@ -67,9 +67,9 @@ func execute(ctx context.Context, in reflect.Value, data interface{}) (reflect.V
 						return reflect.Value{}, errors.New("invalid left arrow function call")
 					}
 					f := ke.Interface().(FuncCall) //nolint:forcetypeassert
-					res, err := executeLeftArrowFunction(ctx, f.Func, e, data)
+					res, err := executeLeftArrowFunction(ctx, f.Func, e, data, keyStr)
 					if err != nil {
-						return reflect.Value{}, fmt.Errorf("failed to execute left arrow function: %w", err)
+						return reflect.Value{}, errors.WithPath(fmt.Errorf("failed to execute left arrow function: %w", err), keyStr)
 					}
 					v = res
 					break
@@ -91,14 +91,14 @@ func execute(ctx context.Context, in reflect.Value, data interface{}) (reflect.V
 				}
 				if e.Type() == yamlMapItemType {
 					key := e.FieldByName("Key")
-					keyStr := fmt.Sprint(key.Interface())
+					keyStr := fmt.Sprintf(".'%s'", key.Interface())
 					value := e.FieldByName("Value")
 					if !isNil(key) {
 						k, err := execute(ctx, key, data)
 						if err != nil {
-							return reflect.Value{}, errors.WithPath(err, keyStr)
+							return reflect.Value{}, err
 						}
-						key = k
+						key.Set(k)
 					}
 					// left arrow function
 					if ke := reflectutil.Elem(key); ke.IsValid() && ke.Type() == funcCallType && ke.CanInterface() {
@@ -106,13 +106,19 @@ func execute(ctx context.Context, in reflect.Value, data interface{}) (reflect.V
 							return reflect.Value{}, errors.New("invalid left arrow function call")
 						}
 						f := ke.Interface().(FuncCall) //nolint:forcetypeassert
-						res, err := executeLeftArrowFunction(ctx, f.Func, value, data)
+						res, err := executeLeftArrowFunction(ctx, f.Func, value, data, keyStr)
 						if err != nil {
-							return reflect.Value{}, fmt.Errorf("failed to execute left arrow function: %w", err)
+							return reflect.Value{}, errors.WithPath(fmt.Errorf("failed to execute left arrow function: %w", err), keyStr)
 						}
 						v = res
 						break
 					}
+					val, err := convert(value.Type())(execute(ctx, value, data))
+					if err != nil {
+						return reflect.Value{}, errors.WithPath(err, keyStr)
+					}
+					value.Set(val)
+					continue
 				}
 				x, err := convert(e.Type())(execute(ctx, e, data))
 				if err != nil {
@@ -171,7 +177,7 @@ func execute(ctx context.Context, in reflect.Value, data interface{}) (reflect.V
 	return v, nil
 }
 
-func executeLeftArrowFunction(ctx context.Context, f Func, v reflect.Value, data any) (reflect.Value, error) {
+func executeLeftArrowFunction(ctx context.Context, f Func, v reflect.Value, data any, str string) (reflect.Value, error) {
 	if !isNil(v) {
 		x, err := execute(ctx, v, data)
 		if err != nil {
@@ -216,6 +222,21 @@ func executeLeftArrowFunction(ctx context.Context, f Func, v reflect.Value, data
 	if err != nil {
 		return reflect.Value{}, fmt.Errorf("failed to execute function: %w", err)
 	}
+
+	// HACK: return error with path
+	if str != "" {
+		if as, ok := res.(interface {
+			Assert(v interface{}) error
+		}); ok {
+			res = assertionFunc(func(v any) error {
+				if err := as.Assert(v); err != nil {
+					return errors.WithPath(err, str)
+				}
+				return nil
+			})
+		}
+	}
+
 	return reflect.ValueOf(res), nil
 }
 
@@ -314,4 +335,10 @@ func makePtr(v reflect.Value) reflect.Value {
 	ptr := reflect.New(v.Type())
 	ptr.Elem().Set(v)
 	return ptr
+}
+
+type assertionFunc func(v interface{}) error
+
+func (f assertionFunc) Assert(v interface{}) error {
+	return f(v)
 }

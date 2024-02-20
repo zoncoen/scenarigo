@@ -645,7 +645,7 @@ type FuncCall struct {
 // Do executes the function f.
 // This function executes templates of the argument v with data before calling the function f.
 func (f *FuncCall) Do(ctx context.Context, v, data any) (any, error) {
-	val, err := executeLeftArrowFunction(ctx, f.Func, reflect.ValueOf(v), data)
+	val, err := executeLeftArrowFunction(ctx, f.Func, reflect.ValueOf(v), data, "")
 	if err != nil {
 		return nil, err
 	}

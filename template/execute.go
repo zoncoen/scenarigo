@@ -240,11 +240,13 @@ func executeLeftArrowFunction(ctx context.Context, f Func, v reflect.Value, data
 	return reflect.ValueOf(res), nil
 }
 
+// NOTE: This function must return a copy to avoid the not found error when retrying.
 func replaceFuncs(in reflect.Value, s *funcStash) (reflect.Value, error) {
 	v := reflectutil.Elem(in)
 
 	switch v.Kind() {
 	case reflect.Map:
+		vv := reflect.MakeMapWithSize(v.Type(), v.Len())
 		for _, k := range v.MapKeys() {
 			e := v.MapIndex(k)
 			if !isNil(e) {
@@ -252,10 +254,12 @@ func replaceFuncs(in reflect.Value, s *funcStash) (reflect.Value, error) {
 				if err != nil {
 					return reflect.Value{}, err
 				}
-				v.SetMapIndex(k, x)
+				vv.SetMapIndex(k, x)
 			}
 		}
+		v = vv
 	case reflect.Slice:
+		vv := reflect.MakeSlice(v.Type(), v.Len(), v.Len())
 		for i := 0; i < v.Len(); i++ {
 			e := v.Index(i)
 			if !isNil(e) {
@@ -263,13 +267,12 @@ func replaceFuncs(in reflect.Value, s *funcStash) (reflect.Value, error) {
 				if err != nil {
 					return reflect.Value{}, err
 				}
-				e.Set(x)
+				vv.Index(i).Set(x)
 			}
 		}
+		v = vv
 	case reflect.Struct:
-		if !v.CanSet() {
-			v = makePtr(v).Elem() // create pointer to enable to set values
-		}
+		vv := reflect.New(v.Type()).Elem()
 		for i := 0; i < v.NumField(); i++ {
 			if !token.IsExported(v.Type().Field(i).Name) {
 				continue // skip unexported field
@@ -279,11 +282,12 @@ func replaceFuncs(in reflect.Value, s *funcStash) (reflect.Value, error) {
 			if err != nil {
 				return reflect.Value{}, err
 			}
-			if err := reflectutil.Set(field, x); err != nil {
-				fieldName := structFieldName(v.Type().Field(i))
+			if err := reflectutil.Set(vv.Field(i), x); err != nil {
+				fieldName := structFieldName(vv.Type().Field(i))
 				return reflect.Value{}, errors.WithPath(err, fieldName)
 			}
 		}
+		v = vv
 	case reflect.Func:
 		return reflect.ValueOf(fmt.Sprintf("{{%s}}", s.save(v.Interface()))), nil
 	default:
@@ -294,15 +298,6 @@ func replaceFuncs(in reflect.Value, s *funcStash) (reflect.Value, error) {
 	if in.IsValid() && v.IsValid() {
 		if converted, err := convert(in.Type())(v, nil); err == nil {
 			v = converted
-		}
-		// keep the original address
-		if in.Type().Kind() == reflect.Ptr && v.Type().Kind() == reflect.Ptr {
-			if v.Elem().Type().AssignableTo(in.Elem().Type()) {
-				if err := reflectutil.Set(in.Elem(), v.Elem()); err != nil {
-					return reflect.Value{}, err
-				}
-				v = in
-			}
 		}
 	}
 	return v, nil

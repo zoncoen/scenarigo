@@ -77,6 +77,12 @@ func newWaitContext(ctx context.Context, base any) *waitContext {
 			case v := <-ready:
 				return v, true
 			case <-ctx.Done():
+				// ignore canceled if the value is already set
+				select {
+				case v := <-ready:
+					return v, true
+				default:
+				}
 				return nil, false
 			}
 		}),

@@ -30,3 +30,8 @@ scenarios:
   success: false
   output:
     stdout: retry/step-include-failure.txt
+- filename: retry/laf.yaml
+  mocks: retry/laf.yaml
+  success: false
+  output:
+    stdout: retry/laf.txt

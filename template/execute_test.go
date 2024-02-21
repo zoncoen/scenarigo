@@ -3,6 +3,7 @@ package template
 import (
 	"context"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -446,6 +447,56 @@ func TestExecute(t *testing.T) {
 			})
 		}
 	})
+}
+
+func TestReplaceFuncs(t *testing.T) {
+	v := yaml.MapSlice{
+		yaml.MapItem{
+			Key:   "foo",
+			Value: func() {},
+		},
+		yaml.MapItem{
+			Key: "bar",
+			Value: map[string]any{
+				"hoge": func() {},
+			},
+		},
+		yaml.MapItem{
+			Key: "baz",
+			Value: []any{
+				&callArg{
+					F:   func() {},
+					Arg: "test",
+				},
+			},
+		},
+	}
+	if _, err := yaml.Marshal(v); err == nil {
+		t.Fatal("no error")
+	}
+
+	s := &funcStash{}
+	vv, err := replaceFuncs(reflect.ValueOf(v), s)
+	if err != nil {
+		t.Fatalf("failed to replace funcs: %s", err)
+	}
+	if b, err := yaml.Marshal(vv.Interface()); err != nil {
+		t.Fatalf("failed to marshal: %s", err)
+	} else if got, expect := string(b), strings.TrimLeft(`
+foo: "{{func-0}}"
+bar:
+  hoge: "{{func-1}}"
+baz:
+- f: "{{func-2}}"
+  arg: test
+`, "\n"); got != expect {
+		t.Fatalf("expect %q but got %q", expect, got)
+	}
+
+	// don't break the original value
+	if _, err := yaml.Marshal(v); err == nil {
+		t.Fatal("no error")
+	}
 }
 
 func TestConvert(t *testing.T) {

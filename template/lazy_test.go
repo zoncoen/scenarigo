@@ -113,8 +113,26 @@ func TestWaitContext(t *testing.T) {
 		t.Fatalf("expect %q but got %q", expect, got)
 	}
 
+	// ignore canceled if the value is already set
+	cancel()
+	for i := 0; i < 10; i++ { // HACK: try many times for converage...
+		if got, expect := extractVal(t, "$.$", wc), "BAR"; got != expect {
+			t.Fatalf("expect %q but got %q", expect, got)
+		}
+	}
+
 	// don't set twice
 	if err := wc.set("BAR"); err == nil {
+		t.Fatal("no error")
+	}
+
+	// canceled
+	wc = newWaitContext(ctx, nil)
+	q, err := query.ParseString("$.$", queryutil.Options()...)
+	if err != nil {
+		t.Fatalf("failed to parse query string: %s", err)
+	}
+	if _, err := q.Extract(wc); err == nil {
 		t.Fatal("no error")
 	}
 }

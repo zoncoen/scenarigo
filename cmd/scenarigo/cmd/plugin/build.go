@@ -174,13 +174,8 @@ func findGoCmd(ctx context.Context, tip bool) (string, error) {
 	goCmd, err := exec.LookPath("go")
 	var verr error
 	if err == nil {
-		verr = checkGoVersion(ctx, goCmd, goVer)
+		verr = checkGoVersion(ctx, goCmd, gomodVer)
 		if verr == nil {
-			return goCmd, nil
-		}
-	}
-	if goCmd, err := exec.LookPath(goVer); err == nil {
-		if err := checkGoVersion(ctx, goCmd, goVer); err == nil {
 			return goCmd, nil
 		}
 	}
@@ -260,7 +255,7 @@ func replacePathVersion(p, v string) string {
 	return fmt.Sprintf("%s %s", p, v)
 }
 
-func checkGoVersion(ctx context.Context, goCmd, ver string) error {
+func checkGoVersion(ctx context.Context, goCmd, minVer string) error {
 	var stdout bytes.Buffer
 	cmd := exec.CommandContext(ctx, goCmd, "version")
 	cmd.Stdout = &stdout
@@ -276,15 +271,9 @@ func checkGoVersion(ctx context.Context, goCmd, ver string) error {
 			return errors.New("invalid version output or scenarigo bug")
 		}
 	}
-	if v := items[2]; v != ver {
-		//nolint:revive
-		return fmt.Errorf(`required %s but installed %s
-
-You can install the required version of Go by the following commands:
-
-	go install golang.org/dl/%s@latest
-	%s download
-`, ver, v, ver, ver)
+	ver := strings.TrimPrefix(items[2], "go")
+	if semver.Compare("v"+ver, "v"+minVer) == -1 {
+		return fmt.Errorf(`required go %s or later but installed %s`, minVer, ver)
 	}
 	return nil
 }
@@ -463,6 +452,11 @@ func execute(ctx context.Context, wd, name string, args ...string) error {
 func executeWithEnvs(ctx context.Context, envs []string, wd, name string, args ...string) error {
 	var stderr bytes.Buffer
 	cmd := exec.CommandContext(ctx, name, args...)
+	if tip {
+		envs = append(envs, "GOTOOLCHAIN=local")
+	} else {
+		envs = append(envs, fmt.Sprintf("GOTOOLCHAIN=%s", goVer))
+	}
 	cmd.Env = append(os.Environ(), envs...)
 	if wd != "" {
 		cmd.Dir = wd

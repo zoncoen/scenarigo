@@ -2,6 +2,7 @@ SHELL := /bin/bash
 .DEFAULT_GOAL := test
 
 GO ?= go
+export GOTOOLCHAIN := local
 
 BIN_DIR := $(CURDIR)/.bin
 export GOBIN := $(BIN_DIR)

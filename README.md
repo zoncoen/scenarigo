@@ -1030,7 +1030,7 @@ func TodayIn(s string) (string, error) {
 
 ### How to build plugins
 
-Go plugin can be built with `go build -buildmode=plugin`, but we recommend you use `scenarigo plugin build` instead. The wrapper command requires `go` command installed in your machine.
+Go plugin can be built with `go build -buildmode=plugin`, but we recommend you use `scenarigo plugin build` instead. The wrapper command requires `go` command installed in your machine. Scenarigo always builds plugins with the same go version that is used to build its own.
 
 Scenarigo builds plugins according to the configuration.
 

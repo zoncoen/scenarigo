@@ -1140,18 +1140,11 @@ func TestFindGoCmd(t *testing.T) {
 				},
 				expect: "go",
 			},
-			fmt.Sprintf("found %s command", goVer): {
+			"minimum go version": {
 				cmds: map[string]string{
-					goVer: fmt.Sprintf("go version %s linux/amd64", goVer),
+					"go": fmt.Sprintf("go version %s linux/amd64", gomodVer),
 				},
-				expect: goVer,
-			},
-			fmt.Sprintf("different go version but %s found", goVer): {
-				cmds: map[string]string{
-					"go":  "go version go1.15 linux/amd64",
-					goVer: fmt.Sprintf("go version %s linux/amd64", goVer),
-				},
-				expect: goVer,
+				expect: "go",
 			},
 			"found gotip command": {
 				cmds: map[string]string{
@@ -1187,11 +1180,11 @@ func TestFindGoCmd(t *testing.T) {
 			"command not found": {
 				expect: "go command required",
 			},
-			"different go version": {
+			"old go version": {
 				cmds: map[string]string{
-					"go": "go version go1.15 linux/amd64",
+					"go": "go version go1.20 linux/amd64",
 				},
-				expect: "installed go1.15",
+				expect: fmt.Sprintf("required go %s or later but installed 1.20", gomodVer),
 			},
 		}
 		for name, test := range tests {

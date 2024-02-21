@@ -71,7 +71,7 @@ func newWaitContext(ctx context.Context, base any) *waitContext {
 	//nolint:exhaustruct
 	return &waitContext{
 		any: base,
-		extractActualValue: onceValues(func() (any, bool) {
+		extractActualValue: sync.OnceValues(func() (any, bool) {
 			cancel()
 			select {
 			case v := <-ready:

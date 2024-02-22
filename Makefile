@@ -2,6 +2,7 @@ SHELL := /bin/bash
 .DEFAULT_GOAL := test
 
 GO ?= go
+export GOTOOLCHAIN := local
 
 BIN_DIR := $(CURDIR)/.bin
 export GOBIN := $(BIN_DIR)
@@ -95,11 +96,19 @@ build: | $(BIN_DIR)
 
 .PHONY: test
 CMD_DIR := cmd
-TEST_TARGETS := $(shell $(GO) list ./... | grep -v $(CMD_DIR))
-test: test/race test/norace
+TEST_TARGETS_MODULE := $(shell $(GO) list ./... | grep -v $(CMD_DIR) | grep -v test/e2e)
+test: test/norace test/race
+
+.PHONY: test/norace
+test/norace:
+	@$(GO) test ./...
+
+.PHONY: test/race
+test/race:
+	@$(GO) test -race ./...
 
 .PHONY: test/ci
-test/ci: coverage test/race
+test/ci: coverage test/race test/e2e
 
 .PHONY: coverage
 coverage: coverage/cmd coverage/module ## measure test coverage
@@ -110,15 +119,11 @@ coverage/cmd:
 
 .PHONY: coverage/module
 coverage/module:
-	@$(GO) test $(TEST_TARGETS) -coverprofile=coverage-module.out -covermode=atomic
+	@$(GO) test $(TEST_TARGETS_MODULE) -coverprofile=coverage-module.out -covermode=atomic
 
-.PHONY: test/norace
-test/norace:
-	@$(GO) test ./...
-
-.PHONY: test/race
-test/race:
-	@$(GO) test -race ./...
+.PHONY: test/e2e
+test/e2e:
+	@$(GO) test ./test/e2e/...
 
 .PHONY: test/examples
 test/examples:

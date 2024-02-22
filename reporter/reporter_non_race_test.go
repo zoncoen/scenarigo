@@ -4,6 +4,7 @@
 package reporter
 
 import (
+	"runtime"
 	"strconv"
 	"testing"
 	"time"
@@ -26,6 +27,24 @@ func TestRun_NilPanic(t *testing.T) {
 				func(r Reporter) {},
 				func(r Reporter) {
 					panic(nil)
+				},
+			},
+			expect: result{
+				Failed: true,
+				Children: []result{
+					{},
+					{
+						Failed: true,
+						Logs:   []string{"panic called with nil argument"},
+					},
+				},
+			},
+		},
+		"child runtime.Goexit()": {
+			fs: []func(r Reporter){
+				func(r Reporter) {},
+				func(r Reporter) {
+					runtime.Goexit()
 				},
 			},
 			expect: result{

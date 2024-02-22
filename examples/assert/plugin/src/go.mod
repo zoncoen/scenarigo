@@ -1,6 +1,6 @@
 module github.com/zoncoen/scenarigo/examples/assert/plugin
 
-go 1.20
+go 1.21
 
 require github.com/zoncoen/scenarigo v0.15.1
 
@@ -18,9 +18,9 @@ require (
 	github.com/vmware-tanzu/carvel-ytt v0.45.4 // indirect
 	github.com/zoncoen/query-go v1.3.1 // indirect
 	github.com/zoncoen/query-go/extractor/yaml v0.2.1 // indirect
-	golang.org/x/mod v0.14.0 // indirect
+	golang.org/x/mod v0.15.0 // indirect
 	golang.org/x/sys v0.16.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
-	google.golang.org/grpc v1.61.0 // indirect
+	google.golang.org/grpc v1.61.1 // indirect
 	google.golang.org/protobuf v1.32.0 // indirect
 )

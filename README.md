@@ -53,7 +53,7 @@ You can download the latest command into the `./scenarigo` directory with the fo
 
 ```shell
 $ version=$(curl -s https://api.github.com/repos/zoncoen/scenarigo/releases/latest | jq -r '.tag_name') && \
-    go_version='go1.21.6' && \
+    go_version='go1.22.0' && \
     curl -sLJ https://github.com/zoncoen/scenarigo/releases/download/${version}/scenarigo_${version}_${go_version}_$(uname)_$(uname -m).tar.gz -o scenarigo.tar.gz && \
     mkdir ./scenarigo && tar -zxvf ./scenarigo.tar.gz -C ./scenarigo && rm scenarigo.tar.gz
 ```
@@ -1030,7 +1030,7 @@ func TodayIn(s string) (string, error) {
 
 ### How to build plugins
 
-Go plugin can be built with `go build -buildmode=plugin`, but we recommend you use `scenarigo plugin build` instead. The wrapper command requires `go` command installed in your machine.
+Go plugin can be built with `go build -buildmode=plugin`, but we recommend you use `scenarigo plugin build` instead. The wrapper command requires `go` command installed in your machine. Scenarigo always builds plugins with the same go version that is used to build its own.
 
 Scenarigo builds plugins according to the configuration.
 

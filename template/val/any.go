@@ -51,8 +51,8 @@ func (a Any) Equal(v Value) (LogicalValue, error) {
 }
 
 func equal(x, y reflect.Value) (bool, bool) {
-	if comparable(x) {
-		return reflectEqual(x, y), true
+	if x.Comparable() {
+		return x.Equal(y), true
 	}
 	return false, false
 }

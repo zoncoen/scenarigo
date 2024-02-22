@@ -316,7 +316,7 @@ var Dependency = fmt.Sprintf("plugin => %s", gomodule.Dependency)
 `,
 					"src/plugin1/go.mod": `module plugin1
 
-go 1.17
+go 1.21
 
 require 127.0.0.1/gomodule.git v1.0.0
 `,
@@ -332,7 +332,7 @@ var Dependency = fmt.Sprintf("plugin => %s", gomodule.Dependency)
 `,
 					"src/plugin2/go.mod": `module plugin2
 
-go 1.17
+go 1.21
 
 require 127.0.0.1/gomodule.git v1.1.0
 `,
@@ -348,7 +348,7 @@ var Dependency = fmt.Sprintf("plugin => %s", gomodule.Dependency)
 `,
 					"src/plugin3/go.mod": `module plugin3
 
-go 1.17
+go 1.21
 
 require 127.0.0.1/gomodule.git/v2 v2.0.0
 `,
@@ -361,7 +361,7 @@ require 127.0.0.1/gomodule.git/v2 v2.0.0
 				expectGoMod: map[string]string{
 					"src/plugin1/go.mod": `module plugin1
 
-go 1.17
+go 1.21
 
 require 127.0.0.1/gomodule.git v1.1.0
 
@@ -369,7 +369,7 @@ require 127.0.0.1/dependent-gomodule.git v1.1.0 // indirect
 `,
 					"src/plugin2/go.mod": `module plugin2
 
-go 1.17
+go 1.21
 
 require 127.0.0.1/gomodule.git v1.1.0
 
@@ -377,7 +377,7 @@ require 127.0.0.1/dependent-gomodule.git v1.1.0 // indirect
 `,
 					"src/plugin3/go.mod": `module plugin3
 
-go 1.17
+go 1.21
 
 require 127.0.0.1/gomodule.git/v2 v2.0.0
 
@@ -408,7 +408,7 @@ var Dependency = fmt.Sprintf("plugin => %s", gomodule.Dependency)
 `,
 					"src/plugin1/go.mod": `module plugin1
 
-go 1.17
+go 1.21
 
 require 127.0.0.1/gomodule.git v1.0.0
 `,
@@ -424,7 +424,7 @@ var Dependency = fmt.Sprintf("plugin => %s", gomodule.Dependency)
 `,
 					"src/plugin2/go.mod": `module plugin2
 
-go 1.17
+go 1.21
 
 require 127.0.0.1/gomodule.git v2.0.0+incompatible
 `,
@@ -436,7 +436,7 @@ require 127.0.0.1/gomodule.git v2.0.0+incompatible
 				expectGoMod: map[string]string{
 					"src/plugin1/go.mod": `module plugin1
 
-go 1.17
+go 1.21
 
 require 127.0.0.1/gomodule.git v2.0.0+incompatible
 
@@ -444,7 +444,7 @@ require 127.0.0.1/dependent-gomodule.git v1.0.0 // indirect
 `,
 					"src/plugin2/go.mod": `module plugin2
 
-go 1.17
+go 1.21
 
 require 127.0.0.1/gomodule.git v2.0.0+incompatible
 
@@ -474,7 +474,7 @@ var Src = src.Src
 `,
 					"src/plugin1/go.mod": `module plugin1
 
-go 1.17
+go 1.21
 
 require 127.0.0.1/sub.git v1.1.0
 `,
@@ -486,7 +486,7 @@ require 127.0.0.1/sub.git v1.1.0
 				expectGoMod: map[string]string{
 					"src/plugin1/go.mod": `module plugin1
 
-go 1.17
+go 1.21
 
 require 127.0.0.1/sub.git v1.0.0
 `,
@@ -518,7 +518,7 @@ var Dependency = fmt.Sprintf("plugin => %s", gomodule.Dependency)
 `,
 					"src/plugin1/go.mod": `module plugin1
 
-go 1.17
+go 1.21
 
 require 127.0.0.1/gomodule.git v1.0.0
 
@@ -538,7 +538,7 @@ var Dependency = fmt.Sprintf("plugin => %s", gomodule.Dependency)
 `,
 					"src/plugin2/go.mod": `module plugin2
 
-go 1.17
+go 1.21
 
 require 127.0.0.1/gomodule.git v1.1.0
 
@@ -552,7 +552,7 @@ import (
 `,
 					"src/plugin3/go.mod": `module plugin3
 
-go 1.17
+go 1.21
 
 require 127.0.0.1/dependent-gomodule.git v1.0.0
 `,
@@ -565,7 +565,7 @@ require 127.0.0.1/dependent-gomodule.git v1.0.0
 				expectGoMod: map[string]string{
 					"src/plugin1/go.mod": `module plugin1
 
-go 1.17
+go 1.21
 
 require 127.0.0.1/gomodule.git v1.1.0
 
@@ -573,7 +573,7 @@ require 127.0.0.1/dependent-gomodule.git v1.1.0 // indirect
 `,
 					"src/plugin2/go.mod": `module plugin2
 
-go 1.17
+go 1.21
 
 require 127.0.0.1/gomodule.git v1.1.0
 
@@ -581,7 +581,7 @@ require 127.0.0.1/dependent-gomodule.git v1.1.0 // indirect
 `,
 					"src/plugin3/go.mod": `module plugin3
 
-go 1.17
+go 1.21
 
 require 127.0.0.1/dependent-gomodule.git v1.1.0
 `,
@@ -603,7 +603,7 @@ var Dependency = "local-dependent"
 `,
 					"src/go.mod": `module 127.0.0.1/dependent-gomodule.git
 
-go 1.17
+go 1.21
 `,
 					"src/plugin1/main.go": `package main
 
@@ -617,7 +617,7 @@ var Dependency = fmt.Sprintf("plugin => %s", gomodule.Dependency)
 `,
 					"src/plugin1/go.mod": `module plugin1
 
-go 1.17
+go 1.21
 
 require 127.0.0.1/gomodule.git v1.0.0
 
@@ -632,7 +632,7 @@ replace 127.0.0.1/dependent-gomodule.git => ../
 				expectGoMod: map[string]string{
 					"src/plugin1/go.mod": `module plugin1
 
-go 1.17
+go 1.21
 
 require 127.0.0.1/gomodule.git v1.0.0
 
@@ -662,7 +662,7 @@ var Dependency = "local-dependent"
 `,
 					"src/local/go.mod": `module 127.0.0.1/dependent-gomodule.git
 
-go 1.17
+go 1.21
 `,
 					"src/plugin1/main.go": `package main
 
@@ -676,7 +676,7 @@ var Dependency = fmt.Sprintf("plugin => %s", gomodule.Dependency)
 `,
 					"src/plugin1/go.mod": `module plugin1
 
-go 1.17
+go 1.21
 
 require 127.0.0.1/gomodule.git v1.0.0
 
@@ -696,7 +696,7 @@ var Dependency = fmt.Sprintf("plugin => %s", gomodule.Dependency)
 `,
 					"src/plugin2/sub/go.mod": `module plugin2
 
-go 1.17
+go 1.21
 
 require 127.0.0.1/gomodule.git v1.1.0
 
@@ -712,7 +712,7 @@ import (
 `,
 					"src/plugin3/go.mod": `module plugin3
 
-go 1.17
+go 1.21
 
 require 127.0.0.1/dependent-gomodule.git v1.0.0
 `,
@@ -725,7 +725,7 @@ require 127.0.0.1/dependent-gomodule.git v1.0.0
 				expectGoMod: map[string]string{
 					"src/plugin1/go.mod": `module plugin1
 
-go 1.17
+go 1.21
 
 require 127.0.0.1/gomodule.git v1.1.0
 
@@ -735,7 +735,7 @@ replace 127.0.0.1/dependent-gomodule.git v1.0.0 => ../local
 `,
 					"src/plugin2/sub/go.mod": `module plugin2
 
-go 1.17
+go 1.21
 
 require 127.0.0.1/gomodule.git v1.1.0
 
@@ -745,7 +745,7 @@ replace 127.0.0.1/dependent-gomodule.git v1.0.0 => ../../local
 `,
 					"src/plugin3/go.mod": `module plugin3
 
-go 1.17
+go 1.21
 
 require 127.0.0.1/dependent-gomodule.git v1.0.0
 
@@ -786,6 +786,8 @@ replace 127.0.0.1/dependent-gomodule.git v1.0.0 => ../local
 						dmp := diffmatchpatch.New()
 						diffs := dmp.DiffMain(expect, got, false)
 						t.Errorf("go.mod differs:\n%s", dmp.DiffPrettyText(diffs))
+						t.Errorf("==== got =====\n%s\n", got)
+						t.Errorf("=== expect ===\n%s\n", expect)
 					}
 				}
 			})
@@ -855,7 +857,7 @@ var Dependency = fmt.Sprintf("plugin => %s", gomodule.Dependency)
 `,
 					"src/plugin/go.mod": `module plugin1
 
-go 1.17
+go 1.21
 
 require 127.0.0.1/gomodule.git v2.0.0
 `,
@@ -891,7 +893,7 @@ var Dependency = fmt.Sprintf("plugin => %s", gomodule.Dependency)
 `,
 					"src/plugin1/go.mod": `module plugin1
 
-go 1.17
+go 1.21
 
 require 127.0.0.1/gomodule.git v1.0.0
 
@@ -924,7 +926,7 @@ var Dependency = fmt.Sprintf("plugin => %s", gomodule.Dependency)
 `,
 					"src/plugin1/go.mod": `module plugin1
 
-go 1.17
+go 1.21
 
 require 127.0.0.1/gomodule.git v1.0.0
 
@@ -944,7 +946,7 @@ var Dependency = fmt.Sprintf("plugin => %s", gomodule.Dependency)
 `,
 					"src/plugin2/go.mod": `module plugin2
 
-go 1.17
+go 1.21
 
 require 127.0.0.1/gomodule.git v1.1.0
 
@@ -971,7 +973,7 @@ var Dependency = "local-dependent"
 `,
 					"src/local/go.mod": `module 127.0.0.1/dependent-gomodule.git
 
-go 1.17
+go 1.21
 `,
 					"src/plugin1/main.go": `package main
 
@@ -985,7 +987,7 @@ var Dependency = fmt.Sprintf("plugin => %s", gomodule.Dependency)
 `,
 					"src/plugin1/go.mod": `module plugin1
 
-go 1.17
+go 1.21
 
 require 127.0.0.1/gomodule.git v1.0.0
 
@@ -1005,7 +1007,7 @@ var Dependency = fmt.Sprintf("plugin => %s", gomodule.Dependency)
 `,
 					"src/plugin2/go.mod": `module plugin2
 
-go 1.17
+go 1.21
 
 require 127.0.0.1/gomodule.git v1.1.0
 
@@ -1032,7 +1034,7 @@ var Dependency = "local-dependent"
 `,
 					"src/local1/go.mod": `module 127.0.0.1/dependent-gomodule.git
 
-go 1.17
+go 1.21
 `,
 					"src/local2/main.go": `package dependent
 
@@ -1040,7 +1042,7 @@ var Dependency = "local-dependent"
 `,
 					"src/local2/go.mod": `module 127.0.0.1/dependent-gomodule.git
 
-go 1.17
+go 1.21
 `,
 					"src/plugin1/main.go": `package main
 
@@ -1054,7 +1056,7 @@ var Dependency = fmt.Sprintf("plugin => %s", gomodule.Dependency)
 `,
 					"src/plugin1/go.mod": `module plugin1
 
-go 1.17
+go 1.21
 
 require 127.0.0.1/gomodule.git v1.0.0
 
@@ -1074,7 +1076,7 @@ var Dependency = fmt.Sprintf("plugin => %s", gomodule.Dependency)
 `,
 					"src/plugin2/go.mod": `module plugin2
 
-go 1.17
+go 1.21
 
 require 127.0.0.1/gomodule.git v1.1.0
 
@@ -1138,18 +1140,11 @@ func TestFindGoCmd(t *testing.T) {
 				},
 				expect: "go",
 			},
-			fmt.Sprintf("found %s command", goVer): {
+			"minimum go version": {
 				cmds: map[string]string{
-					goVer: fmt.Sprintf("go version %s linux/amd64", goVer),
+					"go": fmt.Sprintf("go version %s linux/amd64", gomodVer),
 				},
-				expect: goVer,
-			},
-			fmt.Sprintf("different go version but %s found", goVer): {
-				cmds: map[string]string{
-					"go":  "go version go1.15 linux/amd64",
-					goVer: fmt.Sprintf("go version %s linux/amd64", goVer),
-				},
-				expect: goVer,
+				expect: "go",
 			},
 			"found gotip command": {
 				cmds: map[string]string{
@@ -1185,11 +1180,11 @@ func TestFindGoCmd(t *testing.T) {
 			"command not found": {
 				expect: "go command required",
 			},
-			"different go version": {
+			"old go version": {
 				cmds: map[string]string{
-					"go": "go version go1.15 linux/amd64",
+					"go": "go version go1.20 linux/amd64",
 				},
-				expect: "installed go1.15",
+				expect: fmt.Sprintf("required go %s or later but installed 1.20", gomodVer),
 			},
 		}
 		for name, test := range tests {
@@ -1223,17 +1218,17 @@ func TestUpdateGoMod(t *testing.T) {
 		"do nothing": {
 			gomod: `module plugin_module
 
-go 1.17
+go 1.21
 `,
 			expect: `module plugin_module
 
-go 1.17
+go 1.21
 `,
 		},
 		"do nothing (no requires)": {
 			gomod: `module plugin_module
 
-go 1.17
+go 1.21
 
 require google.golang.org/grpc v1.37.1
 
@@ -1254,7 +1249,7 @@ import (
 `,
 			expect: `module plugin_module
 
-go 1.17
+go 1.21
 
 require google.golang.org/grpc v1.37.1
 
@@ -1271,7 +1266,7 @@ require (
 		"do nothing (not used)": {
 			gomod: `module plugin_module
 
-go 1.17
+go 1.21
 
 require github.com/zoncoen/scenarigo v0.11.2
 
@@ -1290,7 +1285,7 @@ replace github.com/zoncoen/scenarigo v0.11.2 => github.com/zoncoen/scenarigo v0.
 			},
 			expect: `module plugin_module
 
-go 1.17
+go 1.21
 `,
 			expectStdout: `WARN: test.so: remove require github.com/zoncoen/scenarigo v0.11.2
 WARN: test.so: remove replace github.com/zoncoen/scenarigo v0.11.2 => github.com/zoncoen/scenarigo v0.11.0
@@ -1299,7 +1294,7 @@ WARN: test.so: remove replace github.com/zoncoen/scenarigo v0.11.2 => github.com
 		"add require": {
 			gomod: `module plugin_module
 
-go 1.17
+go 1.21
 `,
 			src: `package main
 
@@ -1320,7 +1315,7 @@ import (
 			},
 			expect: `module plugin_module
 
-go 1.17
+go 1.21
 
 require google.golang.org/grpc v1.37.1
 
@@ -1339,7 +1334,7 @@ require (
 		"overwrite require by require": {
 			gomod: `module plugin_module
 
-go 1.17
+go 1.21
 
 require google.golang.org/grpc v1.37.1
 
@@ -1371,7 +1366,7 @@ import (
 			},
 			expect: `module plugin_module
 
-go 1.17
+go 1.21
 
 require google.golang.org/grpc v1.40.0
 
@@ -1390,7 +1385,7 @@ require (
 		"overwrite require by replace": {
 			gomod: `module plugin_module
 
-go 1.17
+go 1.21
 
 require google.golang.org/grpc v1.37.1
 
@@ -1433,7 +1428,7 @@ import (
 			},
 			expect: `module plugin_module
 
-go 1.17
+go 1.21
 
 require google.golang.org/grpc v1.40.0
 
@@ -1452,7 +1447,7 @@ require (
 		"do nothing (same version)": {
 			gomod: `module plugin_module
 
-go 1.17
+go 1.21
 
 require google.golang.org/grpc v1.37.1
 
@@ -1484,7 +1479,7 @@ import (
 			},
 			expect: `module plugin_module
 
-go 1.17
+go 1.21
 
 require google.golang.org/grpc v1.37.1
 
@@ -1501,7 +1496,7 @@ require (
 		"add replace": {
 			gomod: `module plugin_module
 
-go 1.17
+go 1.21
 
 require github.com/zoncoen/scenarigo v0.11.2
 
@@ -1543,7 +1538,7 @@ import (
 			},
 			expect: `module plugin_module
 
-go 1.17
+go 1.21
 
 require github.com/zoncoen/scenarigo v0.11.2
 
@@ -1574,7 +1569,7 @@ replace google.golang.org/grpc v1.46.0 => google.golang.org/grpc v1.40.0
 		"overwrite replace by require": {
 			gomod: `module plugin_module
 
-go 1.17
+go 1.21
 
 require github.com/zoncoen/scenarigo v0.11.2
 
@@ -1618,7 +1613,7 @@ import (
 			},
 			expect: `module plugin_module
 
-go 1.17
+go 1.21
 
 require github.com/zoncoen/scenarigo v0.11.2
 
@@ -1649,7 +1644,7 @@ replace google.golang.org/grpc v1.46.0 => google.golang.org/grpc v1.40.1
 		"override replace by replace": {
 			gomod: `module plugin_module
 
-go 1.17
+go 1.21
 
 require github.com/zoncoen/scenarigo v0.11.2
 
@@ -1704,7 +1699,7 @@ import (
 			},
 			expect: `module plugin_module
 
-go 1.17
+go 1.21
 
 require github.com/zoncoen/scenarigo v0.11.2
 
@@ -1735,7 +1730,7 @@ replace google.golang.org/grpc v1.46.0 => google.golang.org/grpc v1.40.1
 		"do nothing (alredy replaced)": {
 			gomod: `module plugin_module
 
-go 1.17
+go 1.21
 
 require github.com/zoncoen/scenarigo v0.11.2
 
@@ -1779,7 +1774,7 @@ import (
 			},
 			expect: `module plugin_module
 
-go 1.17
+go 1.21
 
 require github.com/zoncoen/scenarigo v0.11.2
 

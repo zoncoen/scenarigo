@@ -4,7 +4,7 @@ go 1.21
 
 require (
 	github.com/google/uuid v1.4.0
-	github.com/zoncoen/scenarigo v0.15.1
+	github.com/zoncoen/scenarigo v0.17.0
 )
 
 require (
@@ -25,7 +25,6 @@ require (
 	golang.org/x/sys v0.16.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/grpc v1.61.1 // indirect
-	google.golang.org/protobuf v1.32.0 // indirect
 )
 
 replace github.com/google/uuid v1.4.0 => github.com/google/uuid v1.3.0

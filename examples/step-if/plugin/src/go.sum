@@ -65,8 +65,8 @@ github.com/zoncoen/query-go v1.3.1 h1:7JZuqOKFNkLanCVvm3ufH5XMKuiCd+aks6txzhmy1i
 github.com/zoncoen/query-go v1.3.1/go.mod h1:rbLi2EwarQtEJ5cNg9LFmAnleihBLsQSc1ow7vA8nms=
 github.com/zoncoen/query-go/extractor/yaml v0.2.1 h1:eLLx27en7aHF75RxArM446Y1JNGYasTcY3tCjVUOPJE=
 github.com/zoncoen/query-go/extractor/yaml v0.2.1/go.mod h1:bhwuZIYGnkm+IOdy6pTgL1oTb+cjHvLTCM0Nc4EWjvE=
-github.com/zoncoen/scenarigo v0.15.1 h1:OxsH2o81lkpeC7d6y2cSw7SUN6UgcNydOL+hcLcI+lg=
-github.com/zoncoen/scenarigo v0.15.1/go.mod h1:w3c/Oyvs+4QEng70twUE3d5xVLtP8ejRT/bxmN10NWI=
+github.com/zoncoen/scenarigo v0.17.0 h1:8Wo2yxQEMMbYHFOoK7ir9J+e0reh9yMWmu+HexYSR3s=
+github.com/zoncoen/scenarigo v0.17.0/go.mod h1:CN4YdZdMzP5T3D+KeTz6YS3RjlVf8OsiIOVAteEw6KY=
 golang.org/x/crypto v0.18.0 h1:PGVlW0xEltQnzFZ55hkuX5+KLyrMYhHld1YHO4AKcdc=
 golang.org/x/crypto v0.18.0/go.mod h1:R0j02AL6hcrfOiy9T4ZYp/rcWeMxM3L6QYxlOuEG1mg=
 golang.org/x/mod v0.15.0 h1:SernR4v+D55NyBH2QiEQrlBAnj1ECL6AGrA5+dPaMY8=

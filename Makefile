@@ -145,6 +145,7 @@ test/examples/%:
 	if [ -d $(CURDIR)/$${dir}/plugin/src ]; then \
 		cd $(CURDIR)/$${dir}/plugin/src; \
 		rm -f go.work go.work.sum; \
+		$(GO) get github.com/zoncoen/scenarigo@latest ; \
 		$(GO) work init . ../../../..; \
 	fi; \
 	cd $(CURDIR)/$$dir; \

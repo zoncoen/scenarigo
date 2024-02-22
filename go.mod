@@ -3,6 +3,7 @@ module github.com/zoncoen/scenarigo
 go 1.21.2
 
 require (
+	carvel.dev/ytt v0.48.0
 	github.com/Masterminds/semver v1.5.0
 	github.com/cenkalti/backoff/v4 v4.2.1
 	github.com/fatih/color v1.16.0
@@ -15,7 +16,6 @@ require (
 	github.com/sergi/go-diff v1.3.1
 	github.com/sosedoff/gitkit v0.4.0
 	github.com/spf13/cobra v1.8.0
-	github.com/vmware-tanzu/carvel-ytt v0.45.4
 	github.com/zoncoen/query-go v1.3.1
 	github.com/zoncoen/query-go/extractor/protobuf v0.1.3
 	github.com/zoncoen/query-go/extractor/yaml v0.2.1

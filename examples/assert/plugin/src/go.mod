@@ -2,7 +2,7 @@ module github.com/zoncoen/scenarigo/examples/assert/plugin
 
 go 1.21
 
-require github.com/zoncoen/scenarigo v0.15.1
+require github.com/zoncoen/scenarigo v0.17.0
 
 require (
 	github.com/cenkalti/backoff/v4 v4.2.1 // indirect
@@ -22,5 +22,4 @@ require (
 	golang.org/x/sys v0.16.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/grpc v1.61.1 // indirect
-	google.golang.org/protobuf v1.32.0 // indirect
 )

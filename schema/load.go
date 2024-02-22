@@ -7,13 +7,13 @@ import (
 	"os"
 	"path/filepath"
 
+	ytt "carvel.dev/ytt/pkg/cmd/template"
+	yttui "carvel.dev/ytt/pkg/cmd/ui"
+	yttfiles "carvel.dev/ytt/pkg/files"
 	"github.com/fatih/color"
 	"github.com/goccy/go-yaml"
 	"github.com/goccy/go-yaml/ast"
 	"github.com/goccy/go-yaml/parser"
-	ytt "github.com/vmware-tanzu/carvel-ytt/pkg/cmd/template"
-	yttui "github.com/vmware-tanzu/carvel-ytt/pkg/cmd/ui"
-	yttfiles "github.com/vmware-tanzu/carvel-ytt/pkg/files"
 
 	"github.com/zoncoen/scenarigo/errors"
 	"github.com/zoncoen/scenarigo/internal/filepathutil"

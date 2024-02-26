@@ -1,5 +1,16 @@
 # CHANGELOG
 
+<a name="v0.17.1"></a>
+## [v0.17.1] - 2024-02-26
+### Bug Fixes
+- **assert:** fix retry failure if using left arrow functions for assertion
+- **assert:** show the correct error position even when using left arrow functions
+- **assert:** don't wrap nil error to fix notContains
+
+### Features
+- bump the minimum go version
+- **plugin:** set GOTOOLCHAIN env for building plugins
+
 <a name="v0.17.0"></a>
 ## [v0.17.0] - 2024-01-26
 ### Bug Fixes
@@ -391,6 +402,7 @@ change protocl.Protocol interface
 - first release
 
 
+[v0.17.1]: https://github.com/zoncoen/scenarigo/compare/v0.17.0...v0.17.1
 [v0.17.0]: https://github.com/zoncoen/scenarigo/compare/v0.16.2...v0.17.0
 [v0.16.2]: https://github.com/zoncoen/scenarigo/compare/v0.16.1...v0.16.2
 [v0.16.1]: https://github.com/zoncoen/scenarigo/compare/v0.16.0...v0.16.1

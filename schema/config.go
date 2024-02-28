@@ -57,6 +57,7 @@ type YTTConfig struct {
 type OutputConfig struct {
 	Verbose bool         `yaml:"verbose,omitempty"`
 	Colored *bool        `yaml:"colored,omitempty"`
+	Summary bool         `yaml:"summary,omitempty"`
 	Report  ReportConfig `yaml:"report,omitempty"`
 }
 

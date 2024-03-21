@@ -1,5 +1,10 @@
 # CHANGELOG
 
+<a name="v0.17.2"></a>
+## [v0.17.2] - 2024-03-07
+### Features
+- add an option to output test summary at last ([#395](https://github.com/zoncoen/scenarigo/issues/395))
+
 <a name="v0.17.1"></a>
 ## [v0.17.1] - 2024-02-26
 ### Bug Fixes
@@ -402,6 +407,7 @@ change protocl.Protocol interface
 - first release
 
 
+[v0.17.2]: https://github.com/zoncoen/scenarigo/compare/v0.17.1...v0.17.2
 [v0.17.1]: https://github.com/zoncoen/scenarigo/compare/v0.17.0...v0.17.1
 [v0.17.0]: https://github.com/zoncoen/scenarigo/compare/v0.16.2...v0.17.0
 [v0.16.2]: https://github.com/zoncoen/scenarigo/compare/v0.16.1...v0.16.2

@@ -1,7 +1,12 @@
 # CHANGELOG
 
+<a name="v0.17.3"></a>
+## [v0.17.3] - 2024-04-14
+### Bug Fixes
+- **release:** ensure the Docker image exists ([#411](https://github.com/zoncoen/scenarigo/issues/411))
+
 <a name="v0.17.2"></a>
-## [v0.17.2] - 2024-03-07
+## [v0.17.2] - 2024-03-21
 ### Features
 - add an option to output test summary at last ([#395](https://github.com/zoncoen/scenarigo/issues/395))
 
@@ -407,6 +412,7 @@ change protocl.Protocol interface
 - first release
 
 
+[v0.17.3]: https://github.com/zoncoen/scenarigo/compare/v0.17.2...v0.17.3
 [v0.17.2]: https://github.com/zoncoen/scenarigo/compare/v0.17.1...v0.17.2
 [v0.17.1]: https://github.com/zoncoen/scenarigo/compare/v0.17.0...v0.17.1
 [v0.17.0]: https://github.com/zoncoen/scenarigo/compare/v0.16.2...v0.17.0

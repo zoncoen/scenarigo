@@ -3,7 +3,7 @@ package queryutil
 import (
 	"sync"
 
-	"github.com/zoncoen/query-go"
+	query "github.com/zoncoen/query-go"
 	yamlextractor "github.com/zoncoen/query-go/extractor/yaml"
 )
 
@@ -12,8 +12,8 @@ var (
 	opts = []query.Option{}
 )
 
-func New() *query.Query {
-	return query.New(Options()...)
+func New(opts ...query.Option) *query.Query {
+	return query.New(append(Options(), opts...)...)
 }
 
 func Options() []query.Option {

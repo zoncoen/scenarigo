@@ -194,7 +194,7 @@ func Greet() string {
 
 go %s
 
-require google.golang.org/grpc v1.37.1
+require google.golang.org/grpc v1.63.2
 `, goVersion),
 				},
 				expectPluginPaths: []string{"plugin.so"},
@@ -224,7 +224,7 @@ func Greet() string {
 
 go %s
 
-require google.golang.org/grpc v1.37.1
+require google.golang.org/grpc v1.63.2
 
 replace google.golang.org/grpc v1.37.1 => google.golang.org/grpc v1.40.0
 `, goVersion),
@@ -1208,6 +1208,7 @@ func TestFindGoCmd(t *testing.T) {
 }
 
 func TestUpdateGoMod(t *testing.T) {
+	modVers := getModuleVersions(t)
 	tests := map[string]struct {
 		gomod        string
 		src          string
@@ -1320,15 +1321,15 @@ require google.golang.org/grpc v1.37.1
 
 require (
 	github.com/golang/protobuf v1.5.0 // indirect
-	golang.org/x/net v0.21.0 // indirect
-	golang.org/x/sys v0.17.0 // indirect
+	golang.org/x/net v0.22.0 // indirect
+	golang.org/x/sys v0.18.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240227224415-6ceb2ff114de // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240318140521-94a12d6c2237 // indirect
 	google.golang.org/protobuf v1.33.0 // indirect
 )
 `,
-			expectStdout: `WARN: test.so: change require google.golang.org/grpc v1.63.2 ==> v1.37.1 by test
-`,
+			expectStdout: fmt.Sprintf(`WARN: test.so: change require google.golang.org/grpc %s ==> v1.37.1 by test
+`, modVers["google.golang.org/grpc"]),
 		},
 		"overwrite require by require": {
 			gomod: `module plugin_module

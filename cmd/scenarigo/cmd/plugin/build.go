@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"sort"
 	"strings"
@@ -26,30 +27,33 @@ import (
 	"github.com/zoncoen/scenarigo/version"
 )
 
+const (
+	versionTooHighErrorPattern = `^go: go.mod requires go >= ([\d\.]+) .+$`
+)
+
 var (
-	goVer        string
-	tip          bool
-	goMajorMinor string
-	gomodVer     string
+	goVer                     string
+	toolchain                 string
+	tip                       bool
+	goMinVer                  string
+	versionTooHighErrorRegexp *regexp.Regexp
 )
 
 func init() {
 	goVer = runtime.Version()
+	toolchain = goVer
 	if strings.HasPrefix(goVer, "devel ") {
 		// gotip
 		goVer = strings.Split(strings.TrimPrefix(goVer, "devel "), "-")[0]
+		toolchain = "local"
 		tip = true
 	}
 	e := strings.Split(strings.TrimPrefix(goVer, "go"), ".")
 	if len(e) < 2 {
 		panic(fmt.Sprintf("%q is invalid Go version", goVer))
 	}
-	goMajorMinor = strings.Join(e[:2], ".")
-	gomod, err := modfile.Parse("go.mod", scenarigo.GoModBytes, nil)
-	if err != nil {
-		panic(fmt.Errorf("failed to parse go.mod of scenarigo: %w", err))
-	}
-	gomodVer = gomod.Go.Version
+	goMinVer = "1.21.2"
+	versionTooHighErrorRegexp = regexp.MustCompile(versionTooHighErrorPattern)
 }
 
 var buildCmd = &cobra.Command{
@@ -98,7 +102,7 @@ func buildRun(cmd *cobra.Command, args []string) error {
 		return errors.New("config file not found")
 	}
 
-	goCmd, err := findGoCmd(ctx(cmd), tip)
+	goCmd, err := findGoCmd(ctx(cmd))
 	if err != nil {
 		return err
 	}
@@ -170,26 +174,15 @@ func buildRun(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func findGoCmd(ctx context.Context, tip bool) (string, error) {
+func findGoCmd(ctx context.Context) (string, error) {
 	goCmd, err := exec.LookPath("go")
-	var verr error
-	if err == nil {
-		verr = checkGoVersion(ctx, goCmd, gomodVer)
-		if verr == nil {
-			return goCmd, nil
-		}
+	if err != nil {
+		return "", fmt.Errorf("go command required: %w", err)
 	}
-	if tip {
-		if goCmd, err := exec.LookPath("gotip"); err == nil {
-			if err := checkGoVersion(ctx, goCmd, goVer); err == nil {
-				return goCmd, nil
-			}
-		}
+	if err := checkGoVersion(ctx, goCmd, goMinVer); err != nil {
+		return "", fmt.Errorf("failed to check go version: %w", err)
 	}
-	if err == nil {
-		return "", verr
-	}
-	return "", fmt.Errorf("go command required: %w", err)
+	return goCmd, nil
 }
 
 func selectUnifiedVersions(pbs []*pluginBuilder) (map[string]*overrideModule, error) {
@@ -205,7 +198,7 @@ func selectUnifiedVersions(pbs []*pluginBuilder) (map[string]*overrideModule, er
 				}
 				continue
 			}
-			if semver.Compare(o.require.Mod.Version, r.Mod.Version) < 0 {
+			if compareVers(o.require.Mod.Version, r.Mod.Version) < 0 {
 				overrides[r.Mod.Path].require = r
 				overrides[r.Mod.Path].requiredBy = pb.name
 			}
@@ -272,7 +265,7 @@ func checkGoVersion(ctx context.Context, goCmd, minVer string) error {
 		}
 	}
 	ver := strings.TrimPrefix(items[2], "go")
-	if semver.Compare("v"+ver, "v"+minVer) == -1 {
+	if compareVers(ver, minVer) == -1 {
 		return fmt.Errorf(`required go %s or later but installed %s`, minVer, ver)
 	}
 	return nil
@@ -288,10 +281,10 @@ func downloadModule(ctx context.Context, goCmd, p string) (string, string, *modf
 		os.RemoveAll(tempDir)
 	}
 
-	if err := execute(ctx, tempDir, goCmd, "mod", "init", "download_module"); err != nil {
+	if _, err := execute(ctx, tempDir, goCmd, "mod", "init", "download_module"); err != nil {
 		return "", "", nil, clean, fmt.Errorf("failed to initialize go.mod: %w", err)
 	}
-	if err := execute(ctx, tempDir, goCmd, downloadCmd(p)...); err != nil {
+	if _, err := execute(ctx, tempDir, goCmd, downloadCmd(p)...); err != nil {
 		return "", "", nil, clean, fmt.Errorf("failed to download %s: %w", p, err)
 	}
 	mod, src, req, err := modSrcPath(tempDir, p)
@@ -383,10 +376,10 @@ func newPluginBuilder(cmd *cobra.Command, goCmd, name, mod, src, out, defaultMod
 
 	gomodPath := filepath.Join(dir, "go.mod")
 	if _, err := os.Stat(gomodPath); err != nil {
-		if err := execute(ctx, dir, goCmd, "mod", "init"); err != nil {
+		if _, err := execute(ctx, dir, goCmd, "mod", "init"); err != nil {
 			// ref. https://github.com/golang/go/wiki/Modules#why-does-go-mod-init-give-the-error-cannot-determine-module-path-for-source-directory
 			if strings.Contains(err.Error(), "cannot determine module path") {
-				if err := execute(ctx, dir, goCmd, "mod", "init", defaultModName); err != nil {
+				if _, err := execute(ctx, dir, goCmd, "mod", "init", defaultModName); err != nil {
 					return nil, fmt.Errorf("failed to initialize go.mod: %w", err)
 				}
 			} else {
@@ -396,6 +389,9 @@ func newPluginBuilder(cmd *cobra.Command, goCmd, name, mod, src, out, defaultMod
 	}
 
 	if err := modTidy(ctx, dir, goCmd); err != nil {
+		if ok, verr := asVersionTooHighError(err); ok {
+			err = fmt.Errorf("re-install scenarigo command with go%s: %w", verr.requiredVersion, err)
+		}
 		return nil, err
 	}
 
@@ -420,12 +416,12 @@ func newPluginBuilder(cmd *cobra.Command, goCmd, name, mod, src, out, defaultMod
 
 func modTidy(ctx context.Context, dir, goCmd string) error {
 	if cmd := os.Getenv("GO_MOD_TIDY"); cmd != "" {
-		if err := execute(ctx, dir, goCmd, strings.Split(cmd, " ")...); err != nil {
+		if _, err := execute(ctx, dir, goCmd, strings.Split(cmd, " ")...); err != nil {
 			return err
 		}
 		return nil
 	}
-	if err := execute(ctx, dir, goCmd, "mod", "tidy", fmt.Sprintf("-compat=%s", goMajorMinor)); err != nil {
+	if _, err := execute(ctx, dir, goCmd, "mod", "tidy"); err != nil {
 		return fmt.Errorf(`"go mod tidy" failed: %w`, err)
 	}
 	return nil
@@ -439,17 +435,18 @@ func (pb *pluginBuilder) build(cmd *cobra.Command, goCmd string, overrideKeys []
 	if err := os.RemoveAll(pb.out); err != nil {
 		return fmt.Errorf("failed to delete the old plugin %s: %w", pb.out, err)
 	}
-	if err := execute(ctx, pb.dir, goCmd, "build", "-buildmode=plugin", "-o", pb.out, pb.src); err != nil {
+	if _, err := execute(ctx, pb.dir, goCmd, "build", "-buildmode=plugin", "-o", pb.out, pb.src); err != nil {
 		return fmt.Errorf(`"go build -buildmode=plugin -o %s %s" failed: %w`, pb.out, pb.src, err)
 	}
 	return nil
 }
 
-func execute(ctx context.Context, wd, name string, args ...string) error {
+func execute(ctx context.Context, wd, name string, args ...string) (string, error) {
 	return executeWithEnvs(ctx, nil, wd, name, args...)
 }
 
-func executeWithEnvs(ctx context.Context, envs []string, wd, name string, args ...string) error {
+func executeWithEnvs(ctx context.Context, envs []string, wd, name string, args ...string) (string, error) {
+	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	cmd := exec.CommandContext(ctx, name, args...)
 	if tip {
@@ -461,16 +458,29 @@ func executeWithEnvs(ctx context.Context, envs []string, wd, name string, args .
 	if wd != "" {
 		cmd.Dir = wd
 	}
+	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		return errors.New(strings.TrimSuffix(stderr.String(), "\n"))
+		return "", wrapVersionTooHighError(errors.New(strings.TrimSuffix(stderr.String(), "\n")))
 	}
-	return nil
+	return stdout.String(), nil
 }
 
 func updateGoMod(cmd *cobra.Command, goCmd, name, gomodPath string, overrideKeys []string, overrides map[string]*overrideModule) error {
 	if err := editGoMod(cmd, goCmd, gomodPath, func(gomod *modfile.File) error {
-		gomod.DropToolchainStmt()
+		switch compareVers(gomod.Go.Version, goVer) {
+		case -1: // go.mod < scenarigo go version
+			if gomod.Toolchain == nil {
+				fmt.Fprintf(cmd.OutOrStdout(), "%s: %s: add toolchain %s by scenarigo\n", warnColor.Sprint("WARN"), name, goVer)
+			} else if gomod.Toolchain.Name != goVer {
+				fmt.Fprintf(cmd.OutOrStdout(), "%s: %s: change toolchain %s ==> %s by scenarigo\n", warnColor.Sprint("WARN"), name, gomod.Toolchain.Name, goVer)
+			}
+			if err := gomod.AddToolchainStmt(goVer); err != nil {
+				return fmt.Errorf("%s: %w", gomodPath, err)
+			}
+		case 1: // go.mod > scenarigo go version
+			return fmt.Errorf("%s: go: go.mod requires go >= %s (running go %s)", gomodPath, gomod.Go.Version, goVer)
+		}
 		return nil
 	}); err != nil {
 		return fmt.Errorf("failed to edit toolchain directive: %w", err)
@@ -498,11 +508,6 @@ func updateRequireDirectives(cmd *cobra.Command, goCmd, gomodPath string, overri
 		}
 		for _, r := range gomod.Replace {
 			initialReplaces[r.Old.Path] = *r
-		}
-		if semver.Compare(gomod.Go.Version, gomodVer) < 0 {
-			if err := gomod.AddGoStmt(gomodVer); err != nil {
-				return fmt.Errorf("%s: %w", gomodPath, err)
-			}
 		}
 		for _, o := range overrides {
 			require, _, _, _ := o.requireReplace()
@@ -701,7 +706,7 @@ func printUpdatedReplaces(cmd *cobra.Command, name string, overrides map[string]
 func editGoMod(cmd *cobra.Command, goCmd, gomodPath string, edit func(*modfile.File) error) error {
 	gomod, err := parseGoMod(cmd, goCmd, gomodPath)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to parse %s: %w", gomodPath, err)
 	}
 
 	if err := edit(gomod); err != nil {
@@ -754,4 +759,58 @@ func requiredModulesByScenarigo() ([]*modfile.Require, error) {
 		}}, gomod.Require...), nil
 	}
 	return gomod.Require, nil
+}
+
+func compareVers(v, w string) int {
+	v = strings.TrimPrefix(v, "go")
+	w = strings.TrimPrefix(w, "go")
+	if !strings.HasPrefix(v, "v") {
+		v = "v" + v
+	}
+	if !strings.HasPrefix(w, "v") {
+		w = "v" + w
+	}
+	return semver.Compare(v, w)
+}
+
+type versionTooHighError struct {
+	err             error
+	requiredVersion string
+}
+
+func (e *versionTooHighError) Error() string {
+	return e.err.Error()
+}
+
+func (e *versionTooHighError) Unwrap() error {
+	return e.err
+}
+
+func wrapVersionTooHighError(err error) error {
+	if err == nil {
+		return nil
+	}
+	if strings.HasPrefix(err.Error(), "go: go.mod requires go >= ") {
+		var requiredVersion string
+		result := versionTooHighErrorRegexp.FindAllStringSubmatch(err.Error(), 1)
+		if len(result) > 0 && len(result[0]) > 1 {
+			requiredVersion = result[0][1]
+		}
+		err = &versionTooHighError{
+			err:             err,
+			requiredVersion: requiredVersion,
+		}
+	}
+	return err
+}
+
+func asVersionTooHighError(err error) (bool, *versionTooHighError) {
+	if err == nil {
+		return false, nil
+	}
+	var e *versionTooHighError
+	if errors.As(err, &e) {
+		return true, e
+	}
+	return false, nil
 }

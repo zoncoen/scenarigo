@@ -19,7 +19,6 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/Masterminds/semver"
 	"github.com/sergi/go-diff/diffmatchpatch"
 	"github.com/sosedoff/gitkit"
 	"github.com/spf13/cobra"
@@ -49,22 +48,6 @@ func init() {
 
 func TestBuild(t *testing.T) {
 	goVersion := strings.TrimPrefix(goVer, "go")
-
-	// Old Go versions need to trim patch versions.
-	v, err := semver.NewVersion(goVersion)
-	if err != nil {
-		t.Fatal(err)
-	}
-	go121, err := semver.NewVersion("1.21.0")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if v.LessThan(go121) {
-		if parts := strings.Split(goVersion, "."); len(parts) > 2 {
-			goVersion = fmt.Sprintf("%s.%s", parts[0], parts[1])
-		}
-	}
-
 	pluginCode := `package main
 
 func Greet() string {
@@ -92,7 +75,7 @@ go %s
 	}
 	gomodWithRequire := b.String()
 
-	goCmd, err := findGoCmd(context.Background(), false)
+	goCmd, err := findGoCmd(context.Background())
 	if err != nil {
 		t.Fatalf("failed to find go command: %s", err)
 	}
@@ -314,12 +297,12 @@ import (
 
 var Dependency = fmt.Sprintf("plugin => %s", gomodule.Dependency)
 `,
-					"src/plugin1/go.mod": `module plugin1
+					"src/plugin1/go.mod": fmt.Sprintf(`module plugin1
 
-go 1.21
+go %s
 
 require 127.0.0.1/gomodule.git v1.0.0
-`,
+`, goVersion),
 					"src/plugin2/main.go": `package main
 
 import (
@@ -330,12 +313,12 @@ import (
 
 var Dependency = fmt.Sprintf("plugin => %s", gomodule.Dependency)
 `,
-					"src/plugin2/go.mod": `module plugin2
+					"src/plugin2/go.mod": fmt.Sprintf(`module plugin2
 
-go 1.21
+go %s
 
 require 127.0.0.1/gomodule.git v1.1.0
-`,
+`, goVersion),
 					"src/plugin3/main.go": `package main
 
 import (
@@ -346,12 +329,12 @@ import (
 
 var Dependency = fmt.Sprintf("plugin => %s", gomodule.Dependency)
 `,
-					"src/plugin3/go.mod": `module plugin3
+					"src/plugin3/go.mod": fmt.Sprintf(`module plugin3
 
-go 1.21
+go %s
 
 require 127.0.0.1/gomodule.git/v2 v2.0.0
-`,
+`, goVersion),
 				},
 				expectPluginPaths: []string{
 					"gen/plugin1.so",
@@ -359,30 +342,30 @@ require 127.0.0.1/gomodule.git/v2 v2.0.0
 					"gen/plugin3.so",
 				},
 				expectGoMod: map[string]string{
-					"src/plugin1/go.mod": `module plugin1
+					"src/plugin1/go.mod": fmt.Sprintf(`module plugin1
 
-go 1.21
-
-require 127.0.0.1/gomodule.git v1.1.0
-
-require 127.0.0.1/dependent-gomodule.git v1.1.0 // indirect
-`,
-					"src/plugin2/go.mod": `module plugin2
-
-go 1.21
+go %s
 
 require 127.0.0.1/gomodule.git v1.1.0
 
 require 127.0.0.1/dependent-gomodule.git v1.1.0 // indirect
-`,
-					"src/plugin3/go.mod": `module plugin3
+`, goVersion),
+					"src/plugin2/go.mod": fmt.Sprintf(`module plugin2
 
-go 1.21
+go %s
+
+require 127.0.0.1/gomodule.git v1.1.0
+
+require 127.0.0.1/dependent-gomodule.git v1.1.0 // indirect
+`, goVersion),
+					"src/plugin3/go.mod": fmt.Sprintf(`module plugin3
+
+go %s
 
 require 127.0.0.1/gomodule.git/v2 v2.0.0
 
 require 127.0.0.1/dependent-gomodule.git v1.1.0 // indirect
-`,
+`, goVersion),
 				},
 			},
 			"multi plugins with incompatible module": {
@@ -406,12 +389,12 @@ import (
 
 var Dependency = fmt.Sprintf("plugin => %s", gomodule.Dependency)
 `,
-					"src/plugin1/go.mod": `module plugin1
+					"src/plugin1/go.mod": fmt.Sprintf(`module plugin1
 
-go 1.21
+go %s
 
 require 127.0.0.1/gomodule.git v1.0.0
-`,
+`, goVersion),
 					"src/plugin2/main.go": `package main
 
 import (
@@ -422,34 +405,34 @@ import (
 
 var Dependency = fmt.Sprintf("plugin => %s", gomodule.Dependency)
 `,
-					"src/plugin2/go.mod": `module plugin2
+					"src/plugin2/go.mod": fmt.Sprintf(`module plugin2
 
-go 1.21
+go %s
 
 require 127.0.0.1/gomodule.git v2.0.0+incompatible
-`,
+`, goVersion),
 				},
 				expectPluginPaths: []string{
 					"gen/plugin1.so",
 					"gen/plugin2.so",
 				},
 				expectGoMod: map[string]string{
-					"src/plugin1/go.mod": `module plugin1
+					"src/plugin1/go.mod": fmt.Sprintf(`module plugin1
 
-go 1.21
-
-require 127.0.0.1/gomodule.git v2.0.0+incompatible
-
-require 127.0.0.1/dependent-gomodule.git v1.0.0 // indirect
-`,
-					"src/plugin2/go.mod": `module plugin2
-
-go 1.21
+go %s
 
 require 127.0.0.1/gomodule.git v2.0.0+incompatible
 
 require 127.0.0.1/dependent-gomodule.git v1.0.0 // indirect
-`,
+`, goVersion),
+					"src/plugin2/go.mod": fmt.Sprintf(`module plugin2
+
+go %s
+
+require 127.0.0.1/gomodule.git v2.0.0+incompatible
+
+require 127.0.0.1/dependent-gomodule.git v1.0.0 // indirect
+`, goVersion),
 				},
 				skipOpen: true,
 			},
@@ -472,24 +455,24 @@ import (
 
 var Src = src.Src
 `,
-					"src/plugin1/go.mod": `module plugin1
+					"src/plugin1/go.mod": fmt.Sprintf(`module plugin1
 
-go 1.21
+go %s
 
 require 127.0.0.1/sub.git v1.1.0
-`,
+`, goVersion),
 				},
 				expectPluginPaths: []string{
 					"gen/plugin1.so",
 					"gen/plugin2.so",
 				},
 				expectGoMod: map[string]string{
-					"src/plugin1/go.mod": `module plugin1
+					"src/plugin1/go.mod": fmt.Sprintf(`module plugin1
 
-go 1.21
+go %s
 
 require 127.0.0.1/sub.git v1.0.0
-`,
+`, goVersion),
 				},
 				skipOpen: true,
 			},
@@ -516,16 +499,16 @@ import (
 
 var Dependency = fmt.Sprintf("plugin => %s", gomodule.Dependency)
 `,
-					"src/plugin1/go.mod": `module plugin1
+					"src/plugin1/go.mod": fmt.Sprintf(`module plugin1
 
-go 1.21
+go %s
 
 require 127.0.0.1/gomodule.git v1.0.0
 
 require 127.0.0.1/dependent-gomodule.git v1.0.0 // indirect
 
 replace 127.0.0.1/dependent-gomodule.git v1.0.0 => 127.0.0.1/dependent-gomodule.git v1.1.0
-`,
+`, goVersion),
 					"src/plugin2/main.go": `package main
 
 import (
@@ -536,26 +519,26 @@ import (
 
 var Dependency = fmt.Sprintf("plugin => %s", gomodule.Dependency)
 `,
-					"src/plugin2/go.mod": `module plugin2
+					"src/plugin2/go.mod": fmt.Sprintf(`module plugin2
 
-go 1.21
+go %s
 
 require 127.0.0.1/gomodule.git v1.1.0
 
 require 127.0.0.1/dependent-gomodule.git v1.0.0 // indirect
-`,
+`, goVersion),
 					"src/plugin3/main.go": `package main
 
 import (
 	_ "127.0.0.1/dependent-gomodule.git"
 )
 `,
-					"src/plugin3/go.mod": `module plugin3
+					"src/plugin3/go.mod": fmt.Sprintf(`module plugin3
 
-go 1.21
+go %s
 
 require 127.0.0.1/dependent-gomodule.git v1.0.0
-`,
+`, goVersion),
 				},
 				expectPluginPaths: []string{
 					"gen/plugin1.so",
@@ -563,28 +546,28 @@ require 127.0.0.1/dependent-gomodule.git v1.0.0
 					"gen/plugin3.so",
 				},
 				expectGoMod: map[string]string{
-					"src/plugin1/go.mod": `module plugin1
+					"src/plugin1/go.mod": fmt.Sprintf(`module plugin1
 
-go 1.21
-
-require 127.0.0.1/gomodule.git v1.1.0
-
-require 127.0.0.1/dependent-gomodule.git v1.1.0 // indirect
-`,
-					"src/plugin2/go.mod": `module plugin2
-
-go 1.21
+go %s
 
 require 127.0.0.1/gomodule.git v1.1.0
 
 require 127.0.0.1/dependent-gomodule.git v1.1.0 // indirect
-`,
-					"src/plugin3/go.mod": `module plugin3
+`, goVersion),
+					"src/plugin2/go.mod": fmt.Sprintf(`module plugin2
 
-go 1.21
+go %s
+
+require 127.0.0.1/gomodule.git v1.1.0
+
+require 127.0.0.1/dependent-gomodule.git v1.1.0 // indirect
+`, goVersion),
+					"src/plugin3/go.mod": fmt.Sprintf(`module plugin3
+
+go %s
 
 require 127.0.0.1/dependent-gomodule.git v1.1.0
-`,
+`, goVersion),
 				},
 				skipOpen: true,
 			},
@@ -601,10 +584,10 @@ plugins:
 
 var Dependency = "local-dependent"
 `,
-					"src/go.mod": `module 127.0.0.1/dependent-gomodule.git
+					"src/go.mod": fmt.Sprintf(`module 127.0.0.1/dependent-gomodule.git
 
-go 1.21
-`,
+go %s
+`, goVersion),
 					"src/plugin1/main.go": `package main
 
 import (
@@ -615,31 +598,31 @@ import (
 
 var Dependency = fmt.Sprintf("plugin => %s", gomodule.Dependency)
 `,
-					"src/plugin1/go.mod": `module plugin1
+					"src/plugin1/go.mod": fmt.Sprintf(`module plugin1
 
-go 1.21
+go %s
 
 require 127.0.0.1/gomodule.git v1.0.0
 
 require 127.0.0.1/dependent-gomodule.git v1.0.0 // indirect
 
 replace 127.0.0.1/dependent-gomodule.git => ../
-`,
+`, goVersion),
 				},
 				expectPluginPaths: []string{
 					"gen/plugin1.so",
 				},
 				expectGoMod: map[string]string{
-					"src/plugin1/go.mod": `module plugin1
+					"src/plugin1/go.mod": fmt.Sprintf(`module plugin1
 
-go 1.21
+go %s
 
 require 127.0.0.1/gomodule.git v1.0.0
 
 require 127.0.0.1/dependent-gomodule.git v1.0.0 // indirect
 
 replace 127.0.0.1/dependent-gomodule.git v1.0.0 => ../
-`,
+`, goVersion),
 				},
 				skipOpen: true,
 			},
@@ -660,10 +643,10 @@ plugins:
 
 var Dependency = "local-dependent"
 `,
-					"src/local/go.mod": `module 127.0.0.1/dependent-gomodule.git
+					"src/local/go.mod": fmt.Sprintf(`module 127.0.0.1/dependent-gomodule.git
 
-go 1.21
-`,
+go %s
+`, goVersion),
 					"src/plugin1/main.go": `package main
 
 import (
@@ -674,16 +657,16 @@ import (
 
 var Dependency = fmt.Sprintf("plugin => %s", gomodule.Dependency)
 `,
-					"src/plugin1/go.mod": `module plugin1
+					"src/plugin1/go.mod": fmt.Sprintf(`module plugin1
 
-go 1.21
+go %s
 
 require 127.0.0.1/gomodule.git v1.0.0
 
 require 127.0.0.1/dependent-gomodule.git v1.0.0 // indirect
 
 replace 127.0.0.1/dependent-gomodule.git => ./../local
-`,
+`, goVersion),
 					"src/plugin2/sub/main.go": `package main
 
 import (
@@ -694,28 +677,28 @@ import (
 
 var Dependency = fmt.Sprintf("plugin => %s", gomodule.Dependency)
 `,
-					"src/plugin2/sub/go.mod": `module plugin2
+					"src/plugin2/sub/go.mod": fmt.Sprintf(`module plugin2
 
-go 1.21
+go %s
 
 require 127.0.0.1/gomodule.git v1.1.0
 
 require 127.0.0.1/dependent-gomodule.git v1.0.0 // indirect
 
 replace 127.0.0.1/dependent-gomodule.git v1.0.0 => ../../local
-`,
+`, goVersion),
 					"src/plugin3/main.go": `package main
 
 import (
 	_ "127.0.0.1/dependent-gomodule.git"
 )
 `,
-					"src/plugin3/go.mod": `module plugin3
+					"src/plugin3/go.mod": fmt.Sprintf(`module plugin3
 
-go 1.21
+go %s
 
 require 127.0.0.1/dependent-gomodule.git v1.0.0
-`,
+`, goVersion),
 				},
 				expectPluginPaths: []string{
 					"gen/plugin1.so",
@@ -723,34 +706,34 @@ require 127.0.0.1/dependent-gomodule.git v1.0.0
 					"gen/plugin3.so",
 				},
 				expectGoMod: map[string]string{
-					"src/plugin1/go.mod": `module plugin1
+					"src/plugin1/go.mod": fmt.Sprintf(`module plugin1
 
-go 1.21
+go %s
 
 require 127.0.0.1/gomodule.git v1.1.0
 
 require 127.0.0.1/dependent-gomodule.git v1.0.0 // indirect
 
 replace 127.0.0.1/dependent-gomodule.git v1.0.0 => ../local
-`,
-					"src/plugin2/sub/go.mod": `module plugin2
+`, goVersion),
+					"src/plugin2/sub/go.mod": fmt.Sprintf(`module plugin2
 
-go 1.21
+go %s
 
 require 127.0.0.1/gomodule.git v1.1.0
 
 require 127.0.0.1/dependent-gomodule.git v1.0.0 // indirect
 
 replace 127.0.0.1/dependent-gomodule.git v1.0.0 => ../../local
-`,
-					"src/plugin3/go.mod": `module plugin3
+`, goVersion),
+					"src/plugin3/go.mod": fmt.Sprintf(`module plugin3
 
-go 1.21
+go %s
 
 require 127.0.0.1/dependent-gomodule.git v1.0.0
 
 replace 127.0.0.1/dependent-gomodule.git v1.0.0 => ../local
-`,
+`, goVersion),
 				},
 				skipOpen: true,
 			},
@@ -801,6 +784,7 @@ replace 127.0.0.1/dependent-gomodule.git v1.0.0 => ../local
 			}
 		})
 	})
+
 	t.Run("failure", func(t *testing.T) {
 		tests := map[string]struct {
 			config string
@@ -826,6 +810,19 @@ plugins:
 					"src/main.go": `packag plugin`,
 				},
 				expect: "expected 'package', found packag",
+			},
+			"go version is too high": {
+				config: `
+schemaVersion: config/v1
+plugins:
+  plugin.so:
+    src: src/main.go
+`,
+				files: map[string]string{
+					"src/main.go": `package plugin`,
+					"src/go.mod":  `go 100.0.0`,
+				},
+				expect: fmt.Sprintf(`failed to build plugin plugin.so: re-install scenarigo command with go100.0.0: "go mod tidy" failed: go: go.mod requires go >= 100.0.0 (running go %s; GOTOOLCHAIN=%s)`, goVersion, toolchain),
 			},
 			"invalid version": {
 				config: `
@@ -855,12 +852,12 @@ import (
 
 var Dependency = fmt.Sprintf("plugin => %s", gomodule.Dependency)
 `,
-					"src/plugin/go.mod": `module plugin1
+					"src/plugin/go.mod": fmt.Sprintf(`module plugin1
 
-go 1.21
+go %s
 
 require 127.0.0.1/gomodule.git v2.0.0
-`,
+`, goVersion),
 				},
 				expect: `require 127.0.0.1/gomodule.git: version "v2.0.0" invalid: should be v0 or v1, not v2`,
 			},
@@ -891,16 +888,16 @@ import (
 
 var Dependency = fmt.Sprintf("plugin => %s", gomodule.Dependency)
 `,
-					"src/plugin1/go.mod": `module plugin1
+					"src/plugin1/go.mod": fmt.Sprintf(`module plugin1
 
-go 1.21
+go %s
 
 require 127.0.0.1/gomodule.git v1.0.0
 
 require 127.0.0.1/dependent-gomodule.git v1.0.0 // indirect
 
 replace 127.0.0.1/dependent-gomodule.git v1.0.0 => ../local1
-`,
+`, goVersion),
 				},
 				expect: "replacement directory ../local1 does not exist",
 			},
@@ -924,16 +921,16 @@ import (
 
 var Dependency = fmt.Sprintf("plugin => %s", gomodule.Dependency)
 `,
-					"src/plugin1/go.mod": `module plugin1
+					"src/plugin1/go.mod": fmt.Sprintf(`module plugin1
 
-go 1.21
+go %s
 
 require 127.0.0.1/gomodule.git v1.0.0
 
 require 127.0.0.1/dependent-gomodule.git v1.0.0 // indirect
 
 replace 127.0.0.1/dependent-gomodule.git v1.0.0 => 127.0.0.1/dependent-gomodule.git v1.1.0
-`,
+`, goVersion),
 					"src/plugin2/main.go": `package main
 
 import (
@@ -944,16 +941,16 @@ import (
 
 var Dependency = fmt.Sprintf("plugin => %s", gomodule.Dependency)
 `,
-					"src/plugin2/go.mod": `module plugin2
+					"src/plugin2/go.mod": fmt.Sprintf(`module plugin2
 
-go 1.21
+go %s
 
 require 127.0.0.1/gomodule.git v1.1.0
 
 require 127.0.0.1/dependent-gomodule.git v1.0.0 // indirect
 
 replace 127.0.0.1/dependent-gomodule.git v1.0.0 => 127.0.0.1/dependent-gomodule.git/v2 v2.0.0
-`,
+`, goVersion),
 				},
 				expect: "replace 127.0.0.1/dependent-gomodule.git directive conflicts: plugin1.so => 127.0.0.1/dependent-gomodule.git v1.1.0, plugin2.so => 127.0.0.1/dependent-gomodule.git/v2 v2.0.0",
 			},
@@ -971,10 +968,10 @@ plugins:
 
 var Dependency = "local-dependent"
 `,
-					"src/local/go.mod": `module 127.0.0.1/dependent-gomodule.git
+					"src/local/go.mod": fmt.Sprintf(`module 127.0.0.1/dependent-gomodule.git
 
-go 1.21
-`,
+go %s
+`, goVersion),
 					"src/plugin1/main.go": `package main
 
 import (
@@ -985,16 +982,16 @@ import (
 
 var Dependency = fmt.Sprintf("plugin => %s", gomodule.Dependency)
 `,
-					"src/plugin1/go.mod": `module plugin1
+					"src/plugin1/go.mod": fmt.Sprintf(`module plugin1
 
-go 1.21
+go %s
 
 require 127.0.0.1/gomodule.git v1.0.0
 
 require 127.0.0.1/dependent-gomodule.git v1.0.0 // indirect
 
 replace 127.0.0.1/dependent-gomodule.git v1.0.0 => 127.0.0.1/dependent-gomodule.git v1.1.0
-`,
+`, goVersion),
 					"src/plugin2/main.go": `package main
 
 import (
@@ -1005,16 +1002,16 @@ import (
 
 var Dependency = fmt.Sprintf("plugin => %s", gomodule.Dependency)
 `,
-					"src/plugin2/go.mod": `module plugin2
+					"src/plugin2/go.mod": fmt.Sprintf(`module plugin2
 
-go 1.21
+go %s
 
 require 127.0.0.1/gomodule.git v1.1.0
 
 require 127.0.0.1/dependent-gomodule.git v1.0.0 // indirect
 
 replace 127.0.0.1/dependent-gomodule.git v1.0.0 => ../local
-`,
+`, goVersion),
 				},
 				expect: "replace 127.0.0.1/dependent-gomodule.git directive conflicts: plugin1.so => 127.0.0.1/dependent-gomodule.git v1.1.0, plugin2.so => ../local",
 			},
@@ -1032,18 +1029,18 @@ plugins:
 
 var Dependency = "local-dependent"
 `,
-					"src/local1/go.mod": `module 127.0.0.1/dependent-gomodule.git
+					"src/local1/go.mod": fmt.Sprintf(`module 127.0.0.1/dependent-gomodule.git
 
-go 1.21
-`,
+go %s
+`, goVersion),
 					"src/local2/main.go": `package dependent
 
 var Dependency = "local-dependent"
 `,
-					"src/local2/go.mod": `module 127.0.0.1/dependent-gomodule.git
+					"src/local2/go.mod": fmt.Sprintf(`module 127.0.0.1/dependent-gomodule.git
 
-go 1.21
-`,
+go %s
+`, goVersion),
 					"src/plugin1/main.go": `package main
 
 import (
@@ -1054,16 +1051,16 @@ import (
 
 var Dependency = fmt.Sprintf("plugin => %s", gomodule.Dependency)
 `,
-					"src/plugin1/go.mod": `module plugin1
+					"src/plugin1/go.mod": fmt.Sprintf(`module plugin1
 
-go 1.21
+go %s
 
 require 127.0.0.1/gomodule.git v1.0.0
 
 require 127.0.0.1/dependent-gomodule.git v1.0.0 // indirect
 
 replace 127.0.0.1/dependent-gomodule.git v1.0.0 => ../local1
-`,
+`, goVersion),
 					"src/plugin2/main.go": `package main
 
 import (
@@ -1074,16 +1071,16 @@ import (
 
 var Dependency = fmt.Sprintf("plugin => %s", gomodule.Dependency)
 `,
-					"src/plugin2/go.mod": `module plugin2
+					"src/plugin2/go.mod": fmt.Sprintf(`module plugin2
 
-go 1.21
+go %s
 
 require 127.0.0.1/gomodule.git v1.1.0
 
 require 127.0.0.1/dependent-gomodule.git v1.0.0 // indirect
 
 replace 127.0.0.1/dependent-gomodule.git v1.0.0 => ../local2
-`,
+`, goVersion),
 				},
 				expect: "replace 127.0.0.1/dependent-gomodule.git directive conflicts: plugin1.so => ../local1, plugin2.so => ../local2",
 			},
@@ -1142,16 +1139,9 @@ func TestFindGoCmd(t *testing.T) {
 			},
 			"minimum go version": {
 				cmds: map[string]string{
-					"go": fmt.Sprintf("go version %s linux/amd64", gomodVer),
+					"go": fmt.Sprintf("go version %s linux/amd64", goMinVer),
 				},
 				expect: "go",
-			},
-			"found gotip command": {
-				cmds: map[string]string{
-					"gotip": fmt.Sprintf("go version %s linux/amd64", goVer),
-				},
-				expect: "gotip",
-				tip:    true,
 			},
 		}
 		for name, test := range tests {
@@ -1162,7 +1152,7 @@ func TestFindGoCmd(t *testing.T) {
 					createExecutable(t, filepath.Join(tmpDir, cmd), stdout)
 				}
 				t.Setenv("PATH", tmpDir)
-				goCmd, err := findGoCmd(context.Background(), test.tip)
+				goCmd, err := findGoCmd(context.Background())
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -1184,7 +1174,7 @@ func TestFindGoCmd(t *testing.T) {
 				cmds: map[string]string{
 					"go": "go version go1.20 linux/amd64",
 				},
-				expect: fmt.Sprintf("required go %s or later but installed 1.20", gomodVer),
+				expect: fmt.Sprintf("required go %s or later but installed 1.20", goMinVer),
 			},
 		}
 		for name, test := range tests {
@@ -1195,7 +1185,7 @@ func TestFindGoCmd(t *testing.T) {
 					createExecutable(t, filepath.Join(tmpDir, cmd), stdout)
 				}
 				t.Setenv("PATH", tmpDir)
-				_, err := findGoCmd(context.Background(), false)
+				_, err := findGoCmd(context.Background())
 				if err == nil {
 					t.Fatal("no error")
 				}
@@ -1208,28 +1198,59 @@ func TestFindGoCmd(t *testing.T) {
 }
 
 func TestUpdateGoMod(t *testing.T) {
+	goVersion := strings.TrimPrefix(goVer, "go")
 	modVers := getModuleVersions(t)
-	tests := map[string]struct {
-		gomod        string
-		src          string
-		overrides    map[string]*overrideModule
-		expect       string
-		expectStdout string
-	}{
-		"do nothing": {
-			gomod: `module plugin_module
+
+	t.Run("success", func(t *testing.T) {
+		tests := map[string]struct {
+			gomod        string
+			src          string
+			overrides    map[string]*overrideModule
+			expect       string
+			expectStdout string
+		}{
+			"do nothing": {
+				gomod: fmt.Sprintf(`module plugin_module
+
+go %s
+`, goVersion),
+				expect: fmt.Sprintf(`module plugin_module
+
+go %s
+`, goVersion),
+			},
+			"add toolchain directive": {
+				gomod: `module plugin_module
 
 go 1.21
 `,
-			expect: `module plugin_module
+				expect: fmt.Sprintf(`module plugin_module
 
 go 1.21
+
+toolchain go%s
+`, goVersion),
+				expectStdout: fmt.Sprintf("WARN: test.so: add toolchain go%s by scenarigo\n", goVersion),
+			},
+			"change toolchain directive": {
+				gomod: `module plugin_module
+
+go 1.21
+
+toolchain go1.21.1
 `,
-		},
-		"do nothing (no requires)": {
-			gomod: `module plugin_module
+				expect: fmt.Sprintf(`module plugin_module
 
 go 1.21
+
+toolchain go%s
+`, goVersion),
+				expectStdout: fmt.Sprintf("WARN: test.so: change toolchain go1.21.1 ==> go%s by scenarigo\n", goVersion),
+			},
+			"do nothing (no requires)": {
+				gomod: fmt.Sprintf(`module plugin_module
+
+go %s
 
 require google.golang.org/grpc v1.37.1
 
@@ -1241,16 +1262,16 @@ require (
 	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013 // indirect
 	google.golang.org/protobuf v1.25.0 // indirect
 )
-`,
-			src: `package main
+`, goVersion),
+				src: `package main
 
 import (
 	_ "google.golang.org/grpc"
 )
 `,
-			expect: `module plugin_module
+				expect: fmt.Sprintf(`module plugin_module
 
-go 1.21
+go %s
 
 require google.golang.org/grpc v1.37.1
 
@@ -1262,60 +1283,60 @@ require (
 	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013 // indirect
 	google.golang.org/protobuf v1.25.0 // indirect
 )
-`,
-		},
-		"do nothing (not used)": {
-			gomod: `module plugin_module
+`, goVersion),
+			},
+			"do nothing (not used)": {
+				gomod: fmt.Sprintf(`module plugin_module
 
-go 1.21
+go %s
 
 require github.com/zoncoen/scenarigo v0.11.2
 
 replace github.com/zoncoen/scenarigo v0.11.2 => github.com/zoncoen/scenarigo v0.11.0
-`,
-			overrides: map[string]*overrideModule{
-				"google.golang.org/grpc": {
-					require: &modfile.Require{
-						Mod: module.Version{
-							Path:    "google.golang.org/grpc",
-							Version: "v1.37.1",
+`, goVersion),
+				overrides: map[string]*overrideModule{
+					"google.golang.org/grpc": {
+						require: &modfile.Require{
+							Mod: module.Version{
+								Path:    "google.golang.org/grpc",
+								Version: "v1.37.1",
+							},
 						},
+						requiredBy: "test",
 					},
-					requiredBy: "test",
 				},
+				expect: fmt.Sprintf(`module plugin_module
+
+go %s
+`, goVersion),
+				expectStdout: `WARN: test.so: remove replace github.com/zoncoen/scenarigo v0.11.2 => github.com/zoncoen/scenarigo v0.11.0
+`,
 			},
-			expect: `module plugin_module
+			"add require": {
+				gomod: fmt.Sprintf(`module plugin_module
 
-go 1.21
-`,
-			expectStdout: `WARN: test.so: remove replace github.com/zoncoen/scenarigo v0.11.2 => github.com/zoncoen/scenarigo v0.11.0
-`,
-		},
-		"add require": {
-			gomod: `module plugin_module
-
-go 1.21
-`,
-			src: `package main
+go %s
+`, goVersion),
+				src: `package main
 
 import (
 	_ "google.golang.org/grpc"
 )
 `,
-			overrides: map[string]*overrideModule{
-				"google.golang.org/grpc": {
-					require: &modfile.Require{
-						Mod: module.Version{
-							Path:    "google.golang.org/grpc",
-							Version: "v1.37.1",
+				overrides: map[string]*overrideModule{
+					"google.golang.org/grpc": {
+						require: &modfile.Require{
+							Mod: module.Version{
+								Path:    "google.golang.org/grpc",
+								Version: "v1.37.1",
+							},
 						},
+						requiredBy: "test",
 					},
-					requiredBy: "test",
 				},
-			},
-			expect: `module plugin_module
+				expect: fmt.Sprintf(`module plugin_module
 
-go 1.21
+go %s
 
 require google.golang.org/grpc v1.37.1
 
@@ -1327,14 +1348,14 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240318140521-94a12d6c2237 // indirect
 	google.golang.org/protobuf v1.33.0 // indirect
 )
-`,
-			expectStdout: fmt.Sprintf(`WARN: test.so: change require google.golang.org/grpc %s ==> v1.37.1 by test
+`, goVersion),
+				expectStdout: fmt.Sprintf(`WARN: test.so: change require google.golang.org/grpc %s ==> v1.37.1 by test
 `, modVers["google.golang.org/grpc"]),
-		},
-		"overwrite require by require": {
-			gomod: `module plugin_module
+			},
+			"overwrite require by require": {
+				gomod: fmt.Sprintf(`module plugin_module
 
-go 1.21
+go %s
 
 require google.golang.org/grpc v1.37.1
 
@@ -1346,27 +1367,27 @@ require (
 	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013 // indirect
 	google.golang.org/protobuf v1.25.0 // indirect
 )
-`,
-			src: `package main
+`, goVersion),
+				src: `package main
 
 import (
 	_ "google.golang.org/grpc"
 )
 `,
-			overrides: map[string]*overrideModule{
-				"google.golang.org/grpc": {
-					require: &modfile.Require{
-						Mod: module.Version{
-							Path:    "google.golang.org/grpc",
-							Version: "v1.40.0",
+				overrides: map[string]*overrideModule{
+					"google.golang.org/grpc": {
+						require: &modfile.Require{
+							Mod: module.Version{
+								Path:    "google.golang.org/grpc",
+								Version: "v1.40.0",
+							},
 						},
+						requiredBy: "test",
 					},
-					requiredBy: "test",
 				},
-			},
-			expect: `module plugin_module
+				expect: fmt.Sprintf(`module plugin_module
 
-go 1.21
+go %s
 
 require google.golang.org/grpc v1.40.0
 
@@ -1378,14 +1399,14 @@ require (
 	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013 // indirect
 	google.golang.org/protobuf v1.25.0 // indirect
 )
+`, goVersion),
+				expectStdout: `WARN: test.so: change require google.golang.org/grpc v1.37.1 ==> v1.40.0 by test
 `,
-			expectStdout: `WARN: test.so: change require google.golang.org/grpc v1.37.1 ==> v1.40.0 by test
-`,
-		},
-		"overwrite require by replace": {
-			gomod: `module plugin_module
+			},
+			"overwrite require by replace": {
+				gomod: fmt.Sprintf(`module plugin_module
 
-go 1.21
+go %s
 
 require google.golang.org/grpc v1.37.1
 
@@ -1397,38 +1418,38 @@ require (
 	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013 // indirect
 	google.golang.org/protobuf v1.25.0 // indirect
 )
-`,
-			src: `package main
+`, goVersion),
+				src: `package main
 
 import (
 	_ "google.golang.org/grpc"
 )
 `,
-			overrides: map[string]*overrideModule{
-				"google.golang.org/grpc": {
-					require: &modfile.Require{
-						Mod: module.Version{
-							Path:    "google.golang.org/grpc",
-							Version: "v1.46.0",
+				overrides: map[string]*overrideModule{
+					"google.golang.org/grpc": {
+						require: &modfile.Require{
+							Mod: module.Version{
+								Path:    "google.golang.org/grpc",
+								Version: "v1.46.0",
+							},
 						},
+						requiredBy: "test",
+						replace: &modfile.Replace{
+							Old: module.Version{
+								Path:    "google.golang.org/grpc",
+								Version: "v1.46.0",
+							},
+							New: module.Version{
+								Path:    "google.golang.org/grpc",
+								Version: "v1.40.0",
+							},
+						},
+						replacedBy: "test",
 					},
-					requiredBy: "test",
-					replace: &modfile.Replace{
-						Old: module.Version{
-							Path:    "google.golang.org/grpc",
-							Version: "v1.46.0",
-						},
-						New: module.Version{
-							Path:    "google.golang.org/grpc",
-							Version: "v1.40.0",
-						},
-					},
-					replacedBy: "test",
 				},
-			},
-			expect: `module plugin_module
+				expect: fmt.Sprintf(`module plugin_module
 
-go 1.21
+go %s
 
 require google.golang.org/grpc v1.40.0
 
@@ -1440,14 +1461,14 @@ require (
 	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013 // indirect
 	google.golang.org/protobuf v1.25.0 // indirect
 )
+`, goVersion),
+				expectStdout: `WARN: test.so: change require google.golang.org/grpc v1.37.1 ==> v1.40.0 by test
 `,
-			expectStdout: `WARN: test.so: change require google.golang.org/grpc v1.37.1 ==> v1.40.0 by test
-`,
-		},
-		"do nothing (same version)": {
-			gomod: `module plugin_module
+			},
+			"do nothing (same version)": {
+				gomod: fmt.Sprintf(`module plugin_module
 
-go 1.21
+go %s
 
 require google.golang.org/grpc v1.37.1
 
@@ -1459,27 +1480,27 @@ require (
 	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013 // indirect
 	google.golang.org/protobuf v1.25.0 // indirect
 )
-`,
-			src: `package main
+`, goVersion),
+				src: `package main
 
 import (
 	_ "google.golang.org/grpc"
 )
 `,
-			overrides: map[string]*overrideModule{
-				"google.golang.org/grpc": {
-					require: &modfile.Require{
-						Mod: module.Version{
-							Path:    "google.golang.org/grpc",
-							Version: "v1.37.1",
+				overrides: map[string]*overrideModule{
+					"google.golang.org/grpc": {
+						require: &modfile.Require{
+							Mod: module.Version{
+								Path:    "google.golang.org/grpc",
+								Version: "v1.37.1",
+							},
 						},
+						requiredBy: "test",
 					},
-					requiredBy: "test",
 				},
-			},
-			expect: `module plugin_module
+				expect: fmt.Sprintf(`module plugin_module
 
-go 1.21
+go %s
 
 require google.golang.org/grpc v1.37.1
 
@@ -1491,12 +1512,12 @@ require (
 	google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013 // indirect
 	google.golang.org/protobuf v1.25.0 // indirect
 )
-`,
-		},
-		"add replace": {
-			gomod: `module plugin_module
+`, goVersion),
+			},
+			"add replace": {
+				gomod: fmt.Sprintf(`module plugin_module
 
-go 1.21
+go %s
 
 require github.com/zoncoen/scenarigo v0.11.2
 
@@ -1518,27 +1539,27 @@ require (
 	google.golang.org/grpc v1.46.0 // indirect
 	google.golang.org/protobuf v1.28.0 // indirect
 )
-`,
-			src: `package main
+`, goVersion),
+				src: `package main
 
 import (
 	_ "github.com/zoncoen/scenarigo/protocol/grpc"
 )
 `,
-			overrides: map[string]*overrideModule{
-				"google.golang.org/grpc": {
-					require: &modfile.Require{
-						Mod: module.Version{
-							Path:    "google.golang.org/grpc",
-							Version: "v1.40.0",
+				overrides: map[string]*overrideModule{
+					"google.golang.org/grpc": {
+						require: &modfile.Require{
+							Mod: module.Version{
+								Path:    "google.golang.org/grpc",
+								Version: "v1.40.0",
+							},
 						},
+						requiredBy: "test",
 					},
-					requiredBy: "test",
 				},
-			},
-			expect: `module plugin_module
+				expect: fmt.Sprintf(`module plugin_module
 
-go 1.21
+go %s
 
 require github.com/zoncoen/scenarigo v0.11.2
 
@@ -1562,14 +1583,14 @@ require (
 )
 
 replace google.golang.org/grpc v1.46.0 => google.golang.org/grpc v1.40.0
+`, goVersion),
+				expectStdout: `WARN: test.so: add replace google.golang.org/grpc v1.46.0 => google.golang.org/grpc v1.40.0 by test
 `,
-			expectStdout: `WARN: test.so: add replace google.golang.org/grpc v1.46.0 => google.golang.org/grpc v1.40.0 by test
-`,
-		},
-		"overwrite replace by require": {
-			gomod: `module plugin_module
+			},
+			"overwrite replace by require": {
+				gomod: fmt.Sprintf(`module plugin_module
 
-go 1.21
+go %s
 
 require github.com/zoncoen/scenarigo v0.11.2
 
@@ -1593,27 +1614,27 @@ require (
 )
 
 replace google.golang.org/grpc v1.46.0 => google.golang.org/grpc v1.40.0
-`,
-			src: `package main
+`, goVersion),
+				src: `package main
 
 import (
 	_ "github.com/zoncoen/scenarigo/protocol/grpc"
 )
 `,
-			overrides: map[string]*overrideModule{
-				"google.golang.org/grpc": {
-					require: &modfile.Require{
-						Mod: module.Version{
-							Path:    "google.golang.org/grpc",
-							Version: "v1.40.1",
+				overrides: map[string]*overrideModule{
+					"google.golang.org/grpc": {
+						require: &modfile.Require{
+							Mod: module.Version{
+								Path:    "google.golang.org/grpc",
+								Version: "v1.40.1",
+							},
 						},
+						requiredBy: "test",
 					},
-					requiredBy: "test",
 				},
-			},
-			expect: `module plugin_module
+				expect: fmt.Sprintf(`module plugin_module
 
-go 1.21
+go %s
 
 require github.com/zoncoen/scenarigo v0.11.2
 
@@ -1637,14 +1658,14 @@ require (
 )
 
 replace google.golang.org/grpc v1.46.0 => google.golang.org/grpc v1.40.1
+`, goVersion),
+				expectStdout: `WARN: test.so: change replace google.golang.org/grpc v1.46.0 => google.golang.org/grpc v1.40.0 ==> google.golang.org/grpc v1.46.0 => google.golang.org/grpc v1.40.1 by test
 `,
-			expectStdout: `WARN: test.so: change replace google.golang.org/grpc v1.46.0 => google.golang.org/grpc v1.40.0 ==> google.golang.org/grpc v1.46.0 => google.golang.org/grpc v1.40.1 by test
-`,
-		},
-		"override replace by replace": {
-			gomod: `module plugin_module
+			},
+			"override replace by replace": {
+				gomod: fmt.Sprintf(`module plugin_module
 
-go 1.21
+go %s
 
 require github.com/zoncoen/scenarigo v0.11.2
 
@@ -1668,38 +1689,38 @@ require (
 )
 
 replace google.golang.org/grpc v1.46.0 => google.golang.org/grpc v1.40.0
-`,
-			src: `package main
+`, goVersion),
+				src: `package main
 
 import (
 	_ "github.com/zoncoen/scenarigo/protocol/grpc"
 )
 `,
-			overrides: map[string]*overrideModule{
-				"google.golang.org/grpc": {
-					require: &modfile.Require{
-						Mod: module.Version{
-							Path:    "google.golang.org/grpc",
-							Version: "v1.46.0",
+				overrides: map[string]*overrideModule{
+					"google.golang.org/grpc": {
+						require: &modfile.Require{
+							Mod: module.Version{
+								Path:    "google.golang.org/grpc",
+								Version: "v1.46.0",
+							},
 						},
+						requiredBy: "test",
+						replace: &modfile.Replace{
+							Old: module.Version{
+								Path:    "google.golang.org/grpc",
+								Version: "v1.46.0",
+							},
+							New: module.Version{
+								Path:    "google.golang.org/grpc",
+								Version: "v1.40.1",
+							},
+						},
+						replacedBy: "test",
 					},
-					requiredBy: "test",
-					replace: &modfile.Replace{
-						Old: module.Version{
-							Path:    "google.golang.org/grpc",
-							Version: "v1.46.0",
-						},
-						New: module.Version{
-							Path:    "google.golang.org/grpc",
-							Version: "v1.40.1",
-						},
-					},
-					replacedBy: "test",
 				},
-			},
-			expect: `module plugin_module
+				expect: fmt.Sprintf(`module plugin_module
 
-go 1.21
+go %s
 
 require github.com/zoncoen/scenarigo v0.11.2
 
@@ -1723,14 +1744,14 @@ require (
 )
 
 replace google.golang.org/grpc v1.46.0 => google.golang.org/grpc v1.40.1
+`, goVersion),
+				expectStdout: `WARN: test.so: change replace google.golang.org/grpc v1.46.0 => google.golang.org/grpc v1.40.0 ==> google.golang.org/grpc v1.46.0 => google.golang.org/grpc v1.40.1 by test
 `,
-			expectStdout: `WARN: test.so: change replace google.golang.org/grpc v1.46.0 => google.golang.org/grpc v1.40.0 ==> google.golang.org/grpc v1.46.0 => google.golang.org/grpc v1.40.1 by test
-`,
-		},
-		"do nothing (alredy replaced)": {
-			gomod: `module plugin_module
+			},
+			"do nothing (alredy replaced)": {
+				gomod: fmt.Sprintf(`module plugin_module
 
-go 1.21
+go %s
 
 require github.com/zoncoen/scenarigo v0.11.2
 
@@ -1754,27 +1775,27 @@ require (
 )
 
 replace google.golang.org/grpc v1.46.0 => google.golang.org/grpc v1.40.0
-`,
-			src: `package main
+`, goVersion),
+				src: `package main
 
 import (
 	_ "github.com/zoncoen/scenarigo/protocol/grpc"
 )
 `,
-			overrides: map[string]*overrideModule{
-				"google.golang.org/grpc": {
-					require: &modfile.Require{
-						Mod: module.Version{
-							Path:    "google.golang.org/grpc",
-							Version: "v1.40.0",
+				overrides: map[string]*overrideModule{
+					"google.golang.org/grpc": {
+						require: &modfile.Require{
+							Mod: module.Version{
+								Path:    "google.golang.org/grpc",
+								Version: "v1.40.0",
+							},
 						},
+						requiredBy: "test",
 					},
-					requiredBy: "test",
 				},
-			},
-			expect: `module plugin_module
+				expect: fmt.Sprintf(`module plugin_module
 
-go 1.21
+go %s
 
 require github.com/zoncoen/scenarigo v0.11.2
 
@@ -1798,57 +1819,111 @@ require (
 )
 
 replace google.golang.org/grpc v1.46.0 => google.golang.org/grpc v1.40.0
+`, goVersion),
+				expectStdout: "", // don't print the warn log if already replaced
+			},
+		}
+		for name, test := range tests {
+			test := test
+			t.Run(name, func(t *testing.T) {
+				tmpDir := t.TempDir()
+				gomod := filepath.Join(tmpDir, "go.mod")
+				create(t, gomod, test.gomod)
+				if test.src != "" {
+					create(t, filepath.Join(tmpDir, "main.go"), test.src)
+				}
+
+				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				defer cancel()
+				goCmd, err := findGoCmd(ctx)
+				if err != nil {
+					t.Fatalf("failed to find go command: %s", err)
+				}
+
+				overrideKeys := make([]string, 0, len(test.overrides))
+				for k := range test.overrides {
+					overrideKeys = append(overrideKeys, k)
+				}
+				sort.Strings(overrideKeys)
+
+				cmd := &cobra.Command{}
+				var stdout bytes.Buffer
+				cmd.SetOutput(&stdout)
+				if err := updateGoMod(cmd, goCmd, "test.so", gomod, overrideKeys, test.overrides); err != nil {
+					t.Fatalf("failed to update go.mod: %s", err)
+				}
+
+				b, err := os.ReadFile(gomod)
+				if err != nil {
+					t.Fatalf("failed read go.mod: %s", err)
+				}
+				if got := string(b); got != test.expect {
+					dmp := diffmatchpatch.New()
+					diffs := dmp.DiffMain(test.expect, got, false)
+					t.Errorf("go.mod differs:\n%s", dmp.DiffPrettyText(diffs))
+				}
+
+				if got := strings.ReplaceAll(stdout.String(), gomod, "/path/to/go.mod"); got != test.expectStdout {
+					dmp := diffmatchpatch.New()
+					diffs := dmp.DiffMain(test.expectStdout, got, false)
+					t.Errorf("stdout differs:\n%s", dmp.DiffPrettyText(diffs))
+				}
+			})
+		}
+	})
+
+	t.Run("failure", func(t *testing.T) {
+		tests := map[string]struct {
+			gomod     string
+			src       string
+			overrides map[string]*overrideModule
+			expect    string
+		}{
+			"too high": {
+				gomod: `module plugin_module
+
+go 100.0.0
 `,
-			expectStdout: "", // don't print the warn log if already replaced
-		},
-	}
-	for name, test := range tests {
-		test := test
-		t.Run(name, func(t *testing.T) {
-			tmpDir := t.TempDir()
-			gomod := filepath.Join(tmpDir, "go.mod")
-			create(t, gomod, test.gomod)
-			if test.src != "" {
-				create(t, filepath.Join(tmpDir, "main.go"), test.src)
-			}
+				expect: fmt.Sprintf("go.mod requires go >= 100.0.0 (running go %s)", goVer),
+			},
+		}
+		for name, test := range tests {
+			test := test
+			t.Run(name, func(t *testing.T) {
+				tmpDir := t.TempDir()
+				gomod := filepath.Join(tmpDir, "go.mod")
+				create(t, gomod, test.gomod)
+				if test.src != "" {
+					create(t, filepath.Join(tmpDir, "main.go"), test.src)
+				}
 
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			defer cancel()
-			goCmd, err := findGoCmd(ctx, false)
-			if err != nil {
-				t.Fatalf("failed to find go command: %s", err)
-			}
+				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				defer cancel()
+				goCmd, err := findGoCmd(ctx)
+				if err != nil {
+					t.Fatalf("failed to find go command: %s", err)
+				}
 
-			overrideKeys := make([]string, 0, len(test.overrides))
-			for k := range test.overrides {
-				overrideKeys = append(overrideKeys, k)
-			}
-			sort.Strings(overrideKeys)
+				overrideKeys := make([]string, 0, len(test.overrides))
+				for k := range test.overrides {
+					overrideKeys = append(overrideKeys, k)
+				}
+				sort.Strings(overrideKeys)
 
-			cmd := &cobra.Command{}
-			var stdout bytes.Buffer
-			cmd.SetOutput(&stdout)
-			if err := updateGoMod(cmd, goCmd, "test.so", gomod, overrideKeys, test.overrides); err != nil {
-				t.Fatalf("failed to update go.mod: %s", err)
-			}
+				cmd := &cobra.Command{}
+				var stdout bytes.Buffer
+				cmd.SetOutput(&stdout)
 
-			b, err := os.ReadFile(gomod)
-			if err != nil {
-				t.Fatalf("failed read go.mod: %s", err)
-			}
-			if got := string(b); got != test.expect {
-				dmp := diffmatchpatch.New()
-				diffs := dmp.DiffMain(test.expect, got, false)
-				t.Errorf("go.mod differs:\n%s", dmp.DiffPrettyText(diffs))
-			}
-
-			if got := strings.ReplaceAll(stdout.String(), gomod, "/path/to/go.mod"); got != test.expectStdout {
-				dmp := diffmatchpatch.New()
-				diffs := dmp.DiffMain(test.expectStdout, got, false)
-				t.Errorf("stdout differs:\n%s", dmp.DiffPrettyText(diffs))
-			}
-		})
-	}
+				err = updateGoMod(cmd, goCmd, "test.so", gomod, overrideKeys, test.overrides)
+				if err == nil {
+					t.Fatal("no error")
+				}
+				if !strings.Contains(err.Error(), test.expect) {
+					t.Fatalf("expected %q but got %q", test.expect, err)
+				}
+			})
+		}
+	})
 }
 
 func setupGitServer(t *testing.T, goCmd string) {
@@ -1886,16 +1961,16 @@ func setupGitServer(t *testing.T, goCmd string) {
 		fmt.Sprintf("GOMODCACHE=%s", filepath.Join(tempDir, ".cache")),
 	}
 	t.Cleanup(func() {
-		if err := executeWithEnvs(ctx, envs, tempDir, goCmd, "clean", "-modcache"); err != nil {
+		if _, err := executeWithEnvs(ctx, envs, tempDir, goCmd, "clean", "-modcache"); err != nil {
 			t.Errorf("go clean -modcache failed: %s", err)
 		}
 	})
 
 	// create git objects for test repositories
-	if err := executeWithEnvs(ctx, envs, tempDir, "git", "config", "--global", "user.name", "scenarigo-test"); err != nil {
+	if _, err := executeWithEnvs(ctx, envs, tempDir, "git", "config", "--global", "user.name", "scenarigo-test"); err != nil {
 		t.Fatalf("git config failed: %s", err)
 	}
-	if err := executeWithEnvs(ctx, envs, tempDir, "git", "config", "--global", "user.email", "scenarigo-test@example.com"); err != nil {
+	if _, err := executeWithEnvs(ctx, envs, tempDir, "git", "config", "--global", "user.email", "scenarigo-test@example.com"); err != nil {
 		t.Fatalf("git config failed: %s", err)
 	}
 	repoDir := filepath.Join("testdata", "git")
@@ -1909,7 +1984,7 @@ func setupGitServer(t *testing.T, goCmd string) {
 		}
 		wd := filepath.Join(repoDir, e.Name())
 		if _, err := os.Stat(filepath.Join(wd, "go.mod")); err == nil {
-			if err := executeWithEnvs(ctx, envs, wd, goCmd, "mod", "tidy"); err != nil {
+			if _, err := executeWithEnvs(ctx, envs, wd, goCmd, "mod", "tidy"); err != nil {
 				t.Fatalf("go mod tidy failed: %s", err)
 			}
 			t.Cleanup(func() {
@@ -1917,33 +1992,33 @@ func setupGitServer(t *testing.T, goCmd string) {
 			})
 		}
 		if _, err := os.Stat(filepath.Join(wd, "v2", "go.mod")); err == nil {
-			if err := executeWithEnvs(ctx, envs, filepath.Join(wd, "v2"), goCmd, "mod", "tidy"); err != nil {
+			if _, err := executeWithEnvs(ctx, envs, filepath.Join(wd, "v2"), goCmd, "mod", "tidy"); err != nil {
 				t.Fatalf("go mod tidy failed: %s", err)
 			}
 			t.Cleanup(func() {
 				os.RemoveAll(filepath.Join(wd, "v2", "go.sum"))
 			})
 		}
-		if err := executeWithEnvs(ctx, envs, wd, "git", "init"); err != nil {
+		if _, err := executeWithEnvs(ctx, envs, wd, "git", "init"); err != nil {
 			t.Fatalf("git init failed: %s", err)
 		}
 		t.Cleanup(func() {
 			os.RemoveAll(filepath.Join(wd, ".git"))
 		})
-		if err := executeWithEnvs(ctx, envs, wd, "git", "add", "-A"); err != nil {
+		if _, err := executeWithEnvs(ctx, envs, wd, "git", "add", "-A"); err != nil {
 			t.Fatalf("git add failed: %s", err)
 		}
-		if err := executeWithEnvs(ctx, envs, wd, "git", "commit", "-m", "commit"); err != nil {
+		if _, err := executeWithEnvs(ctx, envs, wd, "git", "commit", "-m", "commit"); err != nil {
 			t.Fatalf("git commit failed: %s", err)
 		}
-		if err := executeWithEnvs(ctx, envs, wd, "git", "tag", "v1.0.0"); err != nil {
+		if _, err := executeWithEnvs(ctx, envs, wd, "git", "tag", "v1.0.0"); err != nil {
 			t.Fatalf("git tag failed: %s", err)
 		}
-		if err := executeWithEnvs(ctx, envs, wd, "git", "tag", "v1.1.0"); err != nil {
+		if _, err := executeWithEnvs(ctx, envs, wd, "git", "tag", "v1.1.0"); err != nil {
 			t.Fatalf("git tag failed: %s", err)
 		}
 		if _, err := os.Stat(filepath.Join(wd, "v2")); err == nil {
-			if err := executeWithEnvs(ctx, envs, wd, "git", "tag", "v2.0.0"); err != nil {
+			if _, err := executeWithEnvs(ctx, envs, wd, "git", "tag", "v2.0.0"); err != nil {
 				t.Fatalf("git tag failed: %s", err)
 			}
 		}

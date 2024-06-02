@@ -72,12 +72,21 @@ This command requires go command in $PATH.
 
 var warnColor = color.New(color.Bold, color.FgYellow)
 
+type retriableError struct {
+	reason string
+}
+
+func (e *retriableError) Error() string {
+	return fmt.Sprintf("retriable error: %s", e.reason)
+}
+
 type overrideModule struct {
 	require          *modfile.Require
 	requiredBy       string
 	replace          *modfile.Replace
 	replacedBy       string
 	replaceLocalPath string
+	force            bool
 }
 
 func (o *overrideModule) requireReplace() (*modfile.Require, string, *modfile.Replace, string) {
@@ -136,38 +145,66 @@ func buildRun(cmd *cobra.Command, args []string) error {
 		pbs = append(pbs, pb)
 	}
 
-	overrides, err := selectUnifiedVersions(pbs)
-	if err != nil {
-		return fmt.Errorf("failed to build plugin: %w", err)
-	}
+	var overrides map[string]*overrideModule
+	var retriableErrors []string
+	for {
+		overrides, err = selectUnifiedVersions(pbs)
+		if err != nil {
+			return fmt.Errorf("failed to build plugin: %w", err)
+		}
 
-	for m, o := range pluginModules {
-		overrides[m] = &overrideModule{
-			require:    o.require,
-			requiredBy: o.requiredBy,
+		for m, o := range pluginModules {
+			overrides[m] = &overrideModule{
+				require:    o.require,
+				requiredBy: o.requiredBy,
+				force:      true,
+			}
+		}
+
+		requires, err := requiredModulesByScenarigo()
+		if err != nil {
+			return err
+		}
+		for _, r := range requires {
+			overrides[r.Mod.Path] = &overrideModule{
+				require:    r,
+				requiredBy: "scenarigo",
+				force:      true,
+			}
+		}
+
+		overrideKeys := make([]string, 0, len(overrides))
+		for k := range overrides {
+			overrideKeys = append(overrideKeys, k)
+		}
+		sort.Strings(overrideKeys)
+
+		var retry bool
+		for _, pb := range pbs {
+			if err := pb.build(cmd, goCmd, overrideKeys, overrides); err != nil {
+				var re *retriableError
+				if errors.As(err, &re) {
+					msg := fmt.Sprintf("%s: %s", pb.name, err)
+					for _, e := range retriableErrors {
+						if e == msg {
+							return fmt.Errorf("failed to build plugin %s: failed to unify the module version: %w", pb.name, err)
+						}
+					}
+					retriableErrors = append(retriableErrors, msg)
+					retry = true
+				} else {
+					return fmt.Errorf("failed to build plugin %s: %w", pb.name, err)
+				}
+			}
+		}
+		if !retry {
+			break
 		}
 	}
-
-	requires, err := requiredModulesByScenarigo()
-	if err != nil {
-		return err
-	}
-	for _, r := range requires {
-		overrides[r.Mod.Path] = &overrideModule{
-			require:    r,
-			requiredBy: "scenarigo",
-		}
-	}
-
-	overrideKeys := make([]string, 0, len(overrides))
-	for k := range overrides {
-		overrideKeys = append(overrideKeys, k)
-	}
-	sort.Strings(overrideKeys)
 
 	for _, pb := range pbs {
-		if err := pb.build(cmd, goCmd, overrideKeys, overrides); err != nil {
-			return fmt.Errorf("failed to build plugin %s: %w", pb.name, err)
+		if err := pb.printUpdatedResult(cmd, goCmd, pb.name, pb.gomodPath, overrides); err != nil {
+			return err
 		}
 	}
 
@@ -228,6 +265,9 @@ func selectUnifiedVersions(pbs []*pluginBuilder) (map[string]*overrideModule, er
 			o.replace = r
 			o.replacedBy = pb.name
 			o.replaceLocalPath = localPath
+			if localPath != "" {
+				o.force = true
+			}
 			overrides[r.Old.Path] = o
 		}
 	}
@@ -354,12 +394,14 @@ func modSrcPath(tempDir, mod string) (string, string, *modfile.Require, error) {
 }
 
 type pluginBuilder struct {
-	name      string
-	dir       string
-	src       string
-	gomodPath string
-	gomod     *modfile.File
-	out       string
+	name            string
+	dir             string
+	src             string
+	gomodPath       string
+	gomod           *modfile.File
+	initialRequires map[string]modfile.Require
+	initialReplaces map[string]modfile.Replace
+	out             string
 }
 
 func newPluginBuilder(cmd *cobra.Command, goCmd, name, mod, src, out, defaultModName string) (*pluginBuilder, error) {
@@ -404,13 +446,16 @@ func newPluginBuilder(cmd *cobra.Command, goCmd, name, mod, src, out, defaultMod
 		return nil, fmt.Errorf("failed to parse %s: %w", gomodPath, err)
 	}
 
+	initialRequires, initialReplaces := getInitialState(gomod)
 	return &pluginBuilder{
-		name:      name,
-		dir:       dir,
-		src:       src,
-		gomodPath: gomodPath,
-		gomod:     gomod,
-		out:       out,
+		name:            name,
+		dir:             dir,
+		src:             src,
+		gomodPath:       gomodPath,
+		gomod:           gomod,
+		initialRequires: initialRequires,
+		initialReplaces: initialReplaces,
+		out:             out,
 	}, nil
 }
 
@@ -427,9 +472,21 @@ func modTidy(ctx context.Context, dir, goCmd string) error {
 	return nil
 }
 
+func getInitialState(gomod *modfile.File) (map[string]modfile.Require, map[string]modfile.Replace) {
+	initialRequires := map[string]modfile.Require{}
+	for _, r := range gomod.Require {
+		initialRequires[r.Mod.Path] = *r
+	}
+	initialReplaces := map[string]modfile.Replace{}
+	for _, r := range gomod.Replace {
+		initialReplaces[r.Old.Path] = *r
+	}
+	return initialRequires, initialReplaces
+}
+
 func (pb *pluginBuilder) build(cmd *cobra.Command, goCmd string, overrideKeys []string, overrides map[string]*overrideModule) error {
 	ctx := ctx(cmd)
-	if err := updateGoMod(cmd, goCmd, pb.name, pb.gomodPath, overrideKeys, overrides); err != nil {
+	if err := pb.updateGoMod(cmd, goCmd, overrideKeys, overrides); err != nil {
 		return err
 	}
 	if err := os.RemoveAll(pb.out); err != nil {
@@ -466,64 +523,52 @@ func executeWithEnvs(ctx context.Context, envs []string, wd, name string, args .
 	return stdout.String(), nil
 }
 
-func updateGoMod(cmd *cobra.Command, goCmd, name, gomodPath string, overrideKeys []string, overrides map[string]*overrideModule) error {
-	if err := editGoMod(cmd, goCmd, gomodPath, func(gomod *modfile.File) error {
+func (pb *pluginBuilder) updateGoMod(cmd *cobra.Command, goCmd string, overrideKeys []string, overrides map[string]*overrideModule) error {
+	if err := pb.editGoMod(cmd, goCmd, func(gomod *modfile.File) error {
 		switch compareVers(gomod.Go.Version, goVer) {
 		case -1: // go.mod < scenarigo go version
 			if gomod.Toolchain == nil {
-				fmt.Fprintf(cmd.OutOrStdout(), "%s: %s: add toolchain %s by scenarigo\n", warnColor.Sprint("WARN"), name, goVer)
+				fmt.Fprintf(cmd.OutOrStdout(), "%s: %s: add toolchain %s by scenarigo\n", warnColor.Sprint("WARN"), pb.name, goVer)
 			} else if gomod.Toolchain.Name != goVer {
-				fmt.Fprintf(cmd.OutOrStdout(), "%s: %s: change toolchain %s ==> %s by scenarigo\n", warnColor.Sprint("WARN"), name, gomod.Toolchain.Name, goVer)
+				fmt.Fprintf(cmd.OutOrStdout(), "%s: %s: change toolchain %s ==> %s by scenarigo\n", warnColor.Sprint("WARN"), pb.name, gomod.Toolchain.Name, goVer)
 			}
 			if err := gomod.AddToolchainStmt(goVer); err != nil {
-				return fmt.Errorf("%s: %w", gomodPath, err)
+				return fmt.Errorf("%s: %w", pb.gomodPath, err)
 			}
 		case 1: // go.mod > scenarigo go version
-			return fmt.Errorf("%s: go: go.mod requires go >= %s (running go %s)", gomodPath, gomod.Go.Version, goVer)
+			return fmt.Errorf("%s: go: go.mod requires go >= %s (running go %s)", pb.gomodPath, gomod.Go.Version, goVer)
 		}
 		return nil
 	}); err != nil {
 		return fmt.Errorf("failed to edit toolchain directive: %w", err)
 	}
 
-	initialRequires, initialReplaces, err := updateRequireDirectives(cmd, goCmd, gomodPath, overrides)
-	if err != nil {
+	if err := pb.updateRequireDirectives(cmd, goCmd, overrides); err != nil {
 		return err
 	}
-	if err := updateReplaceDirectives(cmd, goCmd, gomodPath, overrides, overrideKeys); err != nil {
-		return err
-	}
-	if err := printUpdatedResult(cmd, goCmd, name, gomodPath, overrides, initialRequires, initialReplaces); err != nil {
+	if err := pb.updateReplaceDirectives(cmd, goCmd, overrides, overrideKeys); err != nil {
 		return err
 	}
 	return nil
 }
 
-func updateRequireDirectives(cmd *cobra.Command, goCmd, gomodPath string, overrides map[string]*overrideModule) (map[string]modfile.Require, map[string]modfile.Replace, error) {
-	initialRequires := map[string]modfile.Require{}
-	initialReplaces := map[string]modfile.Replace{}
-	if err := editGoMod(cmd, goCmd, gomodPath, func(gomod *modfile.File) error {
-		for _, r := range gomod.Require {
-			initialRequires[r.Mod.Path] = *r
-		}
-		for _, r := range gomod.Replace {
-			initialReplaces[r.Old.Path] = *r
-		}
+func (pb *pluginBuilder) updateRequireDirectives(cmd *cobra.Command, goCmd string, overrides map[string]*overrideModule) error {
+	if err := pb.editGoMod(cmd, goCmd, func(gomod *modfile.File) error {
 		for _, o := range overrides {
 			require, _, _, _ := o.requireReplace()
 			if err := gomod.AddRequire(require.Mod.Path, require.Mod.Version); err != nil {
-				return fmt.Errorf("%s: %w", gomodPath, err)
+				return fmt.Errorf("%s: %w", pb.gomodPath, err)
 			}
 		}
 		return nil
 	}); err != nil {
-		return nil, nil, fmt.Errorf("failed to edit require directive: %w", err)
+		return fmt.Errorf("failed to edit require directive: %w", err)
 	}
-	return initialRequires, initialReplaces, nil
+	return nil
 }
 
-func updateReplaceDirectives(cmd *cobra.Command, goCmd, gomodPath string, overrides map[string]*overrideModule, overrideKeys []string) error {
-	if err := editGoMod(cmd, goCmd, gomodPath, func(gomod *modfile.File) error {
+func (pb *pluginBuilder) updateReplaceDirectives(cmd *cobra.Command, goCmd string, overrides map[string]*overrideModule, overrideKeys []string) error {
+	if err := pb.editGoMod(cmd, goCmd, func(gomod *modfile.File) error {
 		requires := map[string]string{}
 		for _, r := range gomod.Require {
 			requires[r.Mod.Path] = r.Mod.Version
@@ -532,7 +577,7 @@ func updateReplaceDirectives(cmd *cobra.Command, goCmd, gomodPath string, overri
 		for _, r := range gomod.Replace {
 			if _, ok := requires[r.Old.Path]; !ok {
 				if err := gomod.DropReplace(r.Old.Path, r.Old.Version); err != nil {
-					return fmt.Errorf("%s: %w", gomodPath, err)
+					return fmt.Errorf("%s: %w", pb.gomodPath, err)
 				}
 				continue
 			}
@@ -540,19 +585,26 @@ func updateReplaceDirectives(cmd *cobra.Command, goCmd, gomodPath string, overri
 		}
 		for _, k := range overrideKeys {
 			o := overrides[k]
+
 			require, _, replace, _ := o.requireReplace()
 			if v, ok := replaces[require.Mod.Path]; ok {
 				if err := gomod.DropReplace(require.Mod.Path, v.Old.Version); err != nil {
-					return fmt.Errorf("%s: %w", gomodPath, err)
+					return fmt.Errorf("%s: %w", pb.gomodPath, err)
 				}
+				if o.replace != nil && !o.force && v.Old.Version != o.replace.Old.Version {
+					return &retriableError{
+						reason: fmt.Sprintf("change the replaced old version of %s from %s to %s", o.replace.Old.Path, o.replace.Old.Version, v.Old.Version),
+					}
+				}
+
 			}
 			if replace != nil {
 				if v, ok := requires[replace.Old.Path]; ok {
 					path := replace.New.Path
 					if o.replaceLocalPath != "" {
-						rel, err := filepath.Rel(filepath.Dir(gomodPath), o.replaceLocalPath)
+						rel, err := filepath.Rel(filepath.Dir(pb.gomodPath), o.replaceLocalPath)
 						if err != nil {
-							return fmt.Errorf("%s: %w", gomodPath, err)
+							return fmt.Errorf("%s: %w", pb.gomodPath, err)
 						}
 						// must be rooted or staring with ./ or ../
 						if sep := string(filepath.Separator); !strings.Contains(rel, sep) {
@@ -561,15 +613,25 @@ func updateReplaceDirectives(cmd *cobra.Command, goCmd, gomodPath string, overri
 						path = rel
 					}
 					if err := gomod.AddReplace(replace.Old.Path, v, path, replace.New.Version); err != nil {
-						return fmt.Errorf("%s: %w", gomodPath, err)
+						return fmt.Errorf("%s: %w", pb.gomodPath, err)
 					}
 				}
 			} else {
 				if v, ok := requires[require.Mod.Path]; ok {
-					if require.Mod.Version != v {
-						if err := gomod.AddReplace(require.Mod.Path, v, require.Mod.Path, require.Mod.Version); err != nil {
-							return fmt.Errorf("%s: %w", gomodPath, err)
+					switch compareVers(require.Mod.Version, v) {
+					case -1: // require.Mod.Version < v
+						if !o.force {
+							if o.replace == nil {
+								return &retriableError{
+									reason: fmt.Sprintf("change the maximum version of %s from %s to %s", require.Mod.Path, require.Mod.Version, v),
+								}
+							}
 						}
+					case 0: // require.Mod.Version == v
+						continue
+					}
+					if err := gomod.AddReplace(require.Mod.Path, v, require.Mod.Path, require.Mod.Version); err != nil {
+						return fmt.Errorf("%s: %w", pb.gomodPath, err)
 					}
 				}
 			}
@@ -591,13 +653,13 @@ type replaceDiff struct {
 	new modfile.Replace
 }
 
-func printUpdatedResult(cmd *cobra.Command, goCmd, name, gomodPath string, overrides map[string]*overrideModule, initialRequires map[string]modfile.Require, initialReplaces map[string]modfile.Replace) error {
+func (pb *pluginBuilder) printUpdatedResult(cmd *cobra.Command, goCmd, name, gomodPath string, overrides map[string]*overrideModule) error {
 	gomod, err := parseGoMod(cmd, goCmd, gomodPath)
 	if err != nil {
 		return err
 	}
-	printUpdatedRequires(cmd, name, overrides, initialRequires, gomod)
-	printUpdatedReplaces(cmd, name, overrides, initialReplaces, gomod)
+	printUpdatedRequires(cmd, name, overrides, pb.initialRequires, gomod)
+	printUpdatedReplaces(cmd, name, overrides, pb.initialReplaces, gomod)
 	return nil
 }
 
@@ -703,34 +765,47 @@ func printUpdatedReplaces(cmd *cobra.Command, name string, overrides map[string]
 	}
 }
 
-func editGoMod(cmd *cobra.Command, goCmd, gomodPath string, edit func(*modfile.File) error) error {
-	gomod, err := parseGoMod(cmd, goCmd, gomodPath)
-	if err != nil {
-		return fmt.Errorf("failed to parse %s: %w", gomodPath, err)
+func (pb *pluginBuilder) editGoMod(cmd *cobra.Command, goCmd string, edit func(*modfile.File) error) error {
+	if pb.gomod == nil {
+		gomod, err := parseGoMod(cmd, goCmd, pb.gomodPath)
+		if err != nil {
+			return fmt.Errorf("failed to parse %s: %w", pb.gomodPath, err)
+		}
+		pb.gomod = gomod
 	}
 
-	if err := edit(gomod); err != nil {
-		return fmt.Errorf("failed to edit %s: %w", gomodPath, err)
+	editErr := edit(pb.gomod)
+	if editErr != nil {
+		var re *retriableError
+		if !errors.As(editErr, &re) {
+			return fmt.Errorf("failed to edit %s: %w", pb.gomodPath, editErr)
+		}
+		return editErr
 	}
-	gomod.Cleanup()
-	edited, err := gomod.Format()
+	pb.gomod.Cleanup()
+	edited, err := pb.gomod.Format()
 	if err != nil {
-		return fmt.Errorf("failed to edit %s: %w", gomodPath, err)
+		return fmt.Errorf("failed to edit %s: %w", pb.gomodPath, err)
 	}
 
-	f, err := os.Create(gomodPath)
+	f, err := os.Create(pb.gomodPath)
 	if err != nil {
-		return fmt.Errorf("failed to edit %s: %w", gomodPath, err)
+		return fmt.Errorf("failed to edit %s: %w", pb.gomodPath, err)
 	}
 	defer f.Close()
 	if _, err := f.Write(edited); err != nil {
-		return fmt.Errorf("failed to edit %s: %w", gomodPath, err)
+		return fmt.Errorf("failed to edit %s: %w", pb.gomodPath, err)
 	}
-	if err := modTidy(ctx(cmd), filepath.Dir(gomodPath), goCmd); err != nil {
+	if err := modTidy(ctx(cmd), filepath.Dir(pb.gomodPath), goCmd); err != nil {
 		return err
 	}
 
-	return nil
+	pb.gomod, err = parseGoMod(cmd, goCmd, pb.gomodPath)
+	if err != nil {
+		return fmt.Errorf("failed to parse %s: %w", pb.gomodPath, err)
+	}
+
+	return editErr
 }
 
 func parseGoMod(cmd *cobra.Command, goCmd, gomodPath string) (*modfile.File, error) {

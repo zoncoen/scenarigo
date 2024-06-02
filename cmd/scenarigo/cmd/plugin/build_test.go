@@ -1551,10 +1551,21 @@ import (
 						require: &modfile.Require{
 							Mod: module.Version{
 								Path:    "google.golang.org/grpc",
-								Version: "v1.40.0",
+								Version: "v1.46.0",
 							},
 						},
 						requiredBy: "test",
+						replace: &modfile.Replace{
+							Old: module.Version{
+								Path:    "google.golang.org/grpc",
+								Version: "v1.46.0",
+							},
+							New: module.Version{
+								Path:    "google.golang.org/grpc",
+								Version: "v1.40.0",
+							},
+						},
+						replacedBy: "test",
 					},
 				},
 				expect: fmt.Sprintf(`module plugin_module
@@ -1585,81 +1596,6 @@ require (
 replace google.golang.org/grpc v1.46.0 => google.golang.org/grpc v1.40.0
 `, goVersion),
 				expectStdout: `WARN: test.so: add replace google.golang.org/grpc v1.46.0 => google.golang.org/grpc v1.40.0 by test
-`,
-			},
-			"overwrite replace by require": {
-				gomod: fmt.Sprintf(`module plugin_module
-
-go %s
-
-require github.com/zoncoen/scenarigo v0.11.2
-
-require (
-	github.com/fatih/color v1.13.0 // indirect
-	github.com/goccy/go-yaml v1.9.5 // indirect
-	github.com/golang/protobuf v1.5.2 // indirect
-	github.com/hashicorp/errwrap v1.0.0 // indirect
-	github.com/hashicorp/go-multierror v1.1.1 // indirect
-	github.com/mattn/go-colorable v0.1.12 // indirect
-	github.com/mattn/go-isatty v0.0.14 // indirect
-	github.com/pkg/errors v0.9.1 // indirect
-	github.com/zoncoen/query-go v1.1.0 // indirect
-	golang.org/x/net v0.0.0-20210813160813-60bc85c4be6d // indirect
-	golang.org/x/sys v0.0.0-20211205182925-97ca703d548d // indirect
-	golang.org/x/text v0.3.7 // indirect
-	golang.org/x/xerrors v0.0.0-20220411194840-2f41105eb62f // indirect
-	google.golang.org/genproto v0.0.0-20220413183235-5e96e2839df9 // indirect
-	google.golang.org/grpc v1.46.0 // indirect
-	google.golang.org/protobuf v1.28.0 // indirect
-)
-
-replace google.golang.org/grpc v1.46.0 => google.golang.org/grpc v1.40.0
-`, goVersion),
-				src: `package main
-
-import (
-	_ "github.com/zoncoen/scenarigo/protocol/grpc"
-)
-`,
-				overrides: map[string]*overrideModule{
-					"google.golang.org/grpc": {
-						require: &modfile.Require{
-							Mod: module.Version{
-								Path:    "google.golang.org/grpc",
-								Version: "v1.40.1",
-							},
-						},
-						requiredBy: "test",
-					},
-				},
-				expect: fmt.Sprintf(`module plugin_module
-
-go %s
-
-require github.com/zoncoen/scenarigo v0.11.2
-
-require (
-	github.com/fatih/color v1.13.0 // indirect
-	github.com/goccy/go-yaml v1.9.5 // indirect
-	github.com/golang/protobuf v1.5.2 // indirect
-	github.com/hashicorp/errwrap v1.0.0 // indirect
-	github.com/hashicorp/go-multierror v1.1.1 // indirect
-	github.com/mattn/go-colorable v0.1.12 // indirect
-	github.com/mattn/go-isatty v0.0.14 // indirect
-	github.com/pkg/errors v0.9.1 // indirect
-	github.com/zoncoen/query-go v1.1.0 // indirect
-	golang.org/x/net v0.0.0-20210813160813-60bc85c4be6d // indirect
-	golang.org/x/sys v0.0.0-20211205182925-97ca703d548d // indirect
-	golang.org/x/text v0.3.7 // indirect
-	golang.org/x/xerrors v0.0.0-20220411194840-2f41105eb62f // indirect
-	google.golang.org/genproto v0.0.0-20220413183235-5e96e2839df9 // indirect
-	google.golang.org/grpc v1.46.0 // indirect
-	google.golang.org/protobuf v1.28.0 // indirect
-)
-
-replace google.golang.org/grpc v1.46.0 => google.golang.org/grpc v1.40.1
-`, goVersion),
-				expectStdout: `WARN: test.so: change replace google.golang.org/grpc v1.46.0 => google.golang.org/grpc v1.40.0 ==> google.golang.org/grpc v1.46.0 => google.golang.org/grpc v1.40.1 by test
 `,
 			},
 			"override replace by replace": {
@@ -1748,7 +1684,7 @@ replace google.golang.org/grpc v1.46.0 => google.golang.org/grpc v1.40.1
 				expectStdout: `WARN: test.so: change replace google.golang.org/grpc v1.46.0 => google.golang.org/grpc v1.40.0 ==> google.golang.org/grpc v1.46.0 => google.golang.org/grpc v1.40.1 by test
 `,
 			},
-			"do nothing (alredy replaced)": {
+			"do nothing (already replaced)": {
 				gomod: fmt.Sprintf(`module plugin_module
 
 go %s
@@ -1787,10 +1723,21 @@ import (
 						require: &modfile.Require{
 							Mod: module.Version{
 								Path:    "google.golang.org/grpc",
-								Version: "v1.40.0",
+								Version: "v1.46.0",
 							},
 						},
 						requiredBy: "test",
+						replace: &modfile.Replace{
+							Old: module.Version{
+								Path:    "google.golang.org/grpc",
+								Version: "v1.46.0",
+							},
+							New: module.Version{
+								Path:    "google.golang.org/grpc",
+								Version: "v1.40.0",
+							},
+						},
+						replacedBy: "test",
 					},
 				},
 				expect: fmt.Sprintf(`module plugin_module
@@ -1849,8 +1796,16 @@ replace google.golang.org/grpc v1.46.0 => google.golang.org/grpc v1.40.0
 				cmd := &cobra.Command{}
 				var stdout bytes.Buffer
 				cmd.SetOutput(&stdout)
-				if err := updateGoMod(cmd, goCmd, "test.so", gomod, overrideKeys, test.overrides); err != nil {
+				pb, err := newPluginBuilder(cmd, goCmd, "test.so", gomod, test.src, filepath.Join(tmpDir, "test.so"), "test")
+				if err != nil {
+					t.Fatalf("failed to create plugin builder: %s", err)
+				}
+
+				if err := pb.updateGoMod(cmd, goCmd, overrideKeys, test.overrides); err != nil {
 					t.Fatalf("failed to update go.mod: %s", err)
+				}
+				if err := pb.printUpdatedResult(cmd, goCmd, pb.name, pb.gomodPath, test.overrides); err != nil {
+					t.Fatalf("failed to print updatet result: %s", err)
 				}
 
 				b, err := os.ReadFile(gomod)
@@ -1867,6 +1822,161 @@ replace google.golang.org/grpc v1.46.0 => google.golang.org/grpc v1.40.0
 					dmp := diffmatchpatch.New()
 					diffs := dmp.DiffMain(test.expectStdout, got, false)
 					t.Errorf("stdout differs:\n%s", dmp.DiffPrettyText(diffs))
+				}
+			})
+		}
+	})
+
+	t.Run("retry", func(t *testing.T) {
+		tests := map[string]struct {
+			gomod     string
+			src       string
+			overrides map[string]*overrideModule
+			expect    string
+		}{
+			"change the maximum version": {
+				gomod: fmt.Sprintf(`module plugin_module
+
+go %s
+
+require github.com/zoncoen/scenarigo v0.11.2
+
+require (
+	github.com/fatih/color v1.13.0 // indirect
+	github.com/goccy/go-yaml v1.9.5 // indirect
+	github.com/golang/protobuf v1.5.2 // indirect
+	github.com/hashicorp/errwrap v1.0.0 // indirect
+	github.com/hashicorp/go-multierror v1.1.1 // indirect
+	github.com/mattn/go-colorable v0.1.12 // indirect
+	github.com/mattn/go-isatty v0.0.14 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
+	github.com/zoncoen/query-go v1.1.0 // indirect
+	golang.org/x/net v0.0.0-20210813160813-60bc85c4be6d // indirect
+	golang.org/x/sys v0.0.0-20211205182925-97ca703d548d // indirect
+	golang.org/x/text v0.3.7 // indirect
+	golang.org/x/xerrors v0.0.0-20220411194840-2f41105eb62f // indirect
+	google.golang.org/genproto v0.0.0-20220413183235-5e96e2839df9 // indirect
+	google.golang.org/grpc v1.46.0 // indirect
+	google.golang.org/protobuf v1.28.0 // indirect
+)
+
+replace google.golang.org/grpc v1.46.0 => google.golang.org/grpc v1.40.0
+`, goVersion),
+				src: `package main
+
+import (
+	_ "github.com/zoncoen/scenarigo/protocol/grpc"
+)
+`,
+				overrides: map[string]*overrideModule{
+					"github.com/fatih/color": {
+						require: &modfile.Require{
+							Mod: module.Version{
+								Path:    "github.com/fatih/color",
+								Version: "v1.12.0",
+							},
+						},
+						requiredBy: "test",
+					},
+				},
+				expect: "failed to edit replace directive: retriable error: change the maximum version of github.com/fatih/color from v1.12.0 to v1.13.0",
+			},
+			"change the replaced old version": {
+				gomod: fmt.Sprintf(`module plugin_module
+
+go %s
+
+require github.com/zoncoen/scenarigo v0.11.2
+
+require (
+	github.com/fatih/color v1.13.0 // indirect
+	github.com/goccy/go-yaml v1.9.5 // indirect
+	github.com/golang/protobuf v1.5.2 // indirect
+	github.com/hashicorp/errwrap v1.0.0 // indirect
+	github.com/hashicorp/go-multierror v1.1.1 // indirect
+	github.com/mattn/go-colorable v0.1.12 // indirect
+	github.com/mattn/go-isatty v0.0.14 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
+	github.com/zoncoen/query-go v1.1.0 // indirect
+	golang.org/x/net v0.0.0-20210813160813-60bc85c4be6d // indirect
+	golang.org/x/sys v0.0.0-20211205182925-97ca703d548d // indirect
+	golang.org/x/text v0.3.7 // indirect
+	golang.org/x/xerrors v0.0.0-20220411194840-2f41105eb62f // indirect
+	google.golang.org/genproto v0.0.0-20220413183235-5e96e2839df9 // indirect
+	google.golang.org/grpc v1.46.0 // indirect
+	google.golang.org/protobuf v1.28.0 // indirect
+)
+
+replace google.golang.org/grpc v1.46.0 => google.golang.org/grpc v1.40.0
+`, goVersion),
+				src: `package main
+
+import (
+	_ "github.com/zoncoen/scenarigo/protocol/grpc"
+)
+`,
+				overrides: map[string]*overrideModule{
+					"google.golang.org/grpc": {
+						require: &modfile.Require{
+							Mod: module.Version{
+								Path:    "google.golang.org/grpc",
+								Version: "v1.45.0",
+							},
+						},
+						requiredBy: "test",
+						replace: &modfile.Replace{
+							Old: module.Version{
+								Path:    "google.golang.org/grpc",
+								Version: "v1.45.0",
+							},
+							New: module.Version{
+								Path:    "google.golang.org/grpc",
+								Version: "v1.40.0",
+							},
+						},
+						replacedBy: "test",
+					},
+				},
+				expect: "failed to edit replace directive: retriable error: change the replaced old version of google.golang.org/grpc from v1.45.0 to v1.46.0",
+			},
+		}
+		for name, test := range tests {
+			test := test
+			t.Run(name, func(t *testing.T) {
+				tmpDir := t.TempDir()
+				gomod := filepath.Join(tmpDir, "go.mod")
+				create(t, gomod, test.gomod)
+				if test.src != "" {
+					create(t, filepath.Join(tmpDir, "main.go"), test.src)
+				}
+
+				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				defer cancel()
+				goCmd, err := findGoCmd(ctx)
+				if err != nil {
+					t.Fatalf("failed to find go command: %s", err)
+				}
+
+				overrideKeys := make([]string, 0, len(test.overrides))
+				for k := range test.overrides {
+					overrideKeys = append(overrideKeys, k)
+				}
+				sort.Strings(overrideKeys)
+
+				cmd := &cobra.Command{}
+				var stdout bytes.Buffer
+				cmd.SetOutput(&stdout)
+
+				pb := &pluginBuilder{
+					name:      "test.so",
+					gomodPath: gomod,
+				}
+				err = pb.updateGoMod(cmd, goCmd, overrideKeys, test.overrides)
+				if err == nil {
+					t.Fatal("no error")
+				}
+				if !strings.Contains(err.Error(), test.expect) {
+					t.Fatalf("expected %q but got %q", test.expect, err)
 				}
 			})
 		}
@@ -1914,7 +2024,11 @@ go 100.0.0
 				var stdout bytes.Buffer
 				cmd.SetOutput(&stdout)
 
-				err = updateGoMod(cmd, goCmd, "test.so", gomod, overrideKeys, test.overrides)
+				pb := &pluginBuilder{
+					name:      "test.so",
+					gomodPath: gomod,
+				}
+				err = pb.updateGoMod(cmd, goCmd, overrideKeys, test.overrides)
 				if err == nil {
 					t.Fatal("no error")
 				}

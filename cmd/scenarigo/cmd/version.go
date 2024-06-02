@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"runtime"
 
 	"github.com/spf13/cobra"
 	"github.com/zoncoen/scenarigo/version"
@@ -15,11 +16,9 @@ var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: fmt.Sprintf("print %s version", appName),
 	Long:  fmt.Sprintf("Prints %s version.", appName),
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Fprintf(cmd.OutOrStdout(), "%s version %s\n", appName, version.String())
-	},
+	Run:   printVersion,
 }
 
 func printVersion(cmd *cobra.Command, args []string) {
-	fmt.Fprintf(cmd.OutOrStdout(), "%s version %s\n", appName, version.String())
+	fmt.Fprintf(cmd.OutOrStdout(), "%s version %s %s %s/%s\n", appName, version.String(), runtime.Version(), runtime.GOOS, runtime.GOARCH)
 }

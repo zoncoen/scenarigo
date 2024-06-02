@@ -3,6 +3,7 @@ package cmd
 import (
 	"bytes"
 	"fmt"
+	"runtime"
 	"testing"
 
 	"github.com/sergi/go-diff/diffmatchpatch"
@@ -15,7 +16,7 @@ func TestVersion(t *testing.T) {
 	cmd := &cobra.Command{}
 	cmd.SetOut(&b)
 	printVersion(cmd, nil)
-	if got, expect := b.String(), fmt.Sprintf("%s version %s\n", appName, version.String()); got != expect {
+	if got, expect := b.String(), fmt.Sprintf("%s version %s %s %s/%s\n", appName, version.String(), runtime.Version(), runtime.GOOS, runtime.GOARCH); got != expect {
 		dmp := diffmatchpatch.New()
 		diffs := dmp.DiffMain(expect, got, false)
 		t.Errorf("output differs:\n%s", dmp.DiffPrettyText(diffs))

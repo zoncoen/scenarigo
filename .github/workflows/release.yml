@@ -86,7 +86,7 @@ jobs:
       working-directory: ./go/src/github.com/${{ github.repository }}
       run: RELEASE_VERSION=${{ github.ref_name }} make changelog/ci && cat .CHANGELOG.md
     - name: Run GoReleaser
-      uses: goreleaser/goreleaser-action@v5
+      uses: goreleaser/goreleaser-action@v6
       with:
         version: latest
         args: release --clean --release-notes .CHANGELOG.md -f ./scripts/cross-build/.goreleaser.yml

@@ -60,14 +60,6 @@ MOCKGEN := $(BIN_DIR)/mockgen
 $(MOCKGEN): | $(BIN_DIR)
 	@$(GO) install github.com/golang/mock/mockgen@v1.6.0
 
-GOBUMP := $(BIN_DIR)/gobump
-$(GOBUMP): | $(BIN_DIR)
-	@$(GO) install github.com/x-motemen/gobump/cmd/gobump@afdfbf2804fecf41b963b1cf7fadfa8d81c7d820
-
-GIT_CHGLOG := $(BIN_DIR)/git-chglog
-$(GIT_CHGLOG): | $(BIN_DIR)
-	@$(GO) install github.com/git-chglog/git-chglog/cmd/git-chglog@v0.15.2
-
 GO_LICENSES := $(BIN_DIR)/go-licenses
 $(GO_LICENSES): | $(BIN_DIR)
 	@$(GO) install github.com/google/go-licenses@v1.6.0
@@ -216,19 +208,6 @@ gen/plugins:
 		echo "build plugin $$(basename $$dir).so"; \
 		$(GO) build -buildmode=plugin -o $(GEN_PLUGINS_DIR)/$$(basename $$dir).so $$dir; \
 	done
-
-.PHONY: release
-release: $(GOBUMP) $(GIT_CHGLOG) ## release new version
-	@$(CURDIR)/scripts/release.sh
-
-.PHONY: changelog
-changelog: $(GIT_CHGLOG) ## generate CHANGELOG.md
-	@git-chglog --tag-filter-pattern "^v[0-9]+.[0-9]+.[0-9]+$$" -o $(CURDIR)/CHANGELOG.md
-
-RELEASE_VERSION := $(RELEASE_VERSION)
-.PHONY: changelog/ci
-changelog/ci: $(GIT_CHGLOG) $(GOBUMP)
-	@git-chglog --tag-filter-pattern "^v[0-9]+.[0-9]+.[0-9]+$$|$(RELEASE_VERSION)" $(RELEASE_VERSION) > $(CURDIR)/.CHANGELOG.md
 
 .PHONY: credits
 credits: $(GO_LICENSES) $(GOCREDITS) ## generate CREDITS

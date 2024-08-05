@@ -1,16 +1,13 @@
 # CHANGELOG
 
-<a name="v0.17.3"></a>
 ## [v0.17.3] - 2024-04-14
 ### Bug Fixes
 - **release:** ensure the Docker image exists ([#411](https://github.com/zoncoen/scenarigo/issues/411))
 
-<a name="v0.17.2"></a>
 ## [v0.17.2] - 2024-03-21
 ### Features
 - add an option to output test summary at last ([#395](https://github.com/zoncoen/scenarigo/issues/395))
 
-<a name="v0.17.1"></a>
 ## [v0.17.1] - 2024-02-26
 ### Bug Fixes
 - **assert:** fix retry failure if using left arrow functions for assertion
@@ -21,7 +18,6 @@
 - bump the minimum go version
 - **plugin:** set GOTOOLCHAIN env for building plugins
 
-<a name="v0.17.0"></a>
 ## [v0.17.0] - 2024-01-26
 ### Bug Fixes
 - **assert:** fix errors when using assert.(and|or)
@@ -37,17 +33,14 @@
 
 template.Executefunction requires a context.Context value as an argument to avoid a goroutine leak.
 
-<a name="v0.16.2"></a>
 ## [v0.16.2] - 2023-11-02
 ### Bug Fixes
 - **template:** don't convert int to string
 
-<a name="v0.16.1"></a>
 ## [v0.16.1] - 2023-11-01
 ### Features
 - **grpc:** dump invalid utf8 strings as hex
 
-<a name="v0.16.0"></a>
 ## [v0.16.0] - 2023-10-24
 ### Bug Fixes
 - don't panic if the protocol is empty
@@ -68,12 +61,10 @@ template.Executefunction requires a context.Context value as an argument to avoi
 
 assert.Build function requires a context.Context value as an argument to avoid a goroutine leak.
 
-<a name="v0.15.1"></a>
 ## [v0.15.1] - 2023-09-15
 ### Code Refactoring
 - remove workaround
 
-<a name="v0.15.0"></a>
 ## [v0.15.0] - 2023-09-06
 ### Bug Fixes
 - **plugin:** setup plugins in the order in which they are registered
@@ -92,16 +83,13 @@ assert.Build function requires a context.Context value as an argument to avoid a
 - **template:** add time and duration type
 - **template:** add bytes type
 
-<a name="v0.14.2"></a>
 ## [v0.14.2] - 2023-03-03
 - bump up the version of dependent modules
 
-<a name="v0.14.1"></a>
 ## [v0.14.1] - 2023-02-27
 ### Features
 - **schema:** add Comments field
 
-<a name="v0.14.0"></a>
 ## [v0.14.0] - 2023-02-20
 ### Bug Fixes
 - pass bound variables to the next step
@@ -118,15 +106,12 @@ assert.Build function requires a context.Context value as an argument to avoid a
 - **http:** enable decoding of response bodies with character encodings other than utf-8
 - **http:** add text/html unmarshaler
 
-<a name="v0.13.2"></a>
 ## [v0.13.2] - 2022-12-16
 - bump up the version of dependent modules
 
-<a name="v0.13.1"></a>
 ## [v0.13.1] - 2022-12-15
 - bump up the version of dependent modules
 
-<a name="v0.13.0"></a>
 ## [v0.13.0] - 2022-12-08
 ### Bug Fixes
 - enable to specify report paths by absolute path
@@ -137,41 +122,34 @@ assert.Build function requires a context.Context value as an argument to avoid a
 - enable to marshal schema.Config to YAML
 - **errors:** change error message format
 
-<a name="v0.12.8"></a>
 ## [v0.12.8] - 2022-10-18
 ### Bug Fixes
 - don't bind vars if included scenario failed
 
-<a name="v0.12.7"></a>
 ## [v0.12.7] - 2022-09-27
 ### Features
 - **template:** enable to call methods
 
-<a name="v0.12.6"></a>
 ## [v0.12.6] - 2022-09-13
 ### Features
 - enable to specify step timeout
 - **grpc:** enable to use template in error details
 - **http:** make method name case-insensitive
 
-<a name="v0.12.5"></a>
 ## [v0.12.5] - 2022-08-22
 ### Bug Fixes
 - **plugin:** go mod tidy with -compat option
 
-<a name="v0.12.4"></a>
 ## [v0.12.4] - 2022-07-25
 ### Bug Fixes
 - **plugin:** enable to replace modules to local paths
 - **plugin:** keep replace directives
 
-<a name="v0.12.3"></a>
 ## [v0.12.3] - 2022-07-21
 ### Bug Fixes
 - **plugin:** remove plugin modules from the cache
 - **plugin:** check remote module source versions
 
-<a name="v0.12.2"></a>
 ## [v0.12.2] - 2022-07-20
 ### Bug Fixes
 - **mock:** fix nil error bug
@@ -181,12 +159,10 @@ assert.Build function requires a context.Context value as an argument to avoid a
 - fix maintidx error
 - fix cyclop error
 
-<a name="v0.12.1"></a>
 ## [v0.12.1] - 2022-06-26
 ### Bug Fixes
 - **release:** reduce target Go versions
 
-<a name="v0.12.0"></a>
 ## [v0.12.0] - 2022-06-13
 ### Bug Fixes
 - **plugin:** suppress unnecessary plugin build logs
@@ -195,18 +171,15 @@ assert.Build function requires a context.Context value as an argument to avoid a
 ### Features
 - **template:** allow functions to return an error
 
-<a name="v0.11.2"></a>
 ## [v0.11.2] - 2022-04-26
 ### Bug Fixes
 - **plugin:** allow specifying sub directories of remote modules as src
 
-<a name="v0.11.1"></a>
 ## [v0.11.1] - 2022-04-18
 ### Bug Fixes
 - print error if fail to open plugin
 - **doc:** setup field was deprecated
 
-<a name="v0.11.0"></a>
 ## [v0.11.0] - 2022-04-15
 ### Bug Fixes
 - **plugin:** fix issue with plugin build failure in Go1.18
@@ -218,7 +191,6 @@ assert.Build function requires a context.Context value as an argument to avoid a
 - **template:** enable to use template in map keys
 - **template:** enable to escape { by \
 
-<a name="v0.10.0"></a>
 ## [v0.10.0] - 2022-01-31
 ### Bug Fixes
 - update the go directive of go.mod
@@ -228,7 +200,6 @@ assert.Build function requires a context.Context value as an argument to avoid a
 
 This package requires Go 1.17 or later.
 
-<a name="v0.9.0"></a>
 ## [v0.9.0] - 2021-12-03
 ### Bug Fixes
 - **errors:** Errors returns nil if no errors
@@ -245,7 +216,6 @@ This package requires Go 1.17 or later.
 - **plugin:** enable to build plugin from remote "go gettable" src
 - **template:** add bool literals
 
-<a name="v0.8.1"></a>
 ## [v0.8.1] - 2021-09-27
 ### Bug Fixes
 - add workaround to avoid the bug of Go 1.17
@@ -261,7 +231,6 @@ This package requires Go 1.17 or later.
 
 "file" and "verbose" options are removed from the list sub-command.
 
-<a name="v0.8.0"></a>
 ## [v0.8.0] - 2021-09-08
 ### Bug Fixes
 - enable CGO on release build
@@ -277,7 +246,6 @@ This package requires Go 1.17 or later.
 - **template:** execute templates of data
 - **version:** get version from build info
 
-<a name="v0.7.0"></a>
 ## [v0.7.0] - 2021-07-30
 ### Bug Fixes
 - **assert:** fix the assertion operators
@@ -306,12 +274,10 @@ This package requires Go 1.17 or later.
 
 This package requires Go 1.16 or later.
 
-<a name="v0.6.3"></a>
 ## [v0.6.3] - 2021-04-08
 ### Bug Fixes
 - enable to bind vars defined in the included scenario
 
-<a name="v0.6.2"></a>
 ## [v0.6.2] - 2021-04-07
 ### Bug Fixes
 - **plugin:** avoid the error caused by loading plugins concurrently ([#78](https://github.com/zoncoen/scenarigo/issues/78))
@@ -325,12 +291,10 @@ This package requires Go 1.16 or later.
 - **reporter:** enable to generate test report ([#83](https://github.com/zoncoen/scenarigo/issues/83))
 - **reporter:** include the execution time of sub-tests ([#82](https://github.com/zoncoen/scenarigo/issues/82))
 
-<a name="v0.6.1"></a>
 ## [v0.6.1] - 2021-01-14
 ### Bug Fixes
 - **template:** don't convert invalid values to avoid panic
 
-<a name="v0.6.0"></a>
 ## [v0.6.0] - 2021-01-12
 ### Bug Fixes
 - **template:** enable to set to pointer values
@@ -342,7 +306,6 @@ This package requires Go 1.16 or later.
 - **assert:** add regexp function
 - **context:** add ScenarioFilePath
 
-<a name="v0.5.1"></a>
 ## [v0.5.1] - 2020-10-23
 ### Bug Fixes
 - **template:** restore funcs in args of left arrow function
@@ -350,7 +313,6 @@ This package requires Go 1.16 or later.
 ### Features
 - **assert:** add "and" function
 
-<a name="v0.5.0"></a>
 ## [v0.5.0] - 2020-10-05
 ### Features
 - **assert:** add "or" function
@@ -358,7 +320,6 @@ This package requires Go 1.16 or later.
 - **grpc:** allow using a template as code and msg
 - **http:** allow using a template as code
 
-<a name="v0.4.0"></a>
 ## [v0.4.0] - 2020-09-02
 ### Bug Fixes
 - register errdetails proto messages to unmarshal Any
@@ -368,7 +329,6 @@ This package requires Go 1.16 or later.
 ### Features
 - **cmd:** add list sub-command ([#51](https://github.com/zoncoen/scenarigo/issues/51))
 
-<a name="v0.3.3"></a>
 ## [v0.3.3] - 2020-06-17
 ### Bug Fixes
 - **core:** add generated files to avoid the import error ([#41](https://github.com/zoncoen/scenarigo/issues/41))
@@ -377,23 +337,19 @@ This package requires Go 1.16 or later.
 - **deps:** update YAML library to fix a bug ( v1.7.9 => v1.7.10 ) ([#40](https://github.com/zoncoen/scenarigo/issues/40))
 - **template:** fix processing for variadic arguments of function ([#48](https://github.com/zoncoen/scenarigo/issues/48))
 
-<a name="v0.3.2"></a>
 ## [v0.3.2] - 2020-06-15
 ### Bug Fixes
 - **deps:** update YAML library to fix a bug ( v1.7.8 => v1.7.9 ) ([#39](https://github.com/zoncoen/scenarigo/issues/39))
 
-<a name="v0.3.1"></a>
 ## [v0.3.1] - 2020-06-12
 ### Bug Fixes
 - **core:** fix ctx.Response() for http protocol ([#35](https://github.com/zoncoen/scenarigo/issues/35))
 - **errors:** fix incorrect line number in YAML source ([#38](https://github.com/zoncoen/scenarigo/issues/38))
 
-<a name="v0.3.0"></a>
 ## [v0.3.0] - 2020-06-11
 ### Features
 - **core:** support to output error with YAML ([#33](https://github.com/zoncoen/scenarigo/issues/33))
 
-<a name="v0.2.0"></a>
 ## [v0.2.0] - 2020-06-03
 ### Code Refactoring
 - **core:** replace YAML libraries to goccy/go-yaml ([#31](https://github.com/zoncoen/scenarigo/issues/31))
@@ -407,7 +363,6 @@ This package requires Go 1.16 or later.
 
 change protocl.Protocol interface
 
-<a name="v0.1.0"></a>
 ## v0.1.0 - 2020-05-17
 - first release
 

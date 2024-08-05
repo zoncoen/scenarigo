@@ -42,7 +42,7 @@ steps:
 ### go install command (recommend)
 
 ```shell
-$ go install github.com/zoncoen/scenarigo/cmd/scenarigo@v0.17.3
+$ go install github.com/zoncoen/scenarigo/cmd/scenarigo@latest
 ```
 
 ### from release page
@@ -53,7 +53,7 @@ You can download the latest command into the `./scenarigo` directory with the fo
 
 ```shell
 $ version=$(curl -s https://api.github.com/repos/zoncoen/scenarigo/releases/latest | jq -r '.tag_name') && \
-    go_version='go1.22.2' && \
+    go_version=$(echo -n $(curl -s 'https://go.dev/VERSION?m=text' | head -n 1)) && \
     curl -sLJ https://github.com/zoncoen/scenarigo/releases/download/${version}/scenarigo_${version}_${go_version}_$(uname)_$(uname -m).tar.gz -o scenarigo.tar.gz && \
     mkdir ./scenarigo && tar -zxvf ./scenarigo.tar.gz -C ./scenarigo && rm scenarigo.tar.gz
 ```

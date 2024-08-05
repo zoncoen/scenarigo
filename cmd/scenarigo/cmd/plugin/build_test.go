@@ -1316,6 +1316,10 @@ go %s
 				gomod: fmt.Sprintf(`module plugin_module
 
 go %s
+
+require (
+	google.golang.org/grpc v1.64.0 // indirect
+)
 `, goVersion),
 				src: `package main
 

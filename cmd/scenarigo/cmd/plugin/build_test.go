@@ -1199,7 +1199,6 @@ func TestFindGoCmd(t *testing.T) {
 
 func TestUpdateGoMod(t *testing.T) {
 	goVersion := strings.TrimPrefix(goVer, "go")
-	modVers := getModuleVersions(t)
 
 	t.Run("success", func(t *testing.T) {
 		tests := map[string]struct {
@@ -1353,8 +1352,8 @@ require (
 	google.golang.org/protobuf v1.33.0 // indirect
 )
 `, goVersion),
-				expectStdout: fmt.Sprintf(`WARN: test.so: change require google.golang.org/grpc %s ==> v1.37.1 by test
-`, modVers["google.golang.org/grpc"]),
+				expectStdout: `WARN: test.so: change require google.golang.org/grpc v1.64.0 ==> v1.37.1 by test
+`,
 			},
 			"overwrite require by require": {
 				gomod: fmt.Sprintf(`module plugin_module

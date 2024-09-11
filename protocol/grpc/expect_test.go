@@ -16,6 +16,7 @@ import (
 
 	"github.com/zoncoen/scenarigo/context"
 	"github.com/zoncoen/scenarigo/internal/reflectutil"
+	"github.com/zoncoen/scenarigo/internal/yamlutil"
 	"github.com/zoncoen/scenarigo/testdata/gen/pb/test"
 )
 
@@ -24,11 +25,11 @@ func TestExpect_Build(t *testing.T) {
 		tests := map[string]struct {
 			vars   interface{}
 			expect *Expect
-			v      response
+			v      *response
 		}{
 			"default": {
 				expect: &Expect{},
-				v: response{
+				v: &response{
 					rvalues: []reflect.Value{
 						reflect.ValueOf(&test.EchoResponse{}),
 						reflect.Zero(reflectutil.TypeError),
@@ -39,7 +40,7 @@ func TestExpect_Build(t *testing.T) {
 				expect: &Expect{
 					Code: strconv.Itoa(int(codes.InvalidArgument)),
 				},
-				v: response{
+				v: &response{
 					rvalues: []reflect.Value{
 						reflect.Zero(reflect.TypeOf(&test.EchoResponse{})),
 						reflect.ValueOf(status.New(codes.InvalidArgument, "invalid argument").Err()),
@@ -50,7 +51,7 @@ func TestExpect_Build(t *testing.T) {
 				expect: &Expect{
 					Code: "InvalidArgument",
 				},
-				v: response{
+				v: &response{
 					rvalues: []reflect.Value{
 						reflect.Zero(reflect.TypeOf(&test.EchoResponse{})),
 						reflect.ValueOf(status.New(codes.InvalidArgument, "invalid argument").Err()),
@@ -61,7 +62,7 @@ func TestExpect_Build(t *testing.T) {
 				expect: &Expect{
 					Code: `{{"InvalidArgument"}}`,
 				},
-				v: response{
+				v: &response{
 					rvalues: []reflect.Value{
 						reflect.Zero(reflect.TypeOf(&test.EchoResponse{})),
 						reflect.ValueOf(status.New(codes.InvalidArgument, "invalid argument").Err()),
@@ -82,7 +83,7 @@ func TestExpect_Build(t *testing.T) {
 						},
 					},
 				},
-				v: response{
+				v: &response{
 					rvalues: []reflect.Value{
 						reflect.ValueOf(&test.EchoResponse{
 							MessageId:   "1",
@@ -102,8 +103,8 @@ func TestExpect_Build(t *testing.T) {
 						},
 					},
 				},
-				v: response{
-					Header: newMDMarshaler(metadata.MD{
+				v: &response{
+					Header: yamlutil.NewMDMarshaler(metadata.MD{
 						"content-type": []string{
 							"application/grpc",
 						},
@@ -124,8 +125,8 @@ func TestExpect_Build(t *testing.T) {
 						},
 					},
 				},
-				v: response{
-					Trailer: newMDMarshaler(metadata.MD{
+				v: &response{
+					Trailer: yamlutil.NewMDMarshaler(metadata.MD{
 						"content-type": []string{
 							"application/grpc",
 						},
@@ -161,7 +162,7 @@ func TestExpect_Build(t *testing.T) {
 						},
 					},
 				},
-				v: response{
+				v: &response{
 					rvalues: []reflect.Value{
 						reflect.Zero(reflect.TypeOf(&test.EchoResponse{})),
 						reflect.ValueOf(status.FromProto(&spb.Status{
@@ -191,7 +192,7 @@ func TestExpect_Build(t *testing.T) {
 						Message: `{{"invalid argument"}}`,
 					},
 				},
-				v: response{
+				v: &response{
 					rvalues: []reflect.Value{
 						reflect.Zero(reflect.TypeOf(&test.EchoResponse{})),
 						reflect.ValueOf(
@@ -214,7 +215,7 @@ func TestExpect_Build(t *testing.T) {
 						},
 					},
 				},
-				v: response{
+				v: &response{
 					rvalues: []reflect.Value{
 						reflect.ValueOf(&test.EchoResponse{
 							MessageId:   "1",
@@ -264,7 +265,7 @@ func TestExpect_Build(t *testing.T) {
 						},
 					},
 				},
-				v: response{
+				v: &response{
 					rvalues: []reflect.Value{
 						reflect.ValueOf(&test.EchoResponse{
 							MessageBody: "hello",
@@ -282,12 +283,12 @@ func TestExpect_Build(t *testing.T) {
 							},
 						}).Err()),
 					},
-					Header: newMDMarshaler(metadata.MD{
+					Header: yamlutil.NewMDMarshaler(metadata.MD{
 						"content-type": []string{
 							"application/grpc",
 						},
 					}),
-					Trailer: newMDMarshaler(metadata.MD{
+					Trailer: yamlutil.NewMDMarshaler(metadata.MD{
 						"version": []string{
 							"v1.0.0",
 						},
@@ -315,7 +316,7 @@ func TestExpect_Build(t *testing.T) {
 	t.Run("ng", func(t *testing.T) {
 		tests := map[string]struct {
 			expect            *Expect
-			v                 response
+			v                 *response
 			expectBuildError  bool
 			expectAssertError bool
 			expectError       string
@@ -361,12 +362,12 @@ func TestExpect_Build(t *testing.T) {
 
 			"return value must be []reflect.Value": {
 				expect:            &Expect{},
-				v:                 response{},
+				v:                 &response{},
 				expectAssertError: true,
 			},
 			"the length of return values must be 2": {
 				expect: &Expect{},
-				v: response{
+				v: &response{
 					rvalues: []reflect.Value{
 						reflect.ValueOf(&test.EchoResponse{}),
 					},
@@ -375,7 +376,7 @@ func TestExpect_Build(t *testing.T) {
 			},
 			"fist return value must be proto.Message": {
 				expect: &Expect{},
-				v: response{
+				v: &response{
 					rvalues: []reflect.Value{
 						reflect.ValueOf(status.New(codes.InvalidArgument, "invalid argument").Err()),
 						reflect.ValueOf(status.New(codes.InvalidArgument, "invalid argument").Err()),
@@ -385,7 +386,7 @@ func TestExpect_Build(t *testing.T) {
 			},
 			"second return value must be error": {
 				expect: &Expect{},
-				v: response{
+				v: &response{
 					rvalues: []reflect.Value{
 						reflect.ValueOf(&test.EchoResponse{}),
 						reflect.ValueOf(&test.EchoResponse{}),
@@ -395,7 +396,7 @@ func TestExpect_Build(t *testing.T) {
 			},
 			"wrong code in case of default": {
 				expect: &Expect{},
-				v: response{
+				v: &response{
 					rvalues: []reflect.Value{
 						reflect.Zero(reflect.TypeOf(&test.EchoResponse{})),
 						reflect.ValueOf(status.New(codes.InvalidArgument, "invalid argument").Err()),
@@ -407,7 +408,7 @@ func TestExpect_Build(t *testing.T) {
 				expect: &Expect{
 					Code: "OK",
 				},
-				v: response{
+				v: &response{
 					rvalues: []reflect.Value{
 						reflect.Zero(reflect.TypeOf(&test.EchoResponse{})),
 						reflect.ValueOf(status.New(codes.InvalidArgument, "invalid argument").Err()),
@@ -429,7 +430,7 @@ func TestExpect_Build(t *testing.T) {
 						},
 					},
 				},
-				v: response{
+				v: &response{
 					rvalues: []reflect.Value{
 						reflect.ValueOf(&test.EchoResponse{
 							MessageId:   "1",
@@ -450,8 +451,8 @@ func TestExpect_Build(t *testing.T) {
 						},
 					},
 				},
-				v: response{
-					Header: newMDMarshaler(metadata.MD{
+				v: &response{
+					Header: yamlutil.NewMDMarshaler(metadata.MD{
 						"content-type": []string{
 							"application/grpc",
 						},
@@ -473,8 +474,8 @@ func TestExpect_Build(t *testing.T) {
 						},
 					},
 				},
-				v: response{
-					Header: newMDMarshaler(metadata.MD{
+				v: &response{
+					Header: yamlutil.NewMDMarshaler(metadata.MD{
 						"content-type": []string{
 							"application/grpc",
 						},
@@ -496,8 +497,8 @@ func TestExpect_Build(t *testing.T) {
 						},
 					},
 				},
-				v: response{
-					Header: newMDMarshaler(metadata.MD{
+				v: &response{
+					Header: yamlutil.NewMDMarshaler(metadata.MD{
 						"content-type": []string{
 							"application/grpc",
 						},
@@ -519,8 +520,8 @@ func TestExpect_Build(t *testing.T) {
 						},
 					},
 				},
-				v: response{
-					Trailer: newMDMarshaler(metadata.MD{
+				v: &response{
+					Trailer: yamlutil.NewMDMarshaler(metadata.MD{
 						"content-type": []string{
 							"application/grpc",
 						},
@@ -542,8 +543,8 @@ func TestExpect_Build(t *testing.T) {
 						},
 					},
 				},
-				v: response{
-					Trailer: newMDMarshaler(metadata.MD{
+				v: &response{
+					Trailer: yamlutil.NewMDMarshaler(metadata.MD{
 						"content-type": []string{
 							"application/grpc",
 						},
@@ -561,7 +562,7 @@ func TestExpect_Build(t *testing.T) {
 						Code: "Invalid Argument",
 					},
 				},
-				v: response{
+				v: &response{
 					rvalues: []reflect.Value{
 						reflect.Zero(reflect.TypeOf(&test.EchoResponse{})),
 						reflect.ValueOf(status.Error(codes.NotFound, "not found")),
@@ -576,7 +577,7 @@ func TestExpect_Build(t *testing.T) {
 						Message: "foo",
 					},
 				},
-				v: response{
+				v: &response{
 					rvalues: []reflect.Value{
 						reflect.Zero(reflect.TypeOf(&test.EchoResponse{})),
 						reflect.ValueOf(status.Error(codes.NotFound, "not found")),
@@ -601,7 +602,7 @@ func TestExpect_Build(t *testing.T) {
 						},
 					},
 				},
-				v: response{
+				v: &response{
 					rvalues: []reflect.Value{
 						reflect.Zero(reflect.TypeOf(&test.EchoResponse{})),
 						reflect.ValueOf(status.FromProto(&spb.Status{
@@ -641,7 +642,7 @@ func TestExpect_Build(t *testing.T) {
 						},
 					},
 				},
-				v: response{
+				v: &response{
 					rvalues: []reflect.Value{
 						reflect.Zero(reflect.TypeOf(&test.EchoResponse{})),
 						reflect.ValueOf(status.FromProto(&spb.Status{
@@ -682,7 +683,7 @@ func TestExpect_Build(t *testing.T) {
 						},
 					},
 				},
-				v: response{
+				v: &response{
 					rvalues: []reflect.Value{
 						reflect.Zero(reflect.TypeOf(&test.EchoResponse{})),
 						reflect.ValueOf(status.FromProto(&spb.Status{
@@ -723,7 +724,7 @@ func TestExpect_Build(t *testing.T) {
 						},
 					},
 				},
-				v: response{
+				v: &response{
 					rvalues: []reflect.Value{
 						reflect.Zero(reflect.TypeOf(&test.EchoResponse{})),
 						reflect.ValueOf(status.FromProto(&spb.Status{
@@ -764,7 +765,7 @@ func TestExpect_Build(t *testing.T) {
 						},
 					},
 				},
-				v: response{
+				v: &response{
 					rvalues: []reflect.Value{
 						reflect.Zero(reflect.TypeOf(&test.EchoResponse{})),
 						reflect.ValueOf(status.FromProto(&spb.Status{
@@ -838,9 +839,9 @@ func TestExpect_Build(t *testing.T) {
 				expect: &Expect{},
 				v:      "string is unexpected value",
 			},
-			"invalid type for rvalues of response": {
+			"invalid type for rvalues of *response": {
 				expect: &Expect{},
-				v: response{
+				v: &response{
 					rvalues: []reflect.Value{},
 				},
 			},

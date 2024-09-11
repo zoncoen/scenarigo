@@ -17,6 +17,7 @@ import (
 	"github.com/zoncoen/scenarigo/internal/mockutil"
 	"github.com/zoncoen/scenarigo/internal/queryutil"
 	"github.com/zoncoen/scenarigo/internal/testutil"
+	"github.com/zoncoen/scenarigo/internal/yamlutil"
 	"github.com/zoncoen/scenarigo/reporter"
 	testpb "github.com/zoncoen/scenarigo/testdata/gen/pb/test"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
@@ -97,10 +98,10 @@ func TestResponseExtractor(t *testing.T) {
 		Status: responseStatus{
 			Code: "OK",
 		},
-		Header: &mdMarshaler{
+		Header: &yamlutil.MDMarshaler{
 			"foo": []string{"FOO"},
 		},
-		Trailer: &mdMarshaler{
+		Trailer: &yamlutil.MDMarshaler{
 			"bar": []string{"BAR"},
 		},
 		Message: map[string]string{"messageBody": "hey"},
@@ -189,9 +190,9 @@ func TestRequest_Invoke(t *testing.T) {
 			if err != nil {
 				t.Fatalf("unexpected error: %s", err)
 			}
-			typedResult, ok := result.(response)
+			typedResult, ok := result.(*response)
 			if !ok {
-				t.Fatalf("failed to type conversion from %s to response", reflect.TypeOf(result))
+				t.Fatalf("failed to type conversion from %s to *response", reflect.TypeOf(result))
 			}
 			message, serr, err := extract(typedResult)
 			if err != nil {
@@ -210,7 +211,7 @@ func TestRequest_Invoke(t *testing.T) {
 			if diff := cmp.Diff((*RequestExtractor)(r), ctx.Request(), protocmp.Transform()); diff != "" {
 				t.Errorf("differs: (-want +got)\n%s", diff)
 			}
-			if diff := cmp.Diff((*ResponseExtractor)(&typedResult), ctx.Response(), protocmp.Transform(), cmpopts.IgnoreFields(ResponseExtractor{}, "rvalues")); diff != "" {
+			if diff := cmp.Diff((*ResponseExtractor)(typedResult), ctx.Response(), protocmp.Transform(), cmpopts.IgnoreFields(ResponseExtractor{}, "rvalues")); diff != "" {
 				t.Errorf("differs: (-want +got)\n%s", diff)
 			}
 		})
@@ -237,9 +238,9 @@ func TestRequest_Invoke(t *testing.T) {
 			if err != nil {
 				t.Fatalf("unexpected error: %s", err)
 			}
-			typedResult, ok := result.(response)
+			typedResult, ok := result.(*response)
 			if !ok {
-				t.Fatalf("failed to type conversion from %s to response", reflect.TypeOf(result))
+				t.Fatalf("failed to type conversion from %s to *response", reflect.TypeOf(result))
 			}
 			_, serr, err := extract(typedResult)
 			if err != nil {
@@ -625,7 +626,7 @@ metadata:
 		t.Run(name, func(t *testing.T) {
 			b, err := yaml.Marshal(Request{
 				Method:   "Foo",
-				Metadata: newMDMarshaler(test.md),
+				Metadata: yamlutil.NewMDMarshaler(test.md),
 			})
 			if err != nil {
 				t.Fatal(err)

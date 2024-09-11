@@ -82,7 +82,7 @@ func (e *Expect) Build(ctx *context.Context) (assert.Assertion, error) {
 	}
 
 	return assert.AssertionFunc(func(v interface{}) error {
-		resp, ok := v.(response)
+		resp, ok := v.(*response)
 		if !ok {
 			return errors.Errorf(`failed to convert to response type. type is %s`, reflect.TypeOf(v))
 		}
@@ -200,7 +200,7 @@ func (e *Expect) assertStatusDetails(assertions []assert.Assertion, sts *status.
 	return nil
 }
 
-func extract(v response) (proto.Message, *status.Status, error) {
+func extract(v *response) (proto.Message, *status.Status, error) {
 	vs := v.rvalues
 	if len(vs) != 2 {
 		return nil, nil, errors.Errorf("expected return value length of method call is 2 but %d", len(vs))

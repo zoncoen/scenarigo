@@ -55,7 +55,7 @@ func (l *logger) Info(msg string, kvs ...interface{}) {
 	if l.level > LogLevelInfo {
 		return
 	}
-	l.logger.Printf(bold.Sprintf("[INFO] %q%s", msg, flatten(kvs...)))
+	l.logger.Print(bold.Sprintf("[INFO] %q%s", msg, flatten(kvs...)))
 }
 
 // Error logs an error, with the given message and key/value pairs.
@@ -63,7 +63,7 @@ func (l *logger) Error(err error, msg string, kvs ...interface{}) {
 	if l.level > LogLevelError {
 		return
 	}
-	l.logger.Printf(red.Sprintf(`[ERROR] %q "error"=%q%s`, msg, err, flatten(kvs...)))
+	l.logger.Print(red.Sprintf(`[ERROR] %q "error"=%q%s`, msg, err, flatten(kvs...)))
 }
 
 func flatten(kvs ...interface{}) string {

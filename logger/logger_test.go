@@ -35,6 +35,15 @@ func TestLogger(t *testing.T) {
 [ERROR] "error msg" "error"="omg" "count"="2"
 `, "\n"),
 		},
+		"no value": {
+			level: LogLevelAll,
+			f: func(l Logger) {
+				l.Info("info msg", "count")
+			},
+			expect: strings.TrimPrefix(`
+[INFO] "info msg" "count"="<no-value>"
+`, "\n"),
+		},
 		"none": {
 			level: LogLevelNone,
 			f: func(l Logger) {

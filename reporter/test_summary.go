@@ -52,7 +52,7 @@ func (s *testSummary) String(noColor bool) string {
 	passedText := s.passColor(noColor).Sprintf("%d passed", s.passedCount)
 	failedText := s.failColor(noColor).Sprintf("%d failed", len(s.failed))
 	skippedText := s.skipColor(noColor).Sprintf("%d skipped", s.skippedCount)
-	failedFiles := s.failColor(noColor).Sprintf(s.failedFiles())
+	failedFiles := s.failColor(noColor).Sprint(s.failedFiles())
 	return fmt.Sprintf(
 		"\n%s: %s, %s, %s\n\n%s",
 		totalText, passedText, failedText, skippedText, failedFiles,

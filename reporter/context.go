@@ -118,6 +118,13 @@ func (c *testContext) release() {
 	c.startParallel <- true // Pick a waiting test to be run.
 }
 
+func (c *testContext) print(a ...any) (int, error) {
+	if c.w == nil {
+		return 0, nil
+	}
+	return fmt.Fprint(c.w, a...)
+}
+
 func (c *testContext) printf(format string, a ...interface{}) (int, error) {
 	if c.w == nil {
 		return 0, nil

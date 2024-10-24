@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"go/build"
+	goversion "go/version"
+	"io"
 	"io/fs"
 	"os"
 	"os/exec"
@@ -34,43 +36,59 @@ const (
 var (
 	goVer                     string
 	toolchain                 string
-	tip                       bool
 	goMinVer                  string
 	versionTooHighErrorRegexp *regexp.Regexp
 )
 
 func init() {
-	goVer = runtime.Version()
-	toolchain = goVer
-	if strings.HasPrefix(goVer, "devel ") {
-		// gotip
-		goVer = strings.Split(strings.TrimPrefix(goVer, "devel "), "-")[0]
-		toolchain = "local"
-		tip = true
-	}
-	e := strings.Split(strings.TrimPrefix(goVer, "go"), ".")
-	if len(e) < 2 {
-		panic(fmt.Sprintf("%q is invalid Go version", goVer))
-	}
+	goVer, toolchain = parseGoVersion(runtime.Version())
 	goMinVer = "1.21.2"
 	versionTooHighErrorRegexp = regexp.MustCompile(versionTooHighErrorPattern)
 }
 
-var buildCmd = &cobra.Command{
-	Use:   "build",
-	Short: "build plugins",
-	Long: strings.Trim(`
+func parseGoVersion(ver string) (string, string) {
+	tc := ver
+	// gotip
+	if strings.HasPrefix(ver, "devel ") {
+		ver = strings.Split(strings.TrimPrefix(ver, "devel "), "-")[0]
+		tc = "local"
+	}
+	// go installed with homebrew (e.g., go1.23.2 X:rangefunc)
+	if !goversion.IsValid(ver) {
+		if v := strings.Split(ver, " ")[0]; goversion.IsValid(v) {
+			ver = v
+			tc = v
+		} else {
+			tc = "local"
+		}
+	}
+	return ver, tc
+}
+
+var verbose bool
+
+func newBuildCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "build",
+		Short: "build plugins",
+		Long: strings.Trim(`
 Builds plugins based on the configuration file.
 
 This command requires go command in $PATH.
 `, "\n"),
-	Args:          cobra.ExactArgs(0),
-	RunE:          buildRun,
-	SilenceErrors: true,
-	SilenceUsage:  true,
+		Args:          cobra.ExactArgs(0),
+		RunE:          buildRun,
+		SilenceErrors: true,
+		SilenceUsage:  true,
+	}
+	cmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "print verbose log")
+	return cmd
 }
 
-var warnColor = color.New(color.Bold, color.FgYellow)
+var (
+	warnColor  = color.New(color.Bold, color.FgYellow)
+	debugColor = color.New(color.Bold)
+)
 
 type retriableError struct {
 	reason string
@@ -103,6 +121,12 @@ func (o *overrideModule) requireReplace() (*modfile.Require, string, *modfile.Re
 }
 
 func buildRun(cmd *cobra.Command, args []string) error {
+	runtimeVersion := runtime.Version()
+	debugLog(cmd.OutOrStderr(), "scenarigo was built with %s", runtimeVersion)
+	if !goversion.IsValid(goVer) {
+		warnLog(cmd.OutOrStderr(), "failed to parse the Go version that built scenarigo: %s", runtimeVersion)
+	}
+
 	cfg, err := config.Load()
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
@@ -115,6 +139,8 @@ func buildRun(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	debugLog(cmd.OutOrStderr(), "found go command: %s", goCmd)
+	debugLog(cmd.OutOrStderr(), "set GOTOOLCHAIN=%s", toolchain)
 
 	pbs := make([]*pluginBuilder, 0, cfg.Plugins.Len())
 	pluginModules := map[string]*overrideModule{}
@@ -506,11 +532,7 @@ func executeWithEnvs(ctx context.Context, envs []string, wd, name string, args .
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	cmd := exec.CommandContext(ctx, name, args...)
-	if tip {
-		envs = append(envs, "GOTOOLCHAIN=local")
-	} else {
-		envs = append(envs, fmt.Sprintf("GOTOOLCHAIN=%s", goVer))
-	}
+	envs = append(envs, fmt.Sprintf("GOTOOLCHAIN=%s", toolchain))
 	cmd.Env = append(os.Environ(), envs...)
 	if wd != "" {
 		cmd.Dir = wd
@@ -525,18 +547,26 @@ func executeWithEnvs(ctx context.Context, envs []string, wd, name string, args .
 
 func (pb *pluginBuilder) updateGoMod(cmd *cobra.Command, goCmd string, overrideKeys []string, overrides map[string]*overrideModule) error {
 	if err := pb.editGoMod(cmd, goCmd, func(gomod *modfile.File) error {
-		switch compareVers(gomod.Go.Version, goVer) {
+		if toolchain == "local" {
+			if gomod.Toolchain != nil {
+				warnLog(cmd.OutOrStdout(), "%s: remove toolchain by scenarigo", pb.name)
+				gomod.DropToolchainStmt()
+			}
+			return nil
+		}
+
+		switch compareVers(gomod.Go.Version, toolchain) {
 		case -1: // go.mod < scenarigo go version
 			if gomod.Toolchain == nil {
-				fmt.Fprintf(cmd.OutOrStdout(), "%s: %s: add toolchain %s by scenarigo\n", warnColor.Sprint("WARN"), pb.name, goVer)
-			} else if gomod.Toolchain.Name != goVer {
-				fmt.Fprintf(cmd.OutOrStdout(), "%s: %s: change toolchain %s ==> %s by scenarigo\n", warnColor.Sprint("WARN"), pb.name, gomod.Toolchain.Name, goVer)
+				warnLog(cmd.OutOrStdout(), "%s: add toolchain %s by scenarigo", pb.name, toolchain)
+			} else if gomod.Toolchain.Name != toolchain {
+				warnLog(cmd.OutOrStdout(), "%s: change toolchain %s ==> %s by scenarigo", pb.name, gomod.Toolchain.Name, toolchain)
 			}
-			if err := gomod.AddToolchainStmt(goVer); err != nil {
+			if err := gomod.AddToolchainStmt(toolchain); err != nil {
 				return fmt.Errorf("%s: %w", pb.gomodPath, err)
 			}
 		case 1: // go.mod > scenarigo go version
-			return fmt.Errorf("%s: go: go.mod requires go >= %s (running go %s)", pb.gomodPath, gomod.Go.Version, goVer)
+			return fmt.Errorf("%s: go: go.mod requires go >= %s (scenarigo was built with %s)", pb.gomodPath, gomod.Go.Version, toolchain)
 		}
 		return nil
 	}); err != nil {
@@ -692,22 +722,22 @@ func printUpdatedRequires(cmd *cobra.Command, name string, overrides map[string]
 			if !diff.new.Indirect {
 				if o := overrides[k]; o != nil {
 					_, requiredBy, _, _ := o.requireReplace()
-					fmt.Fprintf(cmd.OutOrStdout(), "%s: %s: add require %s %s by %s\n", warnColor.Sprint("WARN"), name, k, diff.new.Mod.Version, requiredBy)
+					warnLog(cmd.OutOrStdout(), "%s: add require %s %s by %s", name, k, diff.new.Mod.Version, requiredBy)
 				} else {
-					fmt.Fprintf(cmd.OutOrStdout(), "%s: %s: add require %s %s\n", warnColor.Sprint("WARN"), name, k, diff.new.Mod.Version)
+					warnLog(cmd.OutOrStdout(), "%s: add require %s %s", name, k, diff.new.Mod.Version)
 				}
 			}
 		case diff.new.Mod.Path == "":
 			if !diff.old.Indirect {
-				fmt.Fprintf(cmd.OutOrStdout(), "%s: %s: remove require %s %s\n", warnColor.Sprint("WARN"), name, k, diff.old.Mod.Version)
+				warnLog(cmd.OutOrStdout(), "%s: remove require %s %s", name, k, diff.old.Mod.Version)
 			}
 		case diff.old.Mod.Version != diff.new.Mod.Version:
 			if !diff.old.Indirect || !diff.new.Indirect {
 				if o := overrides[k]; o != nil {
 					_, requiredBy, _, _ := o.requireReplace()
-					fmt.Fprintf(cmd.OutOrStdout(), "%s: %s: change require %s %s ==> %s by %s\n", warnColor.Sprint("WARN"), name, k, diff.old.Mod.Version, diff.new.Mod.Version, requiredBy)
+					warnLog(cmd.OutOrStdout(), "%s: change require %s %s ==> %s by %s", name, k, diff.old.Mod.Version, diff.new.Mod.Version, requiredBy)
 				} else {
-					fmt.Fprintf(cmd.OutOrStdout(), "%s: %s: change require %s %s ==> %s\n", warnColor.Sprint("WARN"), name, k, diff.old.Mod.Version, diff.new.Mod.Version)
+					warnLog(cmd.OutOrStdout(), "%s: change require %s %s ==> %s", name, k, diff.old.Mod.Version, diff.new.Mod.Version)
 				}
 			}
 		}
@@ -745,21 +775,21 @@ func printUpdatedReplaces(cmd *cobra.Command, name string, overrides map[string]
 				if replace != nil {
 					by = replaceBy
 				}
-				fmt.Fprintf(cmd.OutOrStdout(), "%s: %s: add replace %s => %s by %s\n", warnColor.Sprint("WARN"), name, replacePathVersion(k, diff.new.Old.Version), replacePathVersion(diff.new.New.Path, diff.new.New.Version), by)
+				warnLog(cmd.OutOrStdout(), "%s: add replace %s => %s by %s", name, replacePathVersion(k, diff.new.Old.Version), replacePathVersion(diff.new.New.Path, diff.new.New.Version), by)
 			} else {
-				fmt.Fprintf(cmd.OutOrStdout(), "%s: %s: add replace %s => %s\n", warnColor.Sprint("WARN"), name, replacePathVersion(k, diff.new.Old.Version), replacePathVersion(diff.new.New.Path, diff.new.New.Version))
+				warnLog(cmd.OutOrStdout(), "%s: add replace %s => %s", name, replacePathVersion(k, diff.new.Old.Version), replacePathVersion(diff.new.New.Path, diff.new.New.Version))
 			}
 		case diff.new.Old.Path == "":
-			fmt.Fprintf(cmd.OutOrStdout(), "%s: %s: remove replace %s => %s\n", warnColor.Sprint("WARN"), name, replacePathVersion(k, diff.old.Old.Version), replacePathVersion(diff.old.New.Path, diff.old.New.Version))
+			warnLog(cmd.OutOrStdout(), "%s: remove replace %s => %s", name, replacePathVersion(k, diff.old.Old.Version), replacePathVersion(diff.old.New.Path, diff.old.New.Version))
 		case diff.old.New.Path != diff.new.New.Path || diff.old.New.Version != diff.new.New.Version:
 			if o := overrides[k]; o != nil {
 				_, by, replace, replaceBy := o.requireReplace()
 				if replace != nil {
 					by = replaceBy
 				}
-				fmt.Fprintf(cmd.OutOrStdout(), "%s: %s: change replace %s => %s ==> %s => %s by %s\n", warnColor.Sprint("WARN"), name, replacePathVersion(k, diff.old.Old.Version), replacePathVersion(diff.old.New.Path, diff.old.New.Version), replacePathVersion(k, diff.new.Old.Version), replacePathVersion(diff.new.New.Path, diff.new.New.Version), by)
+				warnLog(cmd.OutOrStdout(), "%s: change replace %s => %s ==> %s => %s by %s", name, replacePathVersion(k, diff.old.Old.Version), replacePathVersion(diff.old.New.Path, diff.old.New.Version), replacePathVersion(k, diff.new.Old.Version), replacePathVersion(diff.new.New.Path, diff.new.New.Version), by)
 			} else {
-				fmt.Fprintf(cmd.OutOrStdout(), "%s: %s: change replace %s => %s ==> %s => %s\n", warnColor.Sprint("WARN"), name, replacePathVersion(k, diff.old.Old.Version), replacePathVersion(diff.old.New.Path, diff.old.New.Version), replacePathVersion(k, diff.new.Old.Version), replacePathVersion(diff.new.New.Path, diff.new.New.Version))
+				warnLog(cmd.OutOrStdout(), "%s: change replace %s => %s ==> %s => %s", name, replacePathVersion(k, diff.old.Old.Version), replacePathVersion(diff.old.New.Path, diff.old.New.Version), replacePathVersion(k, diff.new.Old.Version), replacePathVersion(diff.new.New.Path, diff.new.New.Version))
 			}
 		}
 	}
@@ -888,4 +918,15 @@ func asVersionTooHighError(err error) (bool, *versionTooHighError) {
 		return true, e
 	}
 	return false, nil
+}
+
+func warnLog(w io.Writer, format string, a ...any) {
+	fmt.Fprintf(w, fmt.Sprintf("%s: %s\n", warnColor.Sprint("WARN"), format), a...)
+}
+
+func debugLog(w io.Writer, format string, a ...any) {
+	if !verbose {
+		return
+	}
+	fmt.Fprintf(w, fmt.Sprintf("%s: %s\n", debugColor.Sprint("DEBUG"), format), a...)
 }

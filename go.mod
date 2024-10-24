@@ -1,8 +1,6 @@
 module github.com/zoncoen/scenarigo
 
-go 1.21.2
-
-toolchain go1.22.3
+go 1.22.0
 
 require (
 	carvel.dev/ytt v0.48.0

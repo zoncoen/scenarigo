@@ -32,6 +32,7 @@ import (
 var (
 	bash string
 	echo string
+	_    = newBuildCmd()
 )
 
 func init() {
@@ -43,6 +44,47 @@ func init() {
 	echo, err = exec.LookPath("echo")
 	if err != nil {
 		panic("echo command not found")
+	}
+}
+
+func TestParseGoVersion(t *testing.T) {
+	tests := map[string]struct {
+		version         string
+		expect          string
+		expectToolchain string
+	}{
+		"go1.2.3": {
+			version:         "go1.2.3",
+			expect:          "go1.2.3",
+			expectToolchain: "go1.2.3",
+		},
+		"devel go1.24-76f320836": {
+			version:         "devel go1.24-76f320836",
+			expect:          "go1.24",
+			expectToolchain: "local",
+		},
+		"go1.23.2 X:rangefunc": {
+			version:         "go1.23.2 X:rangefunc",
+			expect:          "go1.23.2",
+			expectToolchain: "go1.23.2",
+		},
+		"invalid": {
+			version:         "invalid",
+			expect:          "invalid",
+			expectToolchain: "local",
+		},
+	}
+	for name, test := range tests {
+		test := test
+		t.Run(name, func(t *testing.T) {
+			got, gotToolchain := parseGoVersion(test.version)
+			if got != test.expect {
+				t.Errorf("expect %s but got %s", test.expect, got)
+			}
+			if gotToolchain != test.expectToolchain {
+				t.Errorf("expect toolchain %s but got %s", test.expectToolchain, gotToolchain)
+			}
+		})
 	}
 }
 
@@ -1200,6 +1242,11 @@ func TestFindGoCmd(t *testing.T) {
 func TestUpdateGoMod(t *testing.T) {
 	goVersion := strings.TrimPrefix(goVer, "go")
 
+	gomodToolchain := toolchain
+	if toolchain == "local" {
+		gomodToolchain = "default"
+	}
+
 	t.Run("success", func(t *testing.T) {
 		tests := map[string]struct {
 			gomod        string
@@ -1227,9 +1274,12 @@ go 1.21
 
 go 1.21
 
-toolchain go%s
-`, goVersion),
-				expectStdout: fmt.Sprintf("WARN: test.so: add toolchain go%s by scenarigo\n", goVersion),
+toolchain %s
+`, toolchain),
+				expectStdout: tipOut(
+					"",
+					fmt.Sprintf("WARN: test.so: add toolchain %s by scenarigo\n", gomodToolchain),
+				),
 			},
 			"change toolchain directive": {
 				gomod: `module plugin_module
@@ -1242,9 +1292,12 @@ toolchain go1.21.1
 
 go 1.21
 
-toolchain go%s
-`, goVersion),
-				expectStdout: fmt.Sprintf("WARN: test.so: change toolchain go1.21.1 ==> go%s by scenarigo\n", goVersion),
+toolchain %s
+`, toolchain),
+				expectStdout: tipOut(
+					"WARN: test.so: remove toolchain by scenarigo\n",
+					fmt.Sprintf("WARN: test.so: change toolchain go1.21.1 ==> %s by scenarigo\n", gomodToolchain),
+				),
 			},
 			"do nothing (no requires)": {
 				gomod: fmt.Sprintf(`module plugin_module
@@ -1815,6 +1868,9 @@ replace google.golang.org/grpc v1.46.0 => google.golang.org/grpc v1.40.0
 				if err != nil {
 					t.Fatalf("failed read go.mod: %s", err)
 				}
+				if toolchain == "local" {
+					test.expect = strings.ReplaceAll(test.expect, "\ntoolchain local\n", "")
+				}
 				if got := string(b); got != test.expect {
 					dmp := diffmatchpatch.New()
 					diffs := dmp.DiffMain(test.expect, got, false)
@@ -1986,6 +2042,11 @@ import (
 	})
 
 	t.Run("failure", func(t *testing.T) {
+		tooHighError := fmt.Sprintf("go.mod requires go >= 100.0.0 (scenarigo was built with %s)", goVer)
+		if toolchain == "local" {
+			tooHighError = fmt.Sprintf(`failed to edit toolchain directive: "go mod tidy" failed: go: go.mod requires go >= 100.0.0 (running go %s; GOTOOLCHAIN=local)`, strings.TrimPrefix(goVer, "go"))
+		}
+
 		tests := map[string]struct {
 			gomod     string
 			src       string
@@ -1997,7 +2058,7 @@ import (
 
 go 100.0.0
 `,
-				expect: fmt.Sprintf("go.mod requires go >= 100.0.0 (running go %s)", goVer),
+				expect: tooHighError,
 			},
 		}
 		for name, test := range tests {
@@ -2178,4 +2239,11 @@ func createExecutable(t *testing.T, path, stdout string) {
 	if _, err := f.Write([]byte(fmt.Sprintf("#!%s\n%s %q", bash, echo, stdout))); err != nil {
 		t.Fatalf("failed to write %s: %s", path, err)
 	}
+}
+
+func tipOut(tip, s string) string {
+	if toolchain == "local" {
+		return tip
+	}
+	return s
 }

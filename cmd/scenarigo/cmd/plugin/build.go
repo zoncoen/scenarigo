@@ -53,7 +53,7 @@ func parseGoVersion(ver string) (string, string) {
 		ver = strings.Split(strings.TrimPrefix(ver, "devel "), "-")[0]
 		tc = "local"
 	}
-	// go installed with homebrew (e.g., go1.23.2 X:rangefunc)
+	// workaround for weird environments (e.g., go1.23.2 X:rangefunc)
 	if !goversion.IsValid(ver) {
 		if v := strings.Split(ver, " ")[0]; goversion.IsValid(v) {
 			ver = v

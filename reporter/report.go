@@ -110,17 +110,17 @@ This struct can be marshalled as JUnit-like format XML.
 	fmt.Println(b)
 */
 type TestReport struct {
-	XMLName xml.Name             `json:"-" xml:"testsuites"`
+	XMLName xml.Name             `json:"-"              xml:"testsuites"`
 	Name    string               `json:"name,omitempty" xml:"name,attr,omitempty"`
-	Result  TestResult           `json:"result" xml:"-"`
-	Files   []ScenarioFileReport `json:"files" xml:"testsuite"`
+	Result  TestResult           `json:"result"         xml:"-"`
+	Files   []ScenarioFileReport `json:"files"          xml:"testsuite"`
 }
 
 // ScenarioFileReport represents a result report of a test scenario file.
 type ScenarioFileReport struct {
-	Name      string           `json:"name" xml:"name,attr,omitempty"`
-	Result    TestResult       `json:"result" xml:"-"`
-	Duration  TestDuration     `json:"duration" xml:"time,attr"`
+	Name      string           `json:"name"      xml:"name,attr,omitempty"`
+	Result    TestResult       `json:"result"    xml:"-"`
+	Duration  TestDuration     `json:"duration"  xml:"time,attr"`
 	Scenarios []ScenarioReport `json:"scenarios" xml:"testcase"`
 }
 

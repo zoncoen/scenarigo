@@ -45,7 +45,7 @@ func getField(t *testing.T, v reflect.Value, name string) reflect.StructField {
 }
 
 type testStruct struct {
-	YAML string `yaml:"yamltag" json:"jsontag"`
+	YAML string `json:"jsontag" yaml:"yamltag"`
 	JSON string `json:"jsontag"`
 	Name string
 }

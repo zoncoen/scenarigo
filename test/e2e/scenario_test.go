@@ -89,8 +89,8 @@ func (s *testGRPCServer) Echo(ctx gocontext.Context, req *test.EchoRequest) (*te
 		return nil, sts.Err()
 	}
 	return &test.EchoResponse{
-		MessageId:   req.MessageId,
-		MessageBody: req.MessageBody,
+		MessageId:   req.GetMessageId(),
+		MessageBody: req.GetMessageBody(),
 		UserType:    test.UserType_CUSTOMER,
 		State:       test.State_ACTIVE,
 	}, nil

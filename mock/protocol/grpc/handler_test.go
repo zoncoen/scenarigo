@@ -22,7 +22,7 @@ func TestUnaryHandler_failure(t *testing.T) {
 	svcName := protoreflect.FullName("scenarigo.testdata.test.Test")
 	sd, err := fds.ResolveService(svcName)
 	if err != nil {
-		t.Fatalf("failed to resovle service: %s", err)
+		t.Fatalf("failed to resolve service: %s", err)
 	}
 	md := sd.Methods().ByName("Echo")
 
@@ -139,7 +139,7 @@ func TestUnaryHandler_failure(t *testing.T) {
 			decode:  func(_ any) error { return nil },
 			expect:  ".response.message: failed to execute template of response",
 		},
-		"invalid reponse status code": {
+		"invalid response status code": {
 			mocks: []protocol.Mock{
 				{
 					Protocol: "grpc",
@@ -152,7 +152,7 @@ func TestUnaryHandler_failure(t *testing.T) {
 			decode:  func(_ any) error { return nil },
 			expect:  ".response.status.code: invalid status code",
 		},
-		"invalid reponse message": {
+		"invalid response message": {
 			mocks: []protocol.Mock{
 				{
 					Protocol: "grpc",

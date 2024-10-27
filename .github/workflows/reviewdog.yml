@@ -16,6 +16,4 @@ jobs:
       uses: reviewdog/action-golangci-lint@v2
       with:
         reviewdog_flags: '-conf=.reviewdog.yml -diff="git diff main"'
-        golangci_lint_version: v1.52.2
-    - name: looppointer
-      run: make lint/looppointer
+        golangci_lint_version: v1.61.0

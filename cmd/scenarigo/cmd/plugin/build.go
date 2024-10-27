@@ -626,7 +626,6 @@ func (pb *pluginBuilder) updateReplaceDirectives(cmd *cobra.Command, goCmd strin
 						reason: fmt.Sprintf("change the replaced old version of %s from %s to %s", o.replace.Old.Path, o.replace.Old.Version, v.Old.Version),
 					}
 				}
-
 			}
 			if replace != nil {
 				if v, ok := requires[replace.Old.Path]; ok {

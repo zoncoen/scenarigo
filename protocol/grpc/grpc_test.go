@@ -194,9 +194,9 @@ func (*OneofMessage_A_) isOneofMessage_Value() {}
 func (*OneofMessage_B_) isOneofMessage_Value() {}
 
 type OneofMessage_A struct {
-	FooValue string `protobuf:"bytes,1,opt,name=foo_value,json=fooValue,proto3" json:"foo_value,omitempty"`
+	FooValue string `json:"foo_value,omitempty" protobuf:"bytes,1,opt,name=foo_value,json=fooValue,proto3"`
 }
 
 type OneofMessage_B struct {
-	BarValue string `protobuf:"bytes,1,opt,name=bar_value,json=barValue,proto3" json:"bar_value,omitempty"`
+	BarValue string `json:"bar_value,omitempty" protobuf:"bytes,1,opt,name=bar_value,json=barValue,proto3"`
 }

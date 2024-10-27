@@ -78,7 +78,7 @@ func (s *Scenario) Validate() error {
 
 // Step represents a step of scenario.
 type Step struct {
-	ID                      string                    `yaml:"id,omitempty" validate:"alphanum"`
+	ID                      string                    `validate:"alphanum"                      yaml:"id,omitempty"`
 	Title                   string                    `yaml:"title,omitempty"`
 	Description             string                    `yaml:"description,omitempty"`
 	If                      string                    `yaml:"if,omitempty"`

@@ -1,21 +1,19 @@
 package grpc
 
 import (
-	"reflect"
 	"strconv"
 	"testing"
 
-	"github.com/goccy/go-yaml"
 	"google.golang.org/genproto/googleapis/rpc/errdetails"
-	spb "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/protoadapt"
+
+	"github.com/goccy/go-yaml"
 
 	"github.com/zoncoen/scenarigo/context"
-	"github.com/zoncoen/scenarigo/internal/reflectutil"
 	"github.com/zoncoen/scenarigo/internal/yamlutil"
 	"github.com/zoncoen/scenarigo/testdata/gen/pb/test"
 )
@@ -30,10 +28,7 @@ func TestExpect_Build(t *testing.T) {
 			"default": {
 				expect: &Expect{},
 				v: &response{
-					rvalues: []reflect.Value{
-						reflect.ValueOf(&test.EchoResponse{}),
-						reflect.Zero(reflectutil.TypeError),
-					},
+					Message: &test.EchoResponse{},
 				},
 			},
 			"code": {
@@ -41,10 +36,7 @@ func TestExpect_Build(t *testing.T) {
 					Code: strconv.Itoa(int(codes.InvalidArgument)),
 				},
 				v: &response{
-					rvalues: []reflect.Value{
-						reflect.Zero(reflect.TypeOf(&test.EchoResponse{})),
-						reflect.ValueOf(status.New(codes.InvalidArgument, "invalid argument").Err()),
-					},
+					Status: createStatus(t, codes.InvalidArgument, "invalid argument"),
 				},
 			},
 			"code string": {
@@ -52,10 +44,7 @@ func TestExpect_Build(t *testing.T) {
 					Code: "InvalidArgument",
 				},
 				v: &response{
-					rvalues: []reflect.Value{
-						reflect.Zero(reflect.TypeOf(&test.EchoResponse{})),
-						reflect.ValueOf(status.New(codes.InvalidArgument, "invalid argument").Err()),
-					},
+					Status: createStatus(t, codes.InvalidArgument, "invalid argument"),
 				},
 			},
 			"code template string": {
@@ -63,10 +52,7 @@ func TestExpect_Build(t *testing.T) {
 					Code: `{{"InvalidArgument"}}`,
 				},
 				v: &response{
-					rvalues: []reflect.Value{
-						reflect.Zero(reflect.TypeOf(&test.EchoResponse{})),
-						reflect.ValueOf(status.New(codes.InvalidArgument, "invalid argument").Err()),
-					},
+					Status: createStatus(t, codes.InvalidArgument, "invalid argument"),
 				},
 			},
 			"assert body": {
@@ -84,12 +70,9 @@ func TestExpect_Build(t *testing.T) {
 					},
 				},
 				v: &response{
-					rvalues: []reflect.Value{
-						reflect.ValueOf(&test.EchoResponse{
-							MessageId:   "1",
-							MessageBody: "hello",
-						}),
-						reflect.Zero(reflectutil.TypeError),
+					Message: &test.EchoResponse{
+						MessageId:   "1",
+						MessageBody: "hello",
 					},
 				},
 			},
@@ -109,10 +92,7 @@ func TestExpect_Build(t *testing.T) {
 							"application/grpc",
 						},
 					}),
-					rvalues: []reflect.Value{
-						reflect.ValueOf(&test.EchoResponse{}),
-						reflect.Zero(reflectutil.TypeError),
-					},
+					Message: &test.EchoResponse{},
 				},
 			},
 			"assert metadata.trailer": {
@@ -131,10 +111,7 @@ func TestExpect_Build(t *testing.T) {
 							"application/grpc",
 						},
 					}),
-					rvalues: []reflect.Value{
-						reflect.ValueOf(&test.EchoResponse{}),
-						reflect.Zero(reflectutil.TypeError),
-					},
+					Message: &test.EchoResponse{},
 				},
 			},
 			"assert in case of error": {
@@ -163,26 +140,16 @@ func TestExpect_Build(t *testing.T) {
 					},
 				},
 				v: &response{
-					rvalues: []reflect.Value{
-						reflect.Zero(reflect.TypeOf(&test.EchoResponse{})),
-						reflect.ValueOf(status.FromProto(&spb.Status{
-							Code:    int32(codes.InvalidArgument),
-							Message: "invalid argument",
-							Details: []*anypb.Any{
-								mustAny(t,
-									&errdetails.LocalizedMessage{
-										Locale:  "ja-JP",
-										Message: "エラー",
-									},
-								),
-								mustAny(t,
-									&errdetails.DebugInfo{
-										Detail: "debug",
-									},
-								),
-							},
-						}).Err()),
-					},
+					Status: createStatus(
+						t, codes.InvalidArgument, "invalid argument",
+						&errdetails.LocalizedMessage{
+							Locale:  "ja-JP",
+							Message: "エラー",
+						},
+						&errdetails.DebugInfo{
+							Detail: "debug",
+						},
+					),
 				},
 			},
 			"assert in case of error with template string": {
@@ -193,11 +160,7 @@ func TestExpect_Build(t *testing.T) {
 					},
 				},
 				v: &response{
-					rvalues: []reflect.Value{
-						reflect.Zero(reflect.TypeOf(&test.EchoResponse{})),
-						reflect.ValueOf(
-							status.New(codes.InvalidArgument, "invalid argument").Err()),
-					},
+					Status: createStatus(t, codes.InvalidArgument, "invalid argument"),
 				},
 			},
 			"with vars": {
@@ -216,12 +179,9 @@ func TestExpect_Build(t *testing.T) {
 					},
 				},
 				v: &response{
-					rvalues: []reflect.Value{
-						reflect.ValueOf(&test.EchoResponse{
-							MessageId:   "1",
-							MessageBody: "hello",
-						}),
-						reflect.Zero(reflectutil.TypeError),
+					Message: &test.EchoResponse{
+						MessageId:   "1",
+						MessageBody: "hello",
 					},
 				},
 			},
@@ -266,23 +226,13 @@ func TestExpect_Build(t *testing.T) {
 					},
 				},
 				v: &response{
-					rvalues: []reflect.Value{
-						reflect.ValueOf(&test.EchoResponse{
-							MessageBody: "hello",
-						}),
-						reflect.ValueOf(status.FromProto(&spb.Status{
-							Code:    int32(codes.InvalidArgument),
-							Message: "invalid argument",
-							Details: []*anypb.Any{
-								mustAny(t,
-									&errdetails.LocalizedMessage{
-										Locale:  "ja-JP",
-										Message: "エラー",
-									},
-								),
-							},
-						}).Err()),
-					},
+					Status: createStatus(
+						t, codes.InvalidArgument, "invalid argument",
+						&errdetails.LocalizedMessage{
+							Locale:  "ja-JP",
+							Message: "エラー",
+						},
+					),
 					Header: yamlutil.NewMDMarshaler(metadata.MD{
 						"content-type": []string{
 							"application/grpc",
@@ -293,6 +243,9 @@ func TestExpect_Build(t *testing.T) {
 							"v1.0.0",
 						},
 					}),
+					Message: &test.EchoResponse{
+						MessageBody: "hello",
+					},
 				},
 			},
 		}
@@ -359,48 +312,11 @@ func TestExpect_Build(t *testing.T) {
 				},
 				expectBuildError: true,
 			},
-
-			"return value must be []reflect.Value": {
-				expect:            &Expect{},
-				v:                 &response{},
-				expectAssertError: true,
-			},
-			"the length of return values must be 2": {
-				expect: &Expect{},
-				v: &response{
-					rvalues: []reflect.Value{
-						reflect.ValueOf(&test.EchoResponse{}),
-					},
-				},
-				expectAssertError: true,
-			},
-			"fist return value must be proto.Message": {
-				expect: &Expect{},
-				v: &response{
-					rvalues: []reflect.Value{
-						reflect.ValueOf(status.New(codes.InvalidArgument, "invalid argument").Err()),
-						reflect.ValueOf(status.New(codes.InvalidArgument, "invalid argument").Err()),
-					},
-				},
-				expectAssertError: true,
-			},
-			"second return value must be error": {
-				expect: &Expect{},
-				v: &response{
-					rvalues: []reflect.Value{
-						reflect.ValueOf(&test.EchoResponse{}),
-						reflect.ValueOf(&test.EchoResponse{}),
-					},
-				},
-				expectAssertError: true,
-			},
 			"wrong code in case of default": {
 				expect: &Expect{},
 				v: &response{
-					rvalues: []reflect.Value{
-						reflect.Zero(reflect.TypeOf(&test.EchoResponse{})),
-						reflect.ValueOf(status.New(codes.InvalidArgument, "invalid argument").Err()),
-					},
+					Status:  createStatus(t, codes.InvalidArgument, "invalid argument"),
+					Message: &test.EchoResponse{},
 				},
 				expectAssertError: true,
 			},
@@ -409,10 +325,8 @@ func TestExpect_Build(t *testing.T) {
 					Code: "OK",
 				},
 				v: &response{
-					rvalues: []reflect.Value{
-						reflect.Zero(reflect.TypeOf(&test.EchoResponse{})),
-						reflect.ValueOf(status.New(codes.InvalidArgument, "invalid argument").Err()),
-					},
+					Status:  createStatus(t, codes.InvalidArgument, "invalid argument"),
+					Message: &test.EchoResponse{},
 				},
 				expectAssertError: true,
 			},
@@ -431,12 +345,9 @@ func TestExpect_Build(t *testing.T) {
 					},
 				},
 				v: &response{
-					rvalues: []reflect.Value{
-						reflect.ValueOf(&test.EchoResponse{
-							MessageId:   "1",
-							MessageBody: "hell",
-						}),
-						reflect.Zero(reflectutil.TypeError),
+					Message: &test.EchoResponse{
+						MessageId:   "1",
+						MessageBody: "hell",
 					},
 				},
 				expectAssertError: true,
@@ -457,10 +368,7 @@ func TestExpect_Build(t *testing.T) {
 							"application/grpc",
 						},
 					}),
-					rvalues: []reflect.Value{
-						reflect.ValueOf(&test.EchoResponse{}),
-						reflect.Zero(reflectutil.TypeError),
-					},
+					Message: &test.EchoResponse{},
 				},
 				expectAssertError: true,
 			},
@@ -480,10 +388,7 @@ func TestExpect_Build(t *testing.T) {
 							"application/grpc",
 						},
 					}),
-					rvalues: []reflect.Value{
-						reflect.ValueOf(&test.EchoResponse{}),
-						reflect.Zero(reflectutil.TypeError),
-					},
+					Message: &test.EchoResponse{},
 				},
 				expectAssertError: true,
 			},
@@ -503,10 +408,7 @@ func TestExpect_Build(t *testing.T) {
 							"application/grpc",
 						},
 					}),
-					rvalues: []reflect.Value{
-						reflect.ValueOf(&test.EchoResponse{}),
-						reflect.Zero(reflectutil.TypeError),
-					},
+					Message: &test.EchoResponse{},
 				},
 				expectAssertError: true,
 			},
@@ -526,10 +428,7 @@ func TestExpect_Build(t *testing.T) {
 							"application/grpc",
 						},
 					}),
-					rvalues: []reflect.Value{
-						reflect.ValueOf(&test.EchoResponse{}),
-						reflect.Zero(reflectutil.TypeError),
-					},
+					Message: &test.EchoResponse{},
 				},
 				expectAssertError: true,
 			},
@@ -549,10 +448,7 @@ func TestExpect_Build(t *testing.T) {
 							"application/grpc",
 						},
 					}),
-					rvalues: []reflect.Value{
-						reflect.ValueOf(&test.EchoResponse{}),
-						reflect.Zero(reflectutil.TypeError),
-					},
+					Message: &test.EchoResponse{},
 				},
 				expectAssertError: true,
 			},
@@ -563,10 +459,8 @@ func TestExpect_Build(t *testing.T) {
 					},
 				},
 				v: &response{
-					rvalues: []reflect.Value{
-						reflect.Zero(reflect.TypeOf(&test.EchoResponse{})),
-						reflect.ValueOf(status.Error(codes.NotFound, "not found")),
-					},
+					Status:  createStatus(t, codes.NotFound, "not found"),
+					Message: &test.EchoResponse{},
 				},
 				expectAssertError: true,
 			},
@@ -578,10 +472,8 @@ func TestExpect_Build(t *testing.T) {
 					},
 				},
 				v: &response{
-					rvalues: []reflect.Value{
-						reflect.Zero(reflect.TypeOf(&test.EchoResponse{})),
-						reflect.ValueOf(status.Error(codes.NotFound, "not found")),
-					},
+					Status:  createStatus(t, codes.NotFound, "not found"),
+					Message: &test.EchoResponse{},
 				},
 				expectAssertError: true,
 			},
@@ -603,26 +495,17 @@ func TestExpect_Build(t *testing.T) {
 					},
 				},
 				v: &response{
-					rvalues: []reflect.Value{
-						reflect.Zero(reflect.TypeOf(&test.EchoResponse{})),
-						reflect.ValueOf(status.FromProto(&spb.Status{
-							Code:    int32(codes.InvalidArgument),
-							Message: "invalid argument",
-							Details: []*anypb.Any{
-								mustAny(t,
-									&errdetails.LocalizedMessage{
-										Locale:  "ja-JP",
-										Message: "エラー",
-									},
-								),
-								mustAny(t,
-									&errdetails.DebugInfo{
-										Detail: "debug",
-									},
-								),
-							},
-						}).Err()),
-					},
+					Status: createStatus(
+						t, codes.InvalidArgument, "invalid argument",
+						&errdetails.LocalizedMessage{
+							Locale:  "ja-JP",
+							Message: "エラー",
+						},
+						&errdetails.DebugInfo{
+							Detail: "debug",
+						},
+					),
+					Message: &test.EchoResponse{},
 				},
 				expectBuildError: true,
 			},
@@ -643,26 +526,17 @@ func TestExpect_Build(t *testing.T) {
 					},
 				},
 				v: &response{
-					rvalues: []reflect.Value{
-						reflect.Zero(reflect.TypeOf(&test.EchoResponse{})),
-						reflect.ValueOf(status.FromProto(&spb.Status{
-							Code:    int32(codes.InvalidArgument),
-							Message: "invalid argument",
-							Details: []*anypb.Any{
-								mustAny(t,
-									&errdetails.LocalizedMessage{
-										Locale:  "ja-JP",
-										Message: "エラー",
-									},
-								),
-								mustAny(t,
-									&errdetails.DebugInfo{
-										Detail: "debug",
-									},
-								),
-							},
-						}).Err()),
-					},
+					Status: createStatus(
+						t, codes.InvalidArgument, "invalid argument",
+						&errdetails.LocalizedMessage{
+							Locale:  "ja-JP",
+							Message: "エラー",
+						},
+						&errdetails.DebugInfo{
+							Detail: "debug",
+						},
+					),
+					Message: &test.EchoResponse{},
 				},
 				expectAssertError: true,
 				expectError:       `.status.details[0]: expected "google.rpc.Invalid" but got "google.rpc.LocalizedMessage"`,
@@ -684,26 +558,17 @@ func TestExpect_Build(t *testing.T) {
 					},
 				},
 				v: &response{
-					rvalues: []reflect.Value{
-						reflect.Zero(reflect.TypeOf(&test.EchoResponse{})),
-						reflect.ValueOf(status.FromProto(&spb.Status{
-							Code:    int32(codes.InvalidArgument),
-							Message: "invalid argument",
-							Details: []*anypb.Any{
-								mustAny(t,
-									&errdetails.LocalizedMessage{
-										Locale:  "ja-JP",
-										Message: "エラー",
-									},
-								),
-								mustAny(t,
-									&errdetails.DebugInfo{
-										Detail: "debug",
-									},
-								),
-							},
-						}).Err()),
-					},
+					Status: createStatus(
+						t, codes.InvalidArgument, "invalid argument",
+						&errdetails.LocalizedMessage{
+							Locale:  "ja-JP",
+							Message: "エラー",
+						},
+						&errdetails.DebugInfo{
+							Detail: "debug",
+						},
+					),
+					Message: &test.EchoResponse{},
 				},
 				expectBuildError: true,
 				expectError:      `.status.details[0].'google.rpc.LocalizedMessage': invalid expect status detail: failed to build assertion: failed to parse "{{locale": col 9: expected '}}', found 'EOF'`,
@@ -725,26 +590,17 @@ func TestExpect_Build(t *testing.T) {
 					},
 				},
 				v: &response{
-					rvalues: []reflect.Value{
-						reflect.Zero(reflect.TypeOf(&test.EchoResponse{})),
-						reflect.ValueOf(status.FromProto(&spb.Status{
-							Code:    int32(codes.InvalidArgument),
-							Message: "invalid argument",
-							Details: []*anypb.Any{
-								mustAny(t,
-									&errdetails.LocalizedMessage{
-										Locale:  "ja-JP",
-										Message: "エラー",
-									},
-								),
-								mustAny(t,
-									&errdetails.DebugInfo{
-										Detail: "debug",
-									},
-								),
-							},
-						}).Err()),
-					},
+					Status: createStatus(
+						t, codes.InvalidArgument, "invalid argument",
+						&errdetails.LocalizedMessage{
+							Locale:  "ja-JP",
+							Message: "エラー",
+						},
+						&errdetails.DebugInfo{
+							Detail: "debug",
+						},
+					),
+					Message: &test.EchoResponse{},
 				},
 				expectAssertError: true,
 				expectError:       `.status.details[0].'google.rpc.LocalizedMessage': ".Loc" not found`,
@@ -766,26 +622,17 @@ func TestExpect_Build(t *testing.T) {
 					},
 				},
 				v: &response{
-					rvalues: []reflect.Value{
-						reflect.Zero(reflect.TypeOf(&test.EchoResponse{})),
-						reflect.ValueOf(status.FromProto(&spb.Status{
-							Code:    int32(codes.InvalidArgument),
-							Message: "invalid argument",
-							Details: []*anypb.Any{
-								mustAny(t,
-									&errdetails.LocalizedMessage{
-										Locale:  "ja-JP",
-										Message: "エラー",
-									},
-								),
-								mustAny(t,
-									&errdetails.DebugInfo{
-										Detail: "debug",
-									},
-								),
-							},
-						}).Err()),
-					},
+					Status: createStatus(
+						t, codes.InvalidArgument, "invalid argument",
+						&errdetails.LocalizedMessage{
+							Locale:  "ja-JP",
+							Message: "エラー",
+						},
+						&errdetails.DebugInfo{
+							Detail: "debug",
+						},
+					),
+					Message: &test.EchoResponse{},
 				},
 				expectAssertError: true,
 				expectError:       `.status.details[0].'google.rpc.LocalizedMessage'.Locale: expected "en-US" but got "ja-JP"`,
@@ -839,12 +686,6 @@ func TestExpect_Build(t *testing.T) {
 				expect: &Expect{},
 				v:      "string is unexpected value",
 			},
-			"invalid type for rvalues of *response": {
-				expect: &Expect{},
-				v: &response{
-					rvalues: []reflect.Value{},
-				},
-			},
 		}
 		for name, test := range tests {
 			test := test
@@ -862,11 +703,19 @@ func TestExpect_Build(t *testing.T) {
 	})
 }
 
-func mustAny(t *testing.T, m proto.Message) *anypb.Any {
+func createStatus(t *testing.T, c codes.Code, msg string, details ...proto.Message) *responseStatus {
 	t.Helper()
-	a, err := anypb.New(m)
-	if err != nil {
-		t.Fatal(err)
+	sts := status.New(c, msg)
+	if len(details) > 0 {
+		in := make([]protoadapt.MessageV1, len(details))
+		for i, d := range details {
+			in[i] = protoadapt.MessageV1Of(d)
+		}
+		var err error
+		sts, err = sts.WithDetails(in...)
+		if err != nil {
+			t.Fatalf("failed to create status with details: %s", err)
+		}
 	}
-	return a
+	return &responseStatus{sts}
 }

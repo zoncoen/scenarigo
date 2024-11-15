@@ -2,13 +2,12 @@ package grpc
 
 import (
 	"bytes"
+	gocontext "context"
 	"fmt"
 	"reflect"
 
 	"github.com/goccy/go-yaml"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
@@ -16,37 +15,94 @@ import (
 	"github.com/zoncoen/scenarigo/context"
 	"github.com/zoncoen/scenarigo/errors"
 	"github.com/zoncoen/scenarigo/internal/reflectutil"
-	"github.com/zoncoen/scenarigo/internal/yamlutil"
 )
 
 type customServiceClient struct {
-	v reflect.Value
+	r      *Request
+	method reflect.Value
 }
 
-func (client *customServiceClient) invoke(ctx *context.Context, r *Request, opts *RequestOptions) (*context.Context, *response, error) {
+func newCustomServiceClient(r *Request, v reflect.Value) (*customServiceClient, error) {
 	var method reflect.Value
 	for {
-		if !client.v.IsValid() {
-			return ctx, nil, errors.ErrorPathf("client", "client %s is invalid", r.Client)
+		if !v.IsValid() {
+			return nil, errors.ErrorPathf("client", "client %q is invalid", r.Client)
 		}
-		method = client.v.MethodByName(r.Method)
+		method = v.MethodByName(r.Method)
 		if method.IsValid() {
 			// method found
 			break
 		}
-		switch client.v.Kind() {
+		switch v.Kind() {
 		case reflect.Interface, reflect.Ptr:
-			client.v = client.v.Elem()
+			v = v.Elem()
 		default:
-			return ctx, nil, errors.ErrorPathf("method", "method %s.%s not found", r.Client, r.Method)
+			return nil, errors.ErrorPathf("method", `method "%s.%s" not found`, r.Client, r.Method)
 		}
 	}
 
 	if err := validateMethod(method); err != nil {
-		return ctx, nil, errors.ErrorPathf("method", `"%s.%s" must be "func(context.Context, proto.Message, ...grpc.CallOption) (proto.Message, error): %s"`, r.Client, r.Method, err)
+		return nil, errors.ErrorPathf("method", `"%s.%s" must be "func(context.Context, proto.Message, ...grpc.CallOption) (proto.Message, error): %s"`, r.Client, r.Method, err)
 	}
 
-	return invoke(ctx, method, r)
+	return &customServiceClient{
+		r:      r,
+		method: method,
+	}, nil
+}
+
+func (client *customServiceClient) buildRequestMessage(ctx *context.Context) (proto.Message, error) {
+	req := reflect.New(client.method.Type().In(1).Elem()).Interface()
+	if err := buildRequestMsg(ctx, req, client.r.Message); err != nil {
+		return nil, errors.WrapPathf(err, "message", "failed to build request message")
+	}
+	reqMsg, ok := req.(proto.Message)
+	if !ok {
+		return nil, errors.ErrorPathf("client", "failed to build request message: second argument must be proto.Message but %T", req)
+	}
+	return reqMsg, nil
+}
+
+func (client *customServiceClient) invoke(ctx gocontext.Context, reqMsg proto.Message, opts ...grpc.CallOption) (proto.Message, *status.Status, error) {
+	in := []reflect.Value{
+		reflect.ValueOf(ctx),
+		reflect.ValueOf(reqMsg),
+	}
+	for _, o := range opts {
+		in = append(in, reflect.ValueOf(o))
+	}
+
+	rvalues := client.method.Call(in)
+	if len(rvalues) != 2 {
+		return nil, nil, errors.Errorf("expected return value length of method call is 2 but %d", len(rvalues))
+	}
+	if !rvalues[0].IsValid() {
+		return nil, nil, errors.New("first return value is invalid")
+	}
+	respMsg, ok := rvalues[0].Interface().(proto.Message)
+	if !ok {
+		if !rvalues[0].IsNil() {
+			return nil, nil, errors.Errorf("expected first return value is proto.Message but %T", rvalues[0].Interface())
+		}
+	}
+	if !rvalues[1].IsValid() {
+		return nil, nil, errors.New("second return value is invalid")
+	}
+	callErr, ok := rvalues[1].Interface().(error)
+	if !ok {
+		if !rvalues[1].IsNil() {
+			return nil, nil, errors.Errorf("expected second return value is error but %T", rvalues[1].Interface())
+		}
+	}
+	var sts *status.Status
+	if ok {
+		sts, ok = status.FromError(callErr)
+		if !ok {
+			return nil, nil, errors.Errorf(`expected gRPC status error but got %T: "%s"`, callErr, callErr.Error())
+		}
+	}
+
+	return respMsg, sts, nil
 }
 
 func validateMethod(method reflect.Value) error {
@@ -84,121 +140,6 @@ func validateMethod(method reflect.Value) error {
 	}
 
 	return nil
-}
-
-func invoke(ctx *context.Context, method reflect.Value, r *Request) (*context.Context, *response, error) {
-	reqCtx := ctx.RequestContext()
-	if r.Metadata != nil {
-		x, err := ctx.ExecuteTemplate(r.Metadata)
-		if err != nil {
-			return ctx, nil, errors.WrapPathf(err, "metadata", "failed to set metadata")
-		}
-		md, err := reflectutil.ConvertStringsMap(reflect.ValueOf(x))
-		if err != nil {
-			return nil, nil, errors.WrapPathf(err, "metadata", "failed to set metadata")
-		}
-
-		pairs := []string{}
-		for k, vs := range md {
-			for _, v := range vs {
-				pairs = append(pairs, k, v)
-			}
-		}
-		reqCtx = metadata.AppendToOutgoingContext(reqCtx, pairs...)
-	}
-
-	var in []reflect.Value
-	for i := 0; i < method.Type().NumIn(); i++ {
-		switch i {
-		case 0:
-			in = append(in, reflect.ValueOf(reqCtx))
-		case 1:
-			req := reflect.New(method.Type().In(i).Elem()).Interface()
-			if err := buildRequestMsg(ctx, req, r.Message); err != nil {
-				return ctx, nil, errors.WrapPathf(err, "message", "failed to build request message")
-			}
-
-			//nolint:exhaustruct
-			dumpReq := &Request{
-				Method:  r.Method,
-				Message: req,
-			}
-			reqMD, _ := metadata.FromOutgoingContext(reqCtx)
-			if len(reqMD) > 0 {
-				dumpReq.Metadata = yamlutil.NewMDMarshaler(reqMD)
-			}
-			ctx = ctx.WithRequest((*RequestExtractor)(dumpReq))
-			if b, err := yaml.Marshal(dumpReq); err == nil {
-				ctx.Reporter().Logf("request:\n%s", r.addIndent(string(b), indentNum))
-			} else {
-				ctx.Reporter().Logf("failed to dump request:\n%s", err)
-			}
-
-			in = append(in, reflect.ValueOf(req))
-		}
-	}
-
-	var header, trailer metadata.MD
-	in = append(in,
-		reflect.ValueOf(grpc.Header(&header)),
-		reflect.ValueOf(grpc.Trailer(&trailer)),
-	)
-
-	rvalues := method.Call(in)
-	message := rvalues[0].Interface()
-	var err error
-	if rvalues[1].IsValid() && rvalues[1].CanInterface() {
-		e, ok := rvalues[1].Interface().(error)
-		if ok {
-			err = e
-		}
-	}
-	resp := &response{
-		Status: responseStatus{
-			Code:    codes.OK.String(),
-			Message: "",
-			Details: nil,
-		},
-		Message: message,
-		rvalues: rvalues,
-	}
-	if len(header) > 0 {
-		resp.Header = yamlutil.NewMDMarshaler(header)
-	}
-	if len(trailer) > 0 {
-		resp.Trailer = yamlutil.NewMDMarshaler(trailer)
-	}
-	if err != nil {
-		if sts, ok := status.FromError(err); ok {
-			resp.Status.Code = sts.Code().String()
-			resp.Status.Message = sts.Message()
-			details := sts.Details()
-			if l := len(details); l > 0 {
-				m := make(yaml.MapSlice, l)
-				for i, d := range details {
-					item := yaml.MapItem{
-						Key:   "",
-						Value: d,
-					}
-					if msg, ok := d.(proto.Message); ok {
-						item.Key = string(proto.MessageName(msg))
-					} else {
-						item.Key = fmt.Sprintf("%T (not proto.Message)", d)
-					}
-					m[i] = item
-				}
-				resp.Status.Details = m
-			}
-		}
-	}
-	ctx = ctx.WithResponse((*ResponseExtractor)(resp))
-	if b, err := yaml.Marshal(resp); err == nil {
-		ctx.Reporter().Logf("response:\n%s", r.addIndent(string(b), indentNum))
-	} else {
-		ctx.Reporter().Logf("failed to dump response:\n%s", err)
-	}
-
-	return ctx, resp, nil
 }
 
 func buildRequestMsg(ctx *context.Context, req interface{}, src interface{}) error {

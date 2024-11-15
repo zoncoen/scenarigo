@@ -4,10 +4,14 @@ import (
 	"context"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/reflect/protoreflect"
 
 	"github.com/jhump/protoreflect/grpcreflect"
 )
+
+const unimplementedReflectionServiceMessage = "unknown service grpc.reflection.v1alpha.ServerReflection"
 
 // ReflectionClient is a client to access reflection service.
 type ReflectionClient struct {
@@ -41,4 +45,17 @@ func (c *ReflectionClient) ResolveService(name protoreflect.FullName) (protorefl
 		return nil, err
 	}
 	return fd.UnwrapService(), nil
+}
+
+// IsUnimplementedReflectionServiceError returns a boolean indicating whether its argument is known to report that the server doesn't implement reflection service.
+func IsUnimplementedReflectionServiceError(err error) bool {
+	if err == nil {
+		return false
+	}
+	if s, ok := status.FromError(err); ok {
+		if s.Code() == codes.Unimplemented && s.Message() == unimplementedReflectionServiceMessage {
+			return true
+		}
+	}
+	return false
 }

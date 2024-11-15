@@ -5,13 +5,14 @@ import (
 	"reflect"
 	"strconv"
 
-	"github.com/goccy/go-yaml"
-	"google.golang.org/grpc/status"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 
 	// Register proto messages to unmarshal com.google.protobuf.Any.
 	_ "google.golang.org/genproto/googleapis/rpc/errdetails"
+
+	"github.com/goccy/go-yaml"
 
 	"github.com/zoncoen/scenarigo/assert"
 	"github.com/zoncoen/scenarigo/context"
@@ -86,17 +87,13 @@ func (e *Expect) Build(ctx *context.Context) (assert.Assertion, error) {
 		if !ok {
 			return errors.Errorf(`failed to convert to response type. type is %s`, reflect.TypeOf(v))
 		}
-		message, stErr, err := extract(resp)
-		if err != nil {
-			return err
-		}
-		if err := assertStatusCode(codeAssertion, stErr); err != nil {
+		if err := assertStatusCode(codeAssertion, resp.Status.Code()); err != nil {
 			return errors.WithPath(err, codePath)
 		}
-		if err := e.assertStatusMessage(statusMsgAssertion, stErr); err != nil {
+		if err := e.assertStatusMessage(statusMsgAssertion, resp.Status.Message()); err != nil {
 			return errors.WithPath(err, "status.message")
 		}
-		if err := e.assertStatusDetails(statusDetailAssertions, stErr); err != nil {
+		if err := e.assertStatusDetails(statusDetailAssertions, resp.Status.Details()); err != nil {
 			return errors.WithPath(err, "status")
 		}
 		if err := headerAssertion.Assert(resp.Header); err != nil {
@@ -105,7 +102,7 @@ func (e *Expect) Build(ctx *context.Context) (assert.Assertion, error) {
 		if err := trailerAssertion.Assert(resp.Trailer); err != nil {
 			return errors.WithPath(err, "trailer")
 		}
-		if err := msgAssertion.Assert(message); err != nil {
+		if err := msgAssertion.Assert(resp.Message); err != nil {
 			return errors.WithPath(err, "message")
 		}
 		return nil
@@ -161,32 +158,29 @@ func (e *Expect) buildStatusDetailAssertions(ctx *context.Context) ([]assert.Ass
 	return statusDetailAssertions, nil
 }
 
-func assertStatusCode(assertion assert.Assertion, sts *status.Status) error {
-	err := assertion.Assert(sts.Code().String())
+func assertStatusCode(assertion assert.Assertion, code codes.Code) error {
+	err := assertion.Assert(code.String())
 	if err == nil {
 		return nil
 	}
-	return assertion.Assert(strconv.Itoa(int(sts.Code())))
+	return assertion.Assert(strconv.Itoa(int(code)))
 }
 
-func (e *Expect) assertStatusMessage(assertion assert.Assertion, sts *status.Status) error {
-	if e.Status.Message == "" {
+func (e *Expect) assertStatusMessage(assertion assert.Assertion, msg string) error {
+	if assertion == nil {
 		return nil
 	}
-	err := assertion.Assert(sts.Message())
+	err := assertion.Assert(msg)
 	if err == nil {
 		return nil
 	}
 	return err
 }
 
-func (e *Expect) assertStatusDetails(assertions []assert.Assertion, sts *status.Status) error {
+func (e *Expect) assertStatusDetails(assertions []assert.Assertion, actualDetails []any) error {
 	if len(assertions) == 0 {
 		return nil
 	}
-
-	actualDetails := sts.Details()
-
 	for i, assertion := range assertions {
 		if i >= len(actualDetails) {
 			return errors.ErrorPath(fmt.Sprintf("details[%d]", i), `not found`)
@@ -196,42 +190,5 @@ func (e *Expect) assertStatusDetails(assertions []assert.Assertion, sts *status.
 			return errors.WithPath(err, fmt.Sprintf("details[%d]", i))
 		}
 	}
-
 	return nil
-}
-
-func extract(v *response) (proto.Message, *status.Status, error) {
-	vs := v.rvalues
-	if len(vs) != 2 {
-		return nil, nil, errors.Errorf("expected return value length of method call is 2 but %d", len(vs))
-	}
-
-	if !vs[0].IsValid() {
-		return nil, nil, errors.New("first return value is invalid")
-	}
-	message, ok := vs[0].Interface().(proto.Message)
-	if !ok {
-		if !vs[0].IsNil() {
-			return nil, nil, errors.Errorf("expected first return value is proto.Message but %T", vs[0].Interface())
-		}
-	}
-
-	if !vs[1].IsValid() {
-		return nil, nil, errors.New("second return value is invalid")
-	}
-	callErr, ok := vs[1].Interface().(error)
-	if !ok {
-		if !vs[1].IsNil() {
-			return nil, nil, errors.Errorf("expected second return value is error but %T", vs[1].Interface())
-		}
-	}
-	var sts *status.Status
-	if ok {
-		sts, ok = status.FromError(callErr)
-		if !ok {
-			return nil, nil, errors.Errorf(`expected error is status but got %T: "%s"`, callErr, callErr.Error())
-		}
-	}
-
-	return message, sts, nil
 }

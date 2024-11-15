@@ -2,16 +2,18 @@ package proto
 
 import (
 	"context"
-	"net"
+	"errors"
 	"testing"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/reflection"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/reflect/protoreflect"
 
 	"github.com/google/go-cmp/cmp"
-	testpb "github.com/zoncoen/scenarigo/testdata/gen/pb/test"
+
+	"github.com/zoncoen/scenarigo/internal/testutil"
 )
 
 func TestReflectionClient(t *testing.T) {
@@ -45,24 +47,41 @@ func TestReflectionClient(t *testing.T) {
 
 func startServer(t *testing.T) string {
 	t.Helper()
-	s := grpc.NewServer()
-	testpb.RegisterTestServer(s, nil)
-	reflection.Register(s)
+	return testutil.StartTestGRPCServer(t, nil, testutil.EnableReflection())
+}
 
-	ln, err := net.Listen("tcp", "localhost:0")
-	if err != nil {
-		t.Fatalf("unexpected error: %s", err)
+func TestIsUnimplementedReflectionServiceError(t *testing.T) {
+	tests := map[string]struct {
+		err    error
+		expect bool
+	}{
+		"true": {
+			err:    status.New(codes.Unimplemented, unimplementedReflectionServiceMessage).Err(),
+			expect: true,
+		},
+		"nil error": {
+			expect: false,
+		},
+		"not status error": {
+			err:    errors.New(unimplementedReflectionServiceMessage),
+			expect: false,
+		},
+		"not unimplemented error": {
+			err:    status.New(codes.Unknown, unimplementedReflectionServiceMessage).Err(),
+			expect: false,
+		},
+		"not reflection service": {
+			err:    status.New(codes.Unimplemented, "unknown service scenarigo.test.ServerReflection").Err(),
+			expect: false,
+		},
 	}
-	t.Cleanup(func() {
-		ln.Close()
-	})
-
-	go func() {
-		_ = s.Serve(ln)
-	}()
-	t.Cleanup(func() {
-		s.Stop()
-	})
-
-	return ln.Addr().String()
+	for name, test := range tests {
+		test := test
+		t.Run(name, func(t *testing.T) {
+			got := IsUnimplementedReflectionServiceError(test.err)
+			if got != test.expect {
+				t.Errorf("expect %t but got %t", test.expect, got)
+			}
+		})
+	}
 }

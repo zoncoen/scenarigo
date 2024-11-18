@@ -2220,7 +2220,7 @@ func create(t *testing.T, path, content string) {
 		t.Fatalf("failed to create %s: %s", path, err)
 	}
 	defer f.Close()
-	if _, err := f.Write([]byte(content)); err != nil {
+	if _, err := f.WriteString(content); err != nil {
 		t.Fatalf("failed to write %s: %s", path, err)
 	}
 }
@@ -2236,7 +2236,7 @@ func createExecutable(t *testing.T, path, stdout string) {
 		t.Fatalf("failed to create %s: %s", path, err)
 	}
 	defer f.Close()
-	if _, err := f.Write([]byte(fmt.Sprintf("#!%s\n%s %q", bash, echo, stdout))); err != nil {
+	if _, err := f.WriteString(fmt.Sprintf("#!%s\n%s %q", bash, echo, stdout)); err != nil {
 		t.Fatalf("failed to write %s: %s", path, err)
 	}
 }

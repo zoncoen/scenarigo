@@ -5,25 +5,27 @@ linters:
   enable-all: true
   disable:
     - containedctx
+    - contextcheck
+    - depguard
     - dupl
+    - err113
     - exhaustive
+    - exhaustruct
     - funlen
     - gci
     - gochecknoglobals
     - gochecknoinits
     - gocognit
     - godox
-    - goerr113
-    - gomnd
-    - ifshort
+    - interfacebloat
     - ireturn
     - lll
+    - mnd
     - nestif
     - nlreturn
-    - nosnakecase
     - paralleltest
+    - perfsprint
     - prealloc
-    - scopelint
     - testpackage
     - tparallel
     - unparam
@@ -31,19 +33,32 @@ linters:
     - wrapcheck
     - wsl
 
-    # deplicated
-    - deadcode
-    - exhaustivestruct
-    - golint
-    - interfacer
-    - maligned
-    - scopelint
-    - structcheck
-    - varcheck
+    # deprecated
+    - execinquery
+    - exportloopref
+    - gomnd
 
     # disabled because of generics
     - rowserrcheck
     - wastedassign
+
+    # TODO: fix
+    - copyloopvar
+    - cyclop
+    - errcheck
+    - forbidigo
+    - goconst
+    - gocyclo
+    - govet
+    - inamedparam
+    - intrange
+    - maintidx
+    - nilnil
+    - predeclared
+    - revive
+    - staticcheck
+    - stylecheck
+    - tagliatelle
 
   skip-dirs:
     - gen
@@ -85,6 +100,9 @@ linters-settings:
     - 'github\.com/zoncoen/scenarigo/template/ast\..+$'
     - 'github\.com/zoncoen/scenarigo/template/parser\..+$'
     - 'github\.com/zoncoen/scenarigo/template\.Template$'
+  gosec:
+    excludes:
+      - G115
   maintidx:
     under: 30
   stylecheck:

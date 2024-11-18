@@ -2,10 +2,15 @@ package grpc
 
 import (
 	"bytes"
-	gocontext "context"
 	"reflect"
 	"strings"
 	"testing"
+
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/testing/protocmp"
 
 	"github.com/goccy/go-yaml"
 	"github.com/golang/mock/gomock"
@@ -13,21 +18,14 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/sergi/go-diff/diffmatchpatch"
 	"github.com/zoncoen/query-go"
+
 	"github.com/zoncoen/scenarigo/context"
 	"github.com/zoncoen/scenarigo/internal/mockutil"
 	"github.com/zoncoen/scenarigo/internal/queryutil"
 	"github.com/zoncoen/scenarigo/internal/testutil"
+	"github.com/zoncoen/scenarigo/internal/yamlutil"
 	"github.com/zoncoen/scenarigo/reporter"
 	testpb "github.com/zoncoen/scenarigo/testdata/gen/pb/test"
-	"google.golang.org/genproto/googleapis/rpc/errdetails"
-	spb "google.golang.org/genproto/googleapis/rpc/status"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/testing/protocmp"
-	"google.golang.org/protobuf/types/known/anypb"
 )
 
 func TestRequestExtractor(t *testing.T) {
@@ -94,16 +92,15 @@ func TestRequestExtractor(t *testing.T) {
 
 func TestResponseExtractor(t *testing.T) {
 	resp := &ResponseExtractor{
-		Status: responseStatus{
-			Code: "OK",
-		},
-		Header: &mdMarshaler{
+		Header: &yamlutil.MDMarshaler{
 			"foo": []string{"FOO"},
 		},
-		Trailer: &mdMarshaler{
+		Trailer: &yamlutil.MDMarshaler{
 			"bar": []string{"BAR"},
 		},
-		Message: map[string]string{"messageBody": "hey"},
+		Message: &testpb.EchoResponse{
+			MessageBody: "hey",
+		},
 	}
 	tests := map[string]struct {
 		query       string
@@ -112,7 +109,7 @@ func TestResponseExtractor(t *testing.T) {
 	}{
 		"status": {
 			query:  ".status.code",
-			expect: resp.Status.Code,
+			expect: resp.Status.Code().String(),
 		},
 		"header": {
 			query:  ".header.foo[0]",
@@ -165,137 +162,144 @@ func TestResponseExtractor(t *testing.T) {
 
 func TestRequest_Invoke(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
-		t.Run("Echo returns no error", func(t *testing.T) {
-			req := &testpb.EchoRequest{MessageId: "1", MessageBody: "hello"}
-			resp := &testpb.EchoResponse{MessageId: "1", MessageBody: "hello"}
+		t.Run("custom client", func(t *testing.T) {
+			t.Run("Echo returns no error", func(t *testing.T) {
+				req := &testpb.EchoRequest{MessageId: "1", MessageBody: "hello"}
+				resp := &testpb.EchoResponse{MessageId: "1", MessageBody: "hello"}
 
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-			client := testpb.NewMockTestClient(ctrl)
-			client.EXPECT().Echo(gomock.Any(), mockutil.ProtoMessage(req), gomock.Any()).Return(resp, nil)
+				ctrl := gomock.NewController(t)
+				defer ctrl.Finish()
+				client := testpb.NewMockTestClient(ctrl)
+				client.EXPECT().Echo(gomock.Any(), mockutil.ProtoMessage(req), gomock.Any()).Return(resp, nil)
 
-			r := &Request{
-				Client: "{{vars.client}}",
-				Method: "Echo",
-				Message: yaml.MapSlice{
-					yaml.MapItem{Key: "messageId", Value: "1"},
-					yaml.MapItem{Key: "messageBody", Value: "hello"},
-				},
-			}
-			ctx := context.FromT(t).WithVars(map[string]interface{}{
-				"client": client,
+				r := &Request{
+					Client: "{{vars.client}}",
+					Method: "Echo",
+					Message: yaml.MapSlice{
+						yaml.MapItem{Key: "messageId", Value: "1"},
+						yaml.MapItem{Key: "messageBody", Value: "hello"},
+					},
+				}
+				ctx := context.FromT(t).WithVars(map[string]interface{}{
+					"client": client,
+				})
+				ctx, result, err := r.Invoke(ctx)
+				if err != nil {
+					t.Fatalf("unexpected error: %s", err)
+				}
+				typedResult, ok := result.(*response)
+				if !ok {
+					t.Fatalf("failed to type conversion from %s to *response", reflect.TypeOf(result))
+				}
+				if diff := cmp.Diff(resp, typedResult.Message, protocmp.Transform()); diff != "" {
+					t.Errorf("differs: (-want +got)\n%s", diff)
+				}
+				if typedResult.Status.Code() != codes.OK {
+					t.Fatalf("unexpected error: %v", typedResult.Status.Err())
+				}
+
+				// ensure that ctx.WithRequest and ctx.WithResponse are called
+				r.Client = ""
+				r.Message = req
+				if diff := cmp.Diff((*RequestExtractor)(r), ctx.Request(), protocmp.Transform()); diff != "" {
+					t.Errorf("differs: (-want +got)\n%s", diff)
+				}
+				if diff := cmp.Diff((*ResponseExtractor)(typedResult), ctx.Response(), protocmp.Transform(), cmpopts.IgnoreUnexported(status.Status{})); diff != "" {
+					t.Errorf("differs: (-want +got)\n%s", diff)
+				}
 			})
-			ctx, result, err := r.Invoke(ctx)
-			if err != nil {
-				t.Fatalf("unexpected error: %s", err)
-			}
-			typedResult, ok := result.(response)
-			if !ok {
-				t.Fatalf("failed to type conversion from %s to response", reflect.TypeOf(result))
-			}
-			message, serr, err := extract(typedResult)
-			if err != nil {
-				t.Fatalf("unexpected error: %s", err)
-			}
-			if diff := cmp.Diff(resp, message, protocmp.Transform()); diff != "" {
-				t.Errorf("differs: (-want +got)\n%s", diff)
-			}
-			if serr != nil {
-				t.Fatalf("unexpected error: %v", serr)
-			}
+			t.Run("Echo returns error", func(t *testing.T) {
+				req := &testpb.EchoRequest{MessageId: "1", MessageBody: "hello"}
 
-			// ensure that ctx.WithRequest and ctx.WithResponse are called
-			r.Client = ""
-			r.Message = req
-			if diff := cmp.Diff((*RequestExtractor)(r), ctx.Request(), protocmp.Transform()); diff != "" {
-				t.Errorf("differs: (-want +got)\n%s", diff)
-			}
-			if diff := cmp.Diff((*ResponseExtractor)(&typedResult), ctx.Response(), protocmp.Transform(), cmpopts.IgnoreFields(ResponseExtractor{}, "rvalues")); diff != "" {
-				t.Errorf("differs: (-want +got)\n%s", diff)
-			}
-		})
-		t.Run("Echo returns error", func(t *testing.T) {
-			req := &testpb.EchoRequest{MessageId: "1", MessageBody: "hello"}
+				ctrl := gomock.NewController(t)
+				defer ctrl.Finish()
+				client := testpb.NewMockTestClient(ctrl)
+				client.EXPECT().Echo(gomock.Any(), mockutil.ProtoMessage(req), gomock.Any()).Return(nil, status.New(codes.Unauthenticated, "unauthenticated").Err())
 
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-			client := testpb.NewMockTestClient(ctrl)
-			client.EXPECT().Echo(gomock.Any(), mockutil.ProtoMessage(req), gomock.Any()).Return(nil, status.New(codes.Unauthenticated, "unauthenticated").Err())
+				r := &Request{
+					Client: "{{vars.client}}",
+					Method: "Echo",
+					Message: yaml.MapSlice{
+						yaml.MapItem{Key: "messageId", Value: "1"},
+						yaml.MapItem{Key: "messageBody", Value: "hello"},
+					},
+				}
+				ctx := context.FromT(t).WithVars(map[string]interface{}{
+					"client": client,
+				})
+				ctx, result, err := r.Invoke(ctx)
+				if err != nil {
+					t.Fatalf("unexpected error: %s", err)
+				}
+				typedResult, ok := result.(*response)
+				if !ok {
+					t.Fatalf("failed to type conversion from %s to *response", reflect.TypeOf(result))
+				}
+				serr := typedResult.Status
+				if serr == nil {
+					t.Fatal("no error")
+				}
+				if serr.Code() != codes.Unauthenticated {
+					t.Fatalf("expected code is %s but got %s", codes.Unauthenticated.String(), serr.Code().String())
+				}
 
-			r := &Request{
-				Client: "{{vars.client}}",
-				Method: "Echo",
-				Message: yaml.MapSlice{
-					yaml.MapItem{Key: "messageId", Value: "1"},
-					yaml.MapItem{Key: "messageBody", Value: "hello"},
-				},
-			}
-			ctx := context.FromT(t).WithVars(map[string]interface{}{
-				"client": client,
+				// ensure that ctx.WithRequest and ctx.WithResponse are called
+				r.Client = ""
+				r.Message = req
+				if diff := cmp.Diff((*RequestExtractor)(r), ctx.Request(), protocmp.Transform()); diff != "" {
+					t.Errorf("differs: (-want +got)\n%s", diff)
+				}
 			})
-			ctx, result, err := r.Invoke(ctx)
-			if err != nil {
-				t.Fatalf("unexpected error: %s", err)
-			}
-			typedResult, ok := result.(response)
-			if !ok {
-				t.Fatalf("failed to type conversion from %s to response", reflect.TypeOf(result))
-			}
-			_, serr, err := extract(typedResult)
-			if err != nil {
-				t.Fatalf("unexpected error: %s", err)
-			}
-
-			if serr.Code() != codes.Unauthenticated {
-				t.Fatalf("expected code is %s but got %s", codes.Unauthenticated.String(), serr.Code().String())
-			}
-
-			// ensure that ctx.WithRequest and ctx.WithResponse are called
-			r.Client = ""
-			r.Message = req
-			if diff := cmp.Diff((*RequestExtractor)(r), ctx.Request(), protocmp.Transform()); diff != "" {
-				t.Errorf("differs: (-want +got)\n%s", diff)
-			}
 		})
 	})
+
 	t.Run("failure", func(t *testing.T) {
 		tests := map[string]struct {
 			vars        map[string]interface{}
 			client      string
 			method      string
-			metadata    map[string]interface{}
+			metadata    any
+			msg         any
 			expectError string
 		}{
-			"no client": {
-				expectError: "gRPC client must be specified",
-			},
 			"client not found": {
 				client:      "{{vars.client}}",
 				expectError: "failed to get client",
 			},
-			"nil client": {
+			"invalid client": {
 				vars: map[string]interface{}{
 					"client": nil,
 				},
 				client:      "{{vars.client}}",
 				method:      "Echo",
-				expectError: ".client: client {{vars.client}} is invalid",
+				expectError: `.client: client "{{vars.client}}" is invalid`,
 			},
-			"method not found": {
+			"invalid metadata: invalid template": {
 				vars: map[string]interface{}{
 					"client": testpb.NewTestClient(nil),
 				},
+				method:      "Echo",
 				client:      "{{vars.client}}",
-				method:      "NotFound",
-				expectError: "method {{vars.client}}.NotFound not found",
+				metadata:    map[string]interface{}{"a": "{{b}}"},
+				expectError: `.metadata.'a': failed to set metadata: failed to execute: {{b}}: ".b" not found`,
 			},
-			"invalid metadata": {
+			"invalid metadata: must be map": {
 				vars: map[string]interface{}{
 					"client": testpb.NewTestClient(nil),
 				},
-				method:   "Echo",
-				client:   "{{vars.client}}",
-				metadata: map[string]interface{}{"a": "{{b}}"},
+				method:      "Echo",
+				client:      "{{vars.client}}",
+				metadata:    1,
+				expectError: ".metadata: failed to set metadata: expected map but got int",
+			},
+			"invalid message": {
+				vars: map[string]interface{}{
+					"client": testpb.NewTestClient(nil),
+				},
+				method:      "Echo",
+				client:      "{{vars.client}}",
+				msg:         "test",
+				expectError: `.message: failed to build request message`,
 			},
 		}
 		for name, tc := range tests {
@@ -306,8 +310,9 @@ func TestRequest_Invoke(t *testing.T) {
 					ctx = ctx.WithVars(tc.vars)
 				}
 				req := &Request{
-					Client: tc.client,
-					Method: tc.method,
+					Client:  tc.client,
+					Method:  tc.method,
+					Message: tc.msg,
 				}
 				if tc.metadata != nil {
 					req.Metadata = tc.metadata
@@ -355,23 +360,16 @@ ok  	test.yaml	0.000s
 `,
 		},
 		"failure": {
-			err: status.FromProto(&spb.Status{
-				Code:    int32(codes.InvalidArgument),
-				Message: "invalid argument",
-				Details: []*anypb.Any{
-					mustAny(t,
-						&errdetails.LocalizedMessage{
-							Locale:  "ja-JP",
-							Message: "エラー",
-						},
-					),
-					mustAny(t,
-						&errdetails.DebugInfo{
-							Detail: "debug",
-						},
-					),
+			err: createStatus(
+				t, codes.InvalidArgument, "invalid argument",
+				&errdetails.LocalizedMessage{
+					Locale:  "ja-JP",
+					Message: "エラー",
 				},
-			}).Err(),
+				&errdetails.DebugInfo{
+					Detail: "debug",
+				},
+			).Err(),
 			expect: `
 === RUN   test.yaml
 --- PASS: test.yaml (0.00s)
@@ -439,72 +437,6 @@ ok  	test.yaml	0.000s
 			}
 		})
 	}
-}
-
-func TestValidateMethod(t *testing.T) {
-	t.Run("valid", func(t *testing.T) {
-		method := reflect.ValueOf(testpb.NewTestClient(nil)).MethodByName("Echo")
-		if err := validateMethod(method); err != nil {
-			t.Fatalf("unexpected error: %s", err)
-		}
-	})
-	t.Run("invalid", func(t *testing.T) {
-		tests := map[string]struct {
-			method reflect.Value
-		}{
-			"invalid": {
-				method: reflect.Value{},
-			},
-			"must be func": {
-				method: reflect.ValueOf(struct{}{}),
-			},
-			"nil": {
-				method: reflect.ValueOf((func())(nil)),
-			},
-			"number of arguments must be 3": {
-				method: reflect.ValueOf(func() (proto.Message, error) {
-					return nil, nil
-				}),
-			},
-			"first argument must be context.Context": {
-				method: reflect.ValueOf(func(ctx struct{}, in proto.Message, opts ...grpc.CallOption) (proto.Message, error) {
-					return nil, nil
-				}),
-			},
-			"second argument must be proto.Message": {
-				method: reflect.ValueOf(func(ctx gocontext.Context, in struct{}, opts ...grpc.CallOption) (proto.Message, error) {
-					return nil, nil
-				}),
-			},
-			"third argument must be []grpc.CallOption": {
-				method: reflect.ValueOf(func(ctx gocontext.Context, in proto.Message, opts ...struct{}) (proto.Message, error) {
-					return nil, nil
-				}),
-			},
-			"number of return values must be 2": {
-				method: reflect.ValueOf(func(ctx gocontext.Context, in proto.Message, opts ...grpc.CallOption) {
-				}),
-			},
-			"first return value must be proto.Message": {
-				method: reflect.ValueOf(func(ctx gocontext.Context, in proto.Message, opts ...grpc.CallOption) (*struct{}, error) {
-					return nil, nil //nolint:nilnil
-				}),
-			},
-			"second return value must be error": {
-				method: reflect.ValueOf(func(ctx gocontext.Context, in proto.Message, opts ...grpc.CallOption) (proto.Message, *struct{}) {
-					return nil, nil
-				}),
-			},
-		}
-		for name, tc := range tests {
-			tc := tc
-			t.Run(name, func(t *testing.T) {
-				if err := validateMethod(tc.method); err == nil {
-					t.Fatal("no error")
-				}
-			})
-		}
-	})
 }
 
 func TestBuildRequestBody(t *testing.T) {
@@ -625,7 +557,7 @@ metadata:
 		t.Run(name, func(t *testing.T) {
 			b, err := yaml.Marshal(Request{
 				Method:   "Foo",
-				Metadata: newMDMarshaler(test.md),
+				Metadata: yamlutil.NewMDMarshaler(test.md),
 			})
 			if err != nil {
 				t.Fatal(err)

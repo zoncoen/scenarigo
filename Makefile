@@ -69,7 +69,7 @@ $(GOCREDITS): | $(BIN_DIR)
 	@$(GO) install github.com/Songmu/gocredits/cmd/gocredits@v0.3.0
 
 GOLANGCI_LINT := $(BIN_DIR)/golangci-lint
-GOLANGCI_LINT_VERSION := 1.57.2
+GOLANGCI_LINT_VERSION := 1.61.0
 GOLANGCI_LINT_OS_ARCH := $(shell echo golangci-lint-$(GOLANGCI_LINT_VERSION)-$(GOOS)-$(GOARCH))
 GOLANGCI_LINT_GZIP := $(GOLANGCI_LINT_OS_ARCH).tar.gz
 $(GOLANGCI_LINT): | $(BIN_DIR)
@@ -77,10 +77,6 @@ $(GOLANGCI_LINT): | $(BIN_DIR)
 		"https://github.com/golangci/golangci-lint/releases/download/v$(GOLANGCI_LINT_VERSION)/$(GOLANGCI_LINT_GZIP)"
 	@tar -C $(BIN_DIR) --strip=1 -xf $(GOLANGCI_LINT_GZIP) $(GOLANGCI_LINT_OS_ARCH)/golangci-lint
 	@rm $(GOLANGCI_LINT_GZIP)
-
-LOOPPOINTER := $(BIN_DIR)/looppointer
-$(LOOPPOINTER): | $(BIN_DIR)
-	@$(GO) install github.com/kyoh86/looppointer/cmd/looppointer@v0.2.1
 
 .PHONY: build
 build: | $(BIN_DIR)
@@ -146,11 +142,6 @@ test/examples/%:
 .PHONY: lint
 lint: $(GOLANGCI_LINT) $(LOOPPOINTER) ## run lint
 	@$(GOLANGCI_LINT) run
-	@make lint/looppointer
-
-.PHONY: lint/looppointer
-lint/looppointer: $(LOOPPOINTER)
-	@$(GO) vet -vettool=$(LOOPPOINTER) ./...
 
 .PHONY: lint/fix
 lint/fix: $(GOLANGCI_LINT) $(LOOPPOINTER) ## fix lint errors

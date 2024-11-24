@@ -96,10 +96,16 @@ type Step struct {
 	Retry                   *RetryPolicy              `yaml:"retry,omitempty"`
 }
 
-type rawMessage []byte
+// RawMessage is a raw encoded YAML value.
+type RawMessage []byte
+
+// MarshalYAML implements yaml.BytesMarshaler interface.
+func (r RawMessage) MarshalYAML() ([]byte, error) {
+	return []byte(r), nil
+}
 
 // UnmarshalYAML implements yaml.Unmarshaler interface.
-func (r *rawMessage) UnmarshalYAML(b []byte) error {
+func (r *RawMessage) UnmarshalYAML(b []byte) error {
 	*r = b
 	return nil
 }
@@ -120,8 +126,8 @@ type stepUnmarshaller struct {
 	PostTimeoutWaitingLimit *Duration      `yaml:"postTimeoutWaitingLimit,omitempty"`
 	Retry                   *RetryPolicy   `yaml:"retry,omitempty"`
 
-	Request rawMessage `yaml:"request,omitempty"`
-	Expect  rawMessage `yaml:"expect,omitempty"`
+	Request RawMessage `yaml:"request,omitempty"`
+	Expect  RawMessage `yaml:"expect,omitempty"`
 }
 
 // UnmarshalYAML implements yaml.Unmarshaler interface.

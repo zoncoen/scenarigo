@@ -36,6 +36,7 @@ type Runner struct {
 	secrets         map[string]any
 	pluginDir       *string
 	plugins         schema.OrderedMap[string, schema.PluginConfig]
+	protocols       schema.ProtocolOptions
 	scenarioFiles   []string
 	scenarioReaders []io.Reader
 	enabledColor    bool
@@ -91,6 +92,7 @@ func WithConfig(config *schema.Config) func(*Runner) error {
 			}
 		}
 		r.plugins = config.Plugins
+		r.protocols = config.Protocols
 		if config.Output.Colored != nil {
 			r.enabledColor = *config.Output.Colored
 		}
@@ -263,6 +265,12 @@ func (r *Runner) Run(ctx *context.Context) {
 	}
 	ctx, teardown := setups.setup(ctx)
 	if ctx.Reporter().Failed() {
+		teardown(ctx)
+		return
+	}
+
+	if err := r.protocols.Set(); err != nil {
+		ctx.Reporter().Error(err)
 		teardown(ctx)
 		return
 	}

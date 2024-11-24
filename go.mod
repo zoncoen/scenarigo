@@ -4,6 +4,7 @@ go 1.22.0
 
 require (
 	carvel.dev/ytt v0.48.0
+	dario.cat/mergo v1.0.1
 	github.com/bufbuild/protocompile v0.14.1
 	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/fatih/color v1.18.0

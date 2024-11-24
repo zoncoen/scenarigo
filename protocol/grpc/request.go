@@ -6,9 +6,11 @@ import (
 	"crypto/x509"
 	"fmt"
 	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 
+	"dario.cat/mergo"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
@@ -22,6 +24,7 @@ import (
 
 	"github.com/zoncoen/scenarigo/context"
 	"github.com/zoncoen/scenarigo/errors"
+	"github.com/zoncoen/scenarigo/internal/filepathutil"
 	"github.com/zoncoen/scenarigo/internal/queryutil"
 	"github.com/zoncoen/scenarigo/internal/reflectutil"
 	"github.com/zoncoen/scenarigo/internal/yamlutil"
@@ -277,7 +280,26 @@ func (r *Request) addIndent(s string, indentNum int) string {
 func (r *Request) Invoke(ctx *context.Context) (*context.Context, interface{}, error) {
 	opts := &RequestOptions{}
 	if r.Options != nil {
-		opts = r.Options
+		if err := mergo.Merge(opts, r.Options); err != nil {
+			return ctx, nil, errors.WrapPath(err, "options", "failed to apply options")
+		}
+	}
+	if pOpt := grpcProtocol.getOption(); pOpt != nil && pOpt.Request != nil {
+		if err := mergo.Merge(opts, pOpt.Request); err != nil {
+			return ctx, nil, errors.WrapPath(err, "options", "failed to apply options")
+		}
+	}
+	if opts.Proto != nil {
+		dir := filepath.Dir(ctx.ScenarioFilepath())
+		for i, p := range opts.Proto.Imports {
+			opts.Proto.Imports[i] = filepathutil.From(dir, p)
+		}
+		// If import paths present and not empty, then all file paths to find are assumed to be relative to one of these paths.
+		if len(opts.Proto.Imports) == 0 {
+			for i, p := range opts.Proto.Files {
+				opts.Proto.Files[i] = filepathutil.From(dir, p)
+			}
+		}
 	}
 
 	client, err := r.buildClient(ctx, opts)

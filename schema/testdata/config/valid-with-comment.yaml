@@ -12,6 +12,18 @@ plugins:
     src: github.com/zoncoen/scenarigo
   remote-with-version.so:
     src: github.com/zoncoen/scenarigo@v1.0.0 # comment3
+protocols:
+  grpc:
+    request:
+      # TODO: fix order issue
+      # proto:
+      #   imports:
+      #   - proto
+      auth:
+        insecure: true
+      proto:
+        imports:
+        - proto
 input:
   excludes:
   - .ytt.yaml$

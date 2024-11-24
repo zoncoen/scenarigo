@@ -22,9 +22,14 @@ import (
 
 type testProtocol struct {
 	name string
+	opts any
 }
 
 func (p *testProtocol) Name() string { return p.name }
+
+func (p *testProtocol) UnmarshalOption(b []byte) error {
+	return yaml.Unmarshal(b, &p.opts)
+}
 
 func (p *testProtocol) UnmarshalRequest(b []byte) (protocol.Invoker, error) {
 	var r request

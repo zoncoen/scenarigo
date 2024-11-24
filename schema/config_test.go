@@ -4,12 +4,14 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/goccy/go-yaml"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/sergi/go-diff/diffmatchpatch"
+	"github.com/zoncoen/scenarigo/protocol"
 )
 
 func TestLoadConfig(t *testing.T) {
@@ -34,6 +36,12 @@ func TestLoadConfig(t *testing.T) {
 						{
 							Texts:    []string{" comment3"},
 							Position: yaml.CommentLinePosition,
+						},
+					},
+					"$.protocols.grpc.request.auth": {
+						{
+							Texts:    []string{" TODO: fix order issue", " proto:", "   imports:", "   - proto"},
+							Position: yaml.CommentHeadPosition,
 						},
 					},
 				},
@@ -86,6 +94,20 @@ func TestLoadConfig(t *testing.T) {
 							},
 						},
 					},
+					Protocols: ProtocolOptions{
+						idx: map[string]int{"grpc": 0},
+						items: []OrderedMapItem[string, any]{
+							{
+								Key: "grpc",
+								Value: RawMessage(`request:
+  auth:
+    insecure: true
+  proto:
+    imports:
+    - proto`),
+							},
+						},
+					},
 					Input: InputConfig{
 						Excludes: []Regexp{
 							{
@@ -121,7 +143,7 @@ func TestLoadConfig(t *testing.T) {
 					t.Fatalf("node is nil")
 				}
 				got.Node = nil
-				if diff := cmp.Diff(expect, got, cmp.AllowUnexported(Regexp{}, OrderedMap[string, PluginConfig]{}), cmpopts.IgnoreUnexported(regexp.Regexp{})); diff != "" {
+				if diff := cmp.Diff(expect, got, cmp.AllowUnexported(Regexp{}, OrderedMap[string, PluginConfig]{}, ProtocolOptions{}), cmpopts.IgnoreUnexported(regexp.Regexp{})); diff != "" {
 					t.Errorf("differs (-want +got):\n%s", diff)
 				}
 
@@ -206,4 +228,93 @@ func TestLoadConfig(t *testing.T) {
 			})
 		}
 	})
+}
+
+func TestProtocolOptions_Set(t *testing.T) {
+	tests := map[string]struct {
+		protocol    protocol.Protocol
+		opts        *ProtocolOptions
+		expect      protocol.Protocol
+		expectError string
+	}{
+		"success": {
+			protocol: &testProtocol{
+				name: "test",
+			},
+			opts: &ProtocolOptions{
+				idx: map[string]int{
+					"test": 0,
+				},
+				items: []OrderedMapItem[string, any]{
+					{
+						Key:   "test",
+						Value: RawMessage([]byte("true")),
+					},
+				},
+			},
+			expect: &testProtocol{
+				name: "test",
+				opts: true,
+			},
+		},
+		"unknown protocol": {
+			opts: &ProtocolOptions{
+				idx: map[string]int{
+					"test": 0,
+				},
+				items: []OrderedMapItem[string, any]{
+					{
+						Key:   "test",
+						Value: RawMessage([]byte("true")),
+					},
+				},
+			},
+			expectError: ".protocols.test: unknown protocol",
+		},
+		"failed to unmarshal": {
+			protocol: &testProtocol{
+				name: "test",
+			},
+			opts: &ProtocolOptions{
+				idx: map[string]int{
+					"test": 0,
+				},
+				items: []OrderedMapItem[string, any]{
+					{
+						Key:   "test",
+						Value: RawMessage([]byte(":")),
+					},
+				},
+			},
+			expectError: ".protocols.test: failed to unmarshal YAML",
+		},
+	}
+	for name, test := range tests {
+		test := test
+		t.Run(name, func(t *testing.T) {
+			if test.protocol != nil {
+				protocol.Register(test.protocol)
+				t.Cleanup(func() {
+					protocol.Unregister(test.protocol.Name())
+				})
+			}
+
+			err := test.opts.Set()
+			if err != nil {
+				if test.expectError == "" {
+					t.Fatalf("unexpected error: %s", err)
+				}
+				if !strings.Contains(err.Error(), test.expectError) {
+					t.Fatalf("expect %q but got %q", test.expectError, err)
+				}
+				return // got expected error
+			}
+			if test.expectError != "" {
+				t.Fatal("no error")
+			}
+			if diff := cmp.Diff(test.expect, test.protocol, cmp.AllowUnexported(testProtocol{})); diff != "" {
+				t.Errorf("differs (-want +got):\n%s", diff)
+			}
+		})
+	}
 }

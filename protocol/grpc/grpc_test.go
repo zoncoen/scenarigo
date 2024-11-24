@@ -5,7 +5,25 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/zoncoen/scenarigo/internal/queryutil"
+	"github.com/zoncoen/scenarigo/protocol"
 )
+
+func TestMain(m *testing.M) {
+	p := &GRPC{}
+	queryutil.AppendOptions(p.QueryOptions()...)
+	os.Exit(m.Run())
+}
+
+func TestGRPC(t *testing.T) {
+	Register()
+	p := protocol.Get("grpc")
+	if p == nil {
+		t.Fatal("grpc protocol not found")
+	}
+	if err := p.UnmarshalOption([]byte("")); err != nil {
+		t.Fatal(err)
+	}
+}
 
 func TestGRPC_UnmarshalRequest(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {

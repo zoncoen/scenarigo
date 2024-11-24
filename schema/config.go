@@ -14,6 +14,7 @@ import (
 
 	"github.com/zoncoen/scenarigo/errors"
 	"github.com/zoncoen/scenarigo/internal/filepathutil"
+	"github.com/zoncoen/scenarigo/protocol"
 )
 
 // Config represents a configuration.
@@ -24,6 +25,7 @@ type Config struct {
 	Scenarios       []string                         `yaml:"scenarios,omitempty"`
 	PluginDirectory string                           `yaml:"pluginDirectory,omitempty"`
 	Plugins         OrderedMap[string, PluginConfig] `yaml:"plugins,omitempty"`
+	Protocols       ProtocolOptions                  `yaml:"protocols,omitempty"`
 	Input           InputConfig                      `yaml:"input,omitempty"`
 	Output          OutputConfig                     `yaml:"output,omitempty"`
 
@@ -36,6 +38,58 @@ type Config struct {
 // PluginConfig represents a plugin configuration.
 type PluginConfig struct {
 	Src string `yaml:"src,omitempty"`
+}
+
+// ProtocolOptions represents options for each protocol.
+type ProtocolOptions OrderedMap[string, any]
+
+// IsZero implements yaml.IsZeroer interface.
+func (opts ProtocolOptions) IsZero() bool {
+	return (OrderedMap[string, any])(opts).IsZero()
+}
+
+// MarshalYAML implements yaml.BytesMarshaler interface.
+func (opts ProtocolOptions) MarshalYAML() ([]byte, error) {
+	return (OrderedMap[string, any])(opts).MarshalYAML()
+}
+
+// UnmarshalYAML implements yaml.BytesUnmarshaler interface.
+func (opts *ProtocolOptions) UnmarshalYAML(b []byte) error {
+	in := NewOrderedMap[string, RawMessage]()
+	if err := yaml.Unmarshal(b, &in); err != nil {
+		return err
+	}
+	out := NewOrderedMap[string, any]()
+	for _, o := range in.ToSlice() {
+		out.Set(o.Key, o.Value)
+	}
+	*opts = ProtocolOptions(out)
+	return nil
+}
+
+// Set sets protocol options.
+func (opts ProtocolOptions) Set() error {
+	for _, o := range (OrderedMap[string, any])(opts).ToSlice() {
+		p := protocol.Get(o.Key)
+		errPath := fmt.Sprintf("protocols.%s", o.Key)
+		if p == nil {
+			return errors.ErrorPathf(errPath, "unknown protocol: %s", o.Key)
+		}
+		var b []byte
+		if v, ok := o.Value.(RawMessage); ok {
+			b = v
+		} else {
+			v, err := yaml.Marshal(o.Value)
+			if err != nil {
+				return errors.WrapPath(err, errPath, "failed to marshal YAML")
+			}
+			b = v
+		}
+		if err := p.UnmarshalOption(b); err != nil {
+			return errors.WrapPath(err, errPath, "failed to unmarshal YAML")
+		}
+	}
+	return nil
 }
 
 // InputConfig represents an input configuration.
@@ -118,7 +172,7 @@ func LoadConfigFromReader(r io.Reader, root string) (*Config, error) {
 	case "config/v1":
 		var cfg Config
 		cm := make(yaml.CommentMap)
-		if err := yaml.NodeToValue(d.doc.Body, &cfg, yaml.Strict(), yaml.CommentToMap(cm)); err != nil {
+		if err := yaml.NodeToValue(d.doc.Body, &cfg, yaml.Strict(), yaml.UseOrderedMap(), yaml.CommentToMap(cm)); err != nil {
 			return nil, err
 		}
 		cfg.Root = root

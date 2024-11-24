@@ -20,6 +20,11 @@ func (p *HTTP) Name() string {
 	return "http"
 }
 
+// UnmarshalOption implements protocol.Protocol interface.
+func (p *HTTP) UnmarshalOption(_ []byte) error {
+	return nil
+}
+
 // UnmarshalRequest implements protocol.Protocol interface.
 func (p *HTTP) UnmarshalRequest(b []byte) (protocol.Invoker, error) {
 	var r Request

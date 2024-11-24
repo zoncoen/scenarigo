@@ -2,7 +2,7 @@ module github.com/zoncoen/scenarigo/examples/secrets/plugin/src
 
 go 1.21.2
 
-require github.com/zoncoen/scenarigo v0.17.3
+require github.com/zoncoen/scenarigo v0.17.4-0.20240424024130-5dcf6dd41ae8
 
 require (
 	carvel.dev/ytt v0.48.0 // indirect
@@ -19,6 +19,6 @@ require (
 	github.com/zoncoen/query-go v1.3.1 // indirect
 	github.com/zoncoen/query-go/extractor/yaml v0.2.1 // indirect
 	golang.org/x/mod v0.17.0 // indirect
-	golang.org/x/sys v0.17.0 // indirect
+	golang.org/x/sys v0.18.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 )

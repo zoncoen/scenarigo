@@ -121,7 +121,7 @@ func TestLoadConfig(t *testing.T) {
 					t.Fatalf("node is nil")
 				}
 				got.Node = nil
-				if diff := cmp.Diff(expect, got, cmp.AllowUnexported(Regexp{}, OrderedMap[string, PluginConfig]{}), cmpopts.IgnoreUnexported(regexp.Regexp{})); diff != "" {
+				if diff := cmp.Diff(expect, got, cmp.AllowUnexported(Regexp{}, OrderedMap[string, PluginConfig]{}, ProtocolOptions{}), cmpopts.IgnoreUnexported(regexp.Regexp{})); diff != "" {
 					t.Errorf("differs (-want +got):\n%s", diff)
 				}
 

@@ -41,6 +41,8 @@ type testProtocol struct {
 
 func (p *testProtocol) Name() string { return p.name }
 
+func (p *testProtocol) UnmarshalOption(_ []byte) error { return nil }
+
 func (p *testProtocol) UnmarshalRequest(_ []byte) (protocol.Invoker, error) {
 	return p.invoker, nil
 }

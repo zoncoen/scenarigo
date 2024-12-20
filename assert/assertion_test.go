@@ -278,9 +278,9 @@ deps:
 				if err == nil {
 					t.Error("no error")
 				} else if got, expect := err.Error(), `failed to build assertion: .'{{call <-}}': failed to execute left arrow function: failed to unmarshal argument: [1:1] unknown field "func"
-    >  1 | func: "{{func-0}}"
-           ^
-       2 | arg: foo`; got != expect {
+>  1 | func: "{{func-0}}"
+       ^
+   2 | arg: foo`; got != expect {
 					t.Errorf("expect %q but got %q", expect, got)
 				}
 			})

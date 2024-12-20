@@ -42,6 +42,10 @@ func readDocsWithSchemaVersionFromBytes(b []byte) ([]*docWithSchemaVersion, erro
 	if len(f.Docs) == 0 {
 		return nil, nil
 	}
+	if len(f.Docs) == 1 && f.Docs[0].Body == nil {
+		// YAML interprets an empty string as null, so if docs body is nil, it should be treated as empty content.
+		return nil, nil
+	}
 
 	docs := []*docWithSchemaVersion{}
 	for _, doc := range f.Docs {

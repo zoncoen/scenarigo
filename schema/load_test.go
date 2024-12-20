@@ -363,8 +363,9 @@ func TestLoadScenarios(t *testing.T) {
 			"invalid": {
 				path: "testdata/invalid.yaml",
 				expect: `failed to decode YAML: [1:8] cannot unmarshal yaml.MapSlice into Go struct field Scenario.Title of type string
-    >  1 | title: {}
-                  ^`,
+>  1 | title: {}
+              ^
+`,
 			},
 			"unknown schema version": {
 				path: "testdata/unknown-schema-version.yaml",

@@ -169,10 +169,10 @@ func TestLoadConfig(t *testing.T) {
 			"invalid version": {
 				path: "testdata/config/invalid-version.yaml",
 				expect: `invalid version: [2:3] cannot unmarshal []interface {} into Go value of type string
-       1 | schemaVersion:
-    >  2 |   - config
-             ^
-       3 |   - v1`,
+   1 | schemaVersion:
+>  2 |   - config
+         ^
+   3 |   - v1`,
 			},
 			"invalid scenarios": {
 				path: "testdata/config/invalid-scenarios.yaml",

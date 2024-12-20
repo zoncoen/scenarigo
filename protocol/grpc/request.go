@@ -79,7 +79,7 @@ type ProtoOption struct {
 
 // AuthOption represents a authentication option.
 type AuthOption struct {
-	Insecure bool       `json:"insecure,omitempty" yaml:"insecure,omitempty"`
+	Insecure *bool      `json:"insecure,omitempty" yaml:"insecure,omitempty"`
 	TLS      *TLSOption `json:"tls,omitempty"      yaml:"tls,omitempty"`
 }
 
@@ -91,7 +91,7 @@ func (o *AuthOption) Credentials() (credentials.TransportCredentials, error) {
 	if o == nil {
 		return credentials.NewTLS(cfg), nil
 	}
-	if o.Insecure {
+	if o.Insecure != nil && *o.Insecure {
 		return insecure.NewCredentials(), nil
 	}
 	if o.TLS == nil {
@@ -285,7 +285,7 @@ func (r *Request) Invoke(ctx *context.Context) (*context.Context, interface{}, e
 		}
 	}
 	if pOpt := grpcProtocol.getOption(); pOpt != nil && pOpt.Request != nil {
-		if err := mergo.Merge(opts, pOpt.Request); err != nil {
+		if err := mergo.Merge(opts, pOpt.Request, mergo.WithoutDereference); err != nil {
 			return ctx, nil, errors.WrapPath(err, "options", "failed to apply options")
 		}
 	}

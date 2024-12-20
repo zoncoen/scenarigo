@@ -18,6 +18,7 @@ import (
 	"github.com/goccy/go-yaml"
 	"github.com/google/go-cmp/cmp"
 	"github.com/zoncoen/scenarigo/context"
+	"github.com/zoncoen/scenarigo/internal/ptr"
 	"github.com/zoncoen/scenarigo/internal/testutil"
 	testpb "github.com/zoncoen/scenarigo/testdata/gen/pb/test"
 	"google.golang.org/grpc/codes"
@@ -60,7 +61,7 @@ func TestProtoClient(t *testing.T) {
 						},
 					},
 					Auth: &AuthOption{
-						Insecure: true,
+						Insecure: ptr.To(true),
 					},
 				},
 			},
@@ -82,7 +83,7 @@ func TestProtoClient(t *testing.T) {
 				},
 				Options: &RequestOptions{
 					Auth: &AuthOption{
-						Insecure: true,
+						Insecure: ptr.To(true),
 					},
 				},
 			},
@@ -174,7 +175,7 @@ func TestProtoClient(t *testing.T) {
 						},
 					},
 					Auth: &AuthOption{
-						Insecure: true,
+						Insecure: ptr.To(true),
 					},
 				},
 			},
@@ -326,7 +327,7 @@ func TestProtoClient(t *testing.T) {
 						},
 					},
 					Auth: &AuthOption{
-						Insecure: true,
+						Insecure: ptr.To(true),
 					},
 				},
 			},
@@ -342,7 +343,7 @@ func TestProtoClient(t *testing.T) {
 				Message: yaml.MapSlice{},
 				Options: &RequestOptions{
 					Auth: &AuthOption{
-						Insecure: true,
+						Insecure: ptr.To(true),
 					},
 				},
 			},
@@ -362,7 +363,7 @@ func TestProtoClient(t *testing.T) {
 						},
 					},
 					Auth: &AuthOption{
-						Insecure: true,
+						Insecure: ptr.To(true),
 					},
 				},
 			},
@@ -377,7 +378,7 @@ func TestProtoClient(t *testing.T) {
 				Message: yaml.MapSlice{},
 				Options: &RequestOptions{
 					Auth: &AuthOption{
-						Insecure: true,
+						Insecure: ptr.To(true),
 					},
 				},
 			},
@@ -397,7 +398,7 @@ func TestProtoClient(t *testing.T) {
 						},
 					},
 					Auth: &AuthOption{
-						Insecure: true,
+						Insecure: ptr.To(true),
 					},
 				},
 			},
@@ -420,7 +421,7 @@ func TestProtoClient(t *testing.T) {
 						},
 					},
 					Auth: &AuthOption{
-						Insecure: true,
+						Insecure: ptr.To(true),
 					},
 				},
 			},

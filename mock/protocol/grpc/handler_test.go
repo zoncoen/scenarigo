@@ -51,7 +51,7 @@ func TestUnaryHandler_failure(t *testing.T) {
 					Expect:   yamlutil.RawMessage("-"),
 				},
 			},
-			expect: "failed to unmarshal: [1:1] string was used where mapping is expected",
+			expect: "failed to unmarshal: [1:1] sequence was used where mapping is expected",
 		},
 		"invalid expect service": {
 			mocks: []protocol.Mock{
@@ -124,7 +124,7 @@ func TestUnaryHandler_failure(t *testing.T) {
 			svcName: svcName,
 			method:  md,
 			decode:  func(_ any) error { return nil },
-			expect:  ".response: failed to unmarshal response: [1:1] string was used where mapping is expected",
+			expect:  ".response: failed to unmarshal response: [1:1] sequence was used where mapping is expected",
 		},
 		"failed to execute template of response": {
 			mocks: []protocol.Mock{

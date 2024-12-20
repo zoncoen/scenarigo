@@ -156,7 +156,10 @@ func (t *Template) executeParameterExpr(ctx context.Context, e *ast.ParameterExp
 		}
 
 		// Left arrow function arguments must be a string in YAML.
-		b, err := yaml.Marshal(v)
+		// If the `v` is a map or slice(array) instance, directly concatenating the output string would result in something like
+		// "a: key: value", which is invalid YAML.
+		// To resolve this problem, flow mode is used to create valid YAML, such as 'a: {key: value}'.
+		b, err := yaml.MarshalWithOptions(v, yaml.Flow(true))
 		if err != nil {
 			return nil, err
 		}

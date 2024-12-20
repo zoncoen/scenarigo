@@ -52,8 +52,8 @@ func TestReadDocWithSchemaVersions(t *testing.T) {
 			},
 			"broken YAML": {
 				path: "testdata/broken.yaml",
-				expect: `[1:1] empty sequence entry
->  1 | -
+				expect: `[1:1] unexpected key name
+>  1 | :
        ^
 `,
 			},

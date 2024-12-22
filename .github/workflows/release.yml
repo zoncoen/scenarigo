@@ -83,7 +83,7 @@ jobs:
         mv ./dist/**/*.tar.gz ./assets/
         ls ./assets/
     - name: Run GoReleaser
-      uses: goreleaser/goreleaser-action@v5
+      uses: goreleaser/goreleaser-action@v6
       with:
         version: latest
         args: release --clean -f ./scripts/cross-build/.goreleaser.yml

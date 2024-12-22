@@ -6,8 +6,7 @@ if [ -d "/scenarigo" ]; then
 fi
 
 
-# TODO: --rm-dist is deprecated, use --clean
-cmd="bash /entrypoint.sh --skip-publish --rm-dist --debug"
+cmd="bash /entrypoint.sh --skip=publish --clean --verbose"
 if [ "${SNAPSHOT}" != "" ]; then
     echo "snapshot build"
     cmd="${cmd} --snapshot"

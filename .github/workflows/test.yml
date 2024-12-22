@@ -25,20 +25,20 @@ jobs:
       run: make test/ci
     - name: Upload cmd coverage
       if: matrix.os == 'ubuntu-latest' && startsWith(matrix.go-version, 'stable')
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v5
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         disable_search: true
-        file: ./coverage-cmd.out
+        files: ./coverage-cmd.out
         flags: cmd
         fail_ci_if_error: true
     - name: Upload module coverage
       if: matrix.os == 'ubuntu-latest' && startsWith(matrix.go-version, 'stable')
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v5
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         disable_search: true
-        file: ./coverage-module.out
+        files: ./coverage-module.out
         flags: module
         fail_ci_if_error: true
 

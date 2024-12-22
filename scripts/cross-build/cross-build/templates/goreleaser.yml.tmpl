@@ -59,8 +59,8 @@ archives:
   - LICENSE
   - CREDITS
 checksum:
-  version_template: "{{ .ProjectName  }}_v{{ .Version }}_go<< .GoVersion >>_checksums.txt"
+  name_template: "{{ .ProjectName  }}_v{{ .Version }}_go<< .GoVersion >>_checksums.txt"
 snapshot:
-  name_template: "{{ .Version }}-snapshot"
+  version_template: "{{ .Version }}-snapshot"
 changelog:
   use: github-native

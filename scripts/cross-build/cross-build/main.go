@@ -151,6 +151,7 @@ func goreleaser(ver, tag string) error {
 		"-v", "/var/run/docker.sock:/var/run/docker.sock",
 		"-w", "/scenarigo",
 		"-e", fmt.Sprintf("SNAPSHOT=%s", os.Getenv("SNAPSHOT")),
+		"-e", fmt.Sprintf("GITHUB_TOKEN=%s", token),
 		"--entrypoint", "bash",
 	}
 

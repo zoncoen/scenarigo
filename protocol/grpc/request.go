@@ -6,15 +6,18 @@ import (
 	"crypto/x509"
 	"fmt"
 	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 
+	"dario.cat/mergo"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/goccy/go-yaml"
@@ -22,6 +25,7 @@ import (
 
 	"github.com/zoncoen/scenarigo/context"
 	"github.com/zoncoen/scenarigo/errors"
+	"github.com/zoncoen/scenarigo/internal/filepathutil"
 	"github.com/zoncoen/scenarigo/internal/queryutil"
 	"github.com/zoncoen/scenarigo/internal/reflectutil"
 	"github.com/zoncoen/scenarigo/internal/yamlutil"
@@ -40,7 +44,7 @@ type Request struct {
 	Client   string          `yaml:"client,omitempty"`
 	Target   string          `yaml:"target,omitempty"`
 	Service  string          `yaml:"service,omitempty"`
-	Method   string          `yaml:"method"`
+	Method   string          `yaml:"method,omitempty"`
 	Metadata interface{}     `yaml:"metadata,omitempty"`
 	Message  interface{}     `yaml:"message,omitempty"`
 	Options  *RequestOptions `yaml:"options,omitempty"`
@@ -76,7 +80,7 @@ type ProtoOption struct {
 
 // AuthOption represents a authentication option.
 type AuthOption struct {
-	Insecure bool       `json:"insecure,omitempty" yaml:"insecure,omitempty"`
+	Insecure *bool      `json:"insecure,omitempty" yaml:"insecure,omitempty"`
 	TLS      *TLSOption `json:"tls,omitempty"      yaml:"tls,omitempty"`
 }
 
@@ -88,7 +92,7 @@ func (o *AuthOption) Credentials() (credentials.TransportCredentials, error) {
 	if o == nil {
 		return credentials.NewTLS(cfg), nil
 	}
-	if o.Insecure {
+	if o.Insecure != nil && *o.Insecure {
 		return insecure.NewCredentials(), nil
 	}
 	if o.TLS == nil {
@@ -140,12 +144,12 @@ type TLSOption struct {
 }
 
 // RequestExtractor represents a request dump.
-type RequestExtractor Request
+type RequestExtractor request
 
 // ExtractByKey implements query.KeyExtractor interface.
 func (r RequestExtractor) ExtractByKey(key string) (interface{}, bool) {
 	q := queryutil.New().Key(key)
-	if v, err := q.Extract(Request(r)); err == nil {
+	if v, err := q.Extract(request(r)); err == nil {
 		return v, true
 	}
 	// for backward compatibility
@@ -155,11 +159,31 @@ func (r RequestExtractor) ExtractByKey(key string) (interface{}, bool) {
 	return nil, false
 }
 
+type request struct {
+	Method   string                     `yaml:"method,omitempty"`
+	Metadata any                        `yaml:"metadata,omitempty"`
+	Message  *ProtoMessageYAMLMarshaler `yaml:"message,omitempty"`
+}
+
+type ProtoMessageYAMLMarshaler struct {
+	proto.Message `yaml:",inline"`
+}
+
+// MarshalYAML implements yaml.BytesMarshalerContext interface.
+func (m *ProtoMessageYAMLMarshaler) MarshalYAML(_ gocontext.Context) ([]byte, error) {
+	jb, err := protojson.Marshal(m.Message)
+	if err != nil {
+		return nil, err
+	}
+	yb, err := yaml.JSONToYAML(jb)
+	return yb, err
+}
+
 type response struct {
-	Status  *responseStatus       `yaml:"status,omitempty"`
-	Header  *yamlutil.MDMarshaler `yaml:"header,omitempty"`
-	Trailer *yamlutil.MDMarshaler `yaml:"trailer,omitempty"`
-	Message proto.Message         `yaml:"message,omitempty"`
+	Status  *responseStatus            `yaml:"status,omitempty"`
+	Header  *yamlutil.MDMarshaler      `yaml:"header,omitempty"`
+	Trailer *yamlutil.MDMarshaler      `yaml:"trailer,omitempty"`
+	Message *ProtoMessageYAMLMarshaler `yaml:"message,omitempty"`
 }
 
 type responseStatus struct {
@@ -277,7 +301,30 @@ func (r *Request) addIndent(s string, indentNum int) string {
 func (r *Request) Invoke(ctx *context.Context) (*context.Context, interface{}, error) {
 	opts := &RequestOptions{}
 	if r.Options != nil {
-		opts = r.Options
+		if err := mergo.Merge(opts, r.Options); err != nil {
+			return ctx, nil, errors.WrapPath(err, "options", "failed to apply options")
+		}
+	}
+	if pOpt := grpcProtocol.getOption(); pOpt != nil && pOpt.Request != nil {
+		if err := mergo.Merge(opts, pOpt.Request, mergo.WithoutDereference); err != nil {
+			return ctx, nil, errors.WrapPath(err, "options", "failed to apply options")
+		}
+	}
+	opts, err := context.ExecuteTemplate(ctx, opts)
+	if err != nil {
+		return ctx, nil, errors.WrapPath(err, "options", "failed to execute template")
+	}
+	if opts.Proto != nil {
+		dir := filepath.Dir(ctx.ScenarioFilepath())
+		for i, p := range opts.Proto.Imports {
+			opts.Proto.Imports[i] = filepathutil.From(dir, p)
+		}
+		// If import paths present and not empty, then all file paths to find are assumed to be relative to one of these paths.
+		if len(opts.Proto.Imports) == 0 {
+			for i, p := range opts.Proto.Files {
+				opts.Proto.Files[i] = filepathutil.From(dir, p)
+			}
+		}
 	}
 
 	client, err := r.buildClient(ctx, opts)
@@ -307,7 +354,7 @@ func (r *Request) Invoke(ctx *context.Context) (*context.Context, interface{}, e
 		Status: &responseStatus{
 			status.New(codes.OK, ""),
 		},
-		Message: respMsg,
+		Message: &ProtoMessageYAMLMarshaler{respMsg},
 	}
 	if sts != nil {
 		resp.Status = &responseStatus{sts}
@@ -373,9 +420,9 @@ func (r *Request) appendMetadata(ctx *context.Context) (*context.Context, error)
 
 func (r *Request) dumpRequest(ctx *context.Context, reqMsg proto.Message) *context.Context {
 	//nolint:exhaustruct
-	dumpReq := &Request{
+	dumpReq := &request{
 		Method:  r.Method,
-		Message: reqMsg,
+		Message: &ProtoMessageYAMLMarshaler{reqMsg},
 	}
 	reqMD, _ := metadata.FromOutgoingContext(ctx.RequestContext())
 	if len(reqMD) > 0 {

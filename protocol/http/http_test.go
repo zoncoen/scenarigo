@@ -4,7 +4,19 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/zoncoen/scenarigo/protocol"
 )
+
+func TestHTTP(t *testing.T) {
+	Register()
+	p := protocol.Get("http")
+	if p == nil {
+		t.Fatal("http protocol not found")
+	}
+	if err := p.UnmarshalOption([]byte("")); err != nil {
+		t.Fatal(err)
+	}
+}
 
 func TestHTTP_UnmarshalRequest(t *testing.T) {
 	t.Run("ok", func(t *testing.T) {

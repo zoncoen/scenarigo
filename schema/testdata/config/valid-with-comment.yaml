@@ -15,15 +15,11 @@ plugins:
 protocols:
   grpc:
     request:
-      # TODO: fix order issue
-      # proto:
-      #   imports:
-      #   - proto
-      auth:
-        insecure: true
       proto:
         imports:
         - proto
+      auth:
+        insecure: true
 input:
   excludes:
   - .ytt.yaml$

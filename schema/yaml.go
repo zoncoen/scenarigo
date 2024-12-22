@@ -91,7 +91,7 @@ func (m OrderedMap[K, V]) ToSlice() []OrderedMapItem[K, V] {
 // UnmarshalYAML implements yaml.BytesUnmarshaler interface.
 func (m *OrderedMap[K, V]) UnmarshalYAML(b []byte) error {
 	var s yaml.MapSlice
-	if err := yaml.Unmarshal(b, &s); err != nil {
+	if err := yaml.UnmarshalWithOptions(b, &s, yaml.UseOrderedMap()); err != nil {
 		return err
 	}
 	if len(s) == 0 {

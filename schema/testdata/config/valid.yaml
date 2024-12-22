@@ -13,11 +13,11 @@ plugins:
 protocols:
   grpc:
     request:
-      auth:
-        insecure: true
       proto:
         imports:
         - proto
+      auth:
+        insecure: true
 input:
   excludes:
   - .ytt.yaml$

@@ -38,12 +38,6 @@ func TestLoadConfig(t *testing.T) {
 							Position: yaml.CommentLinePosition,
 						},
 					},
-					"$.protocols.grpc.request.auth": {
-						{
-							Texts:    []string{" TODO: fix order issue", " proto:", "   imports:", "   - proto"},
-							Position: yaml.CommentHeadPosition,
-						},
-					},
 				},
 			},
 		}
@@ -100,11 +94,11 @@ func TestLoadConfig(t *testing.T) {
 							{
 								Key: "grpc",
 								Value: RawMessage(`request:
-  auth:
-    insecure: true
   proto:
     imports:
-    - proto`),
+    - proto
+  auth:
+    insecure: true`),
 							},
 						},
 					},

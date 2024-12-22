@@ -170,7 +170,6 @@ gen/proto: $(PROTOC) $(PROTOC_GEN_GO) $(PROTOC_GEN_GO_GRPC)
 	@rm -rf $(GEN_PB_DIR)
 	@mkdir -p $(GEN_PB_DIR)
 	@find $(PROTO_DIR) -name '*.proto' | xargs -P8 protoc $(PROTOC_OPTION) $(PROTOC_GO_OPTION) $(PROTOC_GO_GRPC_OPTION)
-	@make add-yaml-tag
 	@make gen/mock
 
 .PHONY: add-yaml-tag

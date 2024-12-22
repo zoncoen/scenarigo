@@ -34,7 +34,11 @@ func TestRequestExtractor(t *testing.T) {
 		Metadata: metadata.MD{
 			"foo": []string{"FOO"},
 		},
-		Message: map[string]string{"messageBody": "hey"},
+		Message: &ProtoMessageYAMLMarshaler{
+			&testpb.EchoRequest{
+				MessageBody: "hey",
+			},
+		},
 	}
 	tests := map[string]struct {
 		query       string
@@ -98,9 +102,9 @@ func TestResponseExtractor(t *testing.T) {
 		Trailer: &yamlutil.MDMarshaler{
 			"bar": []string{"BAR"},
 		},
-		Message: &testpb.EchoResponse{
+		Message: &ProtoMessageYAMLMarshaler{&testpb.EchoResponse{
 			MessageBody: "hey",
-		},
+		}},
 	}
 	tests := map[string]struct {
 		query       string
@@ -199,9 +203,12 @@ func TestRequest_Invoke(t *testing.T) {
 				}
 
 				// ensure that ctx.WithRequest and ctx.WithResponse are called
-				r.Client = ""
-				r.Message = req
-				if diff := cmp.Diff((*RequestExtractor)(r), ctx.Request(), protocmp.Transform()); diff != "" {
+				dumpReq := &request{
+					Method:   r.Method,
+					Metadata: r.Metadata,
+					Message:  &ProtoMessageYAMLMarshaler{req},
+				}
+				if diff := cmp.Diff((*RequestExtractor)(dumpReq), ctx.Request(), protocmp.Transform()); diff != "" {
 					t.Errorf("differs: (-want +got)\n%s", diff)
 				}
 				if diff := cmp.Diff((*ResponseExtractor)(typedResult), ctx.Response(), protocmp.Transform(), cmpopts.IgnoreUnexported(status.Status{})); diff != "" {
@@ -244,9 +251,12 @@ func TestRequest_Invoke(t *testing.T) {
 				}
 
 				// ensure that ctx.WithRequest and ctx.WithResponse are called
-				r.Client = ""
-				r.Message = req
-				if diff := cmp.Diff((*RequestExtractor)(r), ctx.Request(), protocmp.Transform()); diff != "" {
+				dumpReq := &request{
+					Method:   r.Method,
+					Metadata: r.Metadata,
+					Message:  &ProtoMessageYAMLMarshaler{req},
+				}
+				if diff := cmp.Diff((*RequestExtractor)(dumpReq), ctx.Request(), protocmp.Transform()); diff != "" {
 					t.Errorf("differs: (-want +got)\n%s", diff)
 				}
 			})

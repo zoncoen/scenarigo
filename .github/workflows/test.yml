@@ -41,3 +41,22 @@ jobs:
         file: ./coverage-module.out
         flags: module
         fail_ci_if_error: true
+
+  test-yaml-tag:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Install Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: stable
+        check-latest: true
+    - name: Checkout code
+      uses: actions/checkout@v4
+    - name: Generate codes
+      run: make gen/proto
+    - name: Add yaml tag
+      run: make add-yaml-tag
+    - name: Generate plugins
+      run: make gen/plugins
+    - name: Test
+      run: make test/ci

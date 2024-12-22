@@ -120,8 +120,8 @@ type EchoRequest struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	MessageId   string `protobuf:"bytes,1,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty" yaml:"messageId,omitempty"`
-	MessageBody string `protobuf:"bytes,2,opt,name=message_body,json=messageBody,proto3" json:"message_body,omitempty" yaml:"messageBody,omitempty"`
+	MessageId   string `protobuf:"bytes,1,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
+	MessageBody string `protobuf:"bytes,2,opt,name=message_body,json=messageBody,proto3" json:"message_body,omitempty"`
 }
 
 func (x *EchoRequest) Reset() {
@@ -175,17 +175,17 @@ type EchoResponse struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	MessageId   string   `protobuf:"bytes,1,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty" yaml:"messageId,omitempty"`
-	MessageBody string   `protobuf:"bytes,2,opt,name=message_body,json=messageBody,proto3" json:"message_body,omitempty" yaml:"messageBody,omitempty"`
-	ReceivedAt  int64    `protobuf:"varint,3,opt,name=received_at,json=receivedAt,proto3" json:"received_at,omitempty" yaml:"receivedAt,omitempty"`
-	UserType    UserType `protobuf:"varint,4,opt,name=user_type,json=userType,proto3,enum=scenarigo.testdata.test.UserType" json:"user_type,omitempty" yaml:"userType,omitempty"`
+	MessageId   string   `protobuf:"bytes,1,opt,name=message_id,json=messageId,proto3" json:"message_id,omitempty"`
+	MessageBody string   `protobuf:"bytes,2,opt,name=message_body,json=messageBody,proto3" json:"message_body,omitempty"`
+	ReceivedAt  int64    `protobuf:"varint,3,opt,name=received_at,json=receivedAt,proto3" json:"received_at,omitempty"`
+	UserType    UserType `protobuf:"varint,4,opt,name=user_type,json=userType,proto3,enum=scenarigo.testdata.test.UserType" json:"user_type,omitempty"`
 	// Types that are assignable to UserId:
 	//
 	//	*EchoResponse_CustomerId
 	//	*EchoResponse_StaffId
-	UserId         isEchoResponse_UserId `protobuf_oneof:"user_id" yaml:",inline"`
-	State          State                 `protobuf:"varint,7,opt,name=state,proto3,enum=scenarigo.testdata.test.State" json:"state,omitempty" yaml:"state,omitempty"`
-	NullableString *StringValue          `protobuf:"bytes,11,opt,name=nullable_string,json=nullableString,proto3" json:"nullable_string,omitempty" yaml:"nullableString,omitempty"`
+	UserId         isEchoResponse_UserId `protobuf_oneof:"user_id"`
+	State          State                 `protobuf:"varint,7,opt,name=state,proto3,enum=scenarigo.testdata.test.State" json:"state,omitempty"`
+	NullableString *StringValue          `protobuf:"bytes,11,opt,name=nullable_string,json=nullableString,proto3" json:"nullable_string,omitempty"`
 }
 
 func (x *EchoResponse) Reset() {
@@ -288,11 +288,11 @@ type isEchoResponse_UserId interface {
 }
 
 type EchoResponse_CustomerId struct {
-	CustomerId string `protobuf:"bytes,5,opt,name=customer_id,json=customerId,proto3,oneof" yaml:"customerId,omitempty"`
+	CustomerId string `protobuf:"bytes,5,opt,name=customer_id,json=customerId,proto3,oneof"`
 }
 
 type EchoResponse_StaffId struct {
-	StaffId string `protobuf:"bytes,6,opt,name=staff_id,json=staffId,proto3,oneof" yaml:"staffId,omitempty"`
+	StaffId string `protobuf:"bytes,6,opt,name=staff_id,json=staffId,proto3,oneof"`
 }
 
 func (*EchoResponse_CustomerId) isEchoResponse_UserId() {}
@@ -305,7 +305,7 @@ type StringValue struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Value string `protobuf:"bytes,1,opt,name=value,proto3" json:"value,omitempty" yaml:"value,omitempty"`
+	Value string `protobuf:"bytes,1,opt,name=value,proto3" json:"value,omitempty"`
 }
 
 func (x *StringValue) Reset() {

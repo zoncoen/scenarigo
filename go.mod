@@ -18,15 +18,15 @@ require (
 	github.com/sergi/go-diff v1.3.1
 	github.com/sosedoff/gitkit v0.4.0
 	github.com/spf13/cobra v1.8.1
-	github.com/zoncoen/query-go v1.3.1
-	github.com/zoncoen/query-go/extractor/protobuf v0.1.3
-	github.com/zoncoen/query-go/extractor/yaml v0.2.1
+	github.com/zoncoen/query-go v1.3.2
+	github.com/zoncoen/query-go/extractor/protobuf v0.1.4
+	github.com/zoncoen/query-go/extractor/yaml v0.2.2
 	golang.org/x/mod v0.21.0
 	golang.org/x/sync v0.8.0
 	golang.org/x/text v0.19.0
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240814211410-ddb44dafa142
 	google.golang.org/grpc v1.67.1
-	google.golang.org/protobuf v1.35.1
+	google.golang.org/protobuf v1.36.0
 )
 
 require (

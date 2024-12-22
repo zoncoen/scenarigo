@@ -28,7 +28,7 @@ func TestExpect_Build(t *testing.T) {
 			"default": {
 				expect: &Expect{},
 				v: &response{
-					Message: &test.EchoResponse{},
+					Message: &ProtoMessageYAMLMarshaler{&test.EchoResponse{}},
 				},
 			},
 			"code": {
@@ -70,10 +70,10 @@ func TestExpect_Build(t *testing.T) {
 					},
 				},
 				v: &response{
-					Message: &test.EchoResponse{
+					Message: &ProtoMessageYAMLMarshaler{&test.EchoResponse{
 						MessageId:   "1",
 						MessageBody: "hello",
-					},
+					}},
 				},
 			},
 			"assert metadata.header": {
@@ -92,7 +92,7 @@ func TestExpect_Build(t *testing.T) {
 							"application/grpc",
 						},
 					}),
-					Message: &test.EchoResponse{},
+					Message: &ProtoMessageYAMLMarshaler{&test.EchoResponse{}},
 				},
 			},
 			"assert metadata.trailer": {
@@ -111,7 +111,7 @@ func TestExpect_Build(t *testing.T) {
 							"application/grpc",
 						},
 					}),
-					Message: &test.EchoResponse{},
+					Message: &ProtoMessageYAMLMarshaler{&test.EchoResponse{}},
 				},
 			},
 			"assert in case of error": {
@@ -179,10 +179,10 @@ func TestExpect_Build(t *testing.T) {
 					},
 				},
 				v: &response{
-					Message: &test.EchoResponse{
+					Message: &ProtoMessageYAMLMarshaler{&test.EchoResponse{
 						MessageId:   "1",
 						MessageBody: "hello",
-					},
+					}},
 				},
 			},
 			"with $": {
@@ -243,9 +243,9 @@ func TestExpect_Build(t *testing.T) {
 							"v1.0.0",
 						},
 					}),
-					Message: &test.EchoResponse{
+					Message: &ProtoMessageYAMLMarshaler{&test.EchoResponse{
 						MessageBody: "hello",
-					},
+					}},
 				},
 			},
 		}
@@ -316,7 +316,7 @@ func TestExpect_Build(t *testing.T) {
 				expect: &Expect{},
 				v: &response{
 					Status:  createStatus(t, codes.InvalidArgument, "invalid argument"),
-					Message: &test.EchoResponse{},
+					Message: &ProtoMessageYAMLMarshaler{&test.EchoResponse{}},
 				},
 				expectAssertError: true,
 			},
@@ -326,7 +326,7 @@ func TestExpect_Build(t *testing.T) {
 				},
 				v: &response{
 					Status:  createStatus(t, codes.InvalidArgument, "invalid argument"),
-					Message: &test.EchoResponse{},
+					Message: &ProtoMessageYAMLMarshaler{&test.EchoResponse{}},
 				},
 				expectAssertError: true,
 			},
@@ -345,10 +345,10 @@ func TestExpect_Build(t *testing.T) {
 					},
 				},
 				v: &response{
-					Message: &test.EchoResponse{
+					Message: &ProtoMessageYAMLMarshaler{&test.EchoResponse{
 						MessageId:   "1",
 						MessageBody: "hell",
-					},
+					}},
 				},
 				expectAssertError: true,
 			},
@@ -368,7 +368,7 @@ func TestExpect_Build(t *testing.T) {
 							"application/grpc",
 						},
 					}),
-					Message: &test.EchoResponse{},
+					Message: &ProtoMessageYAMLMarshaler{&test.EchoResponse{}},
 				},
 				expectAssertError: true,
 			},
@@ -388,7 +388,7 @@ func TestExpect_Build(t *testing.T) {
 							"application/grpc",
 						},
 					}),
-					Message: &test.EchoResponse{},
+					Message: &ProtoMessageYAMLMarshaler{&test.EchoResponse{}},
 				},
 				expectAssertError: true,
 			},
@@ -408,7 +408,7 @@ func TestExpect_Build(t *testing.T) {
 							"application/grpc",
 						},
 					}),
-					Message: &test.EchoResponse{},
+					Message: &ProtoMessageYAMLMarshaler{&test.EchoResponse{}},
 				},
 				expectAssertError: true,
 			},
@@ -428,7 +428,7 @@ func TestExpect_Build(t *testing.T) {
 							"application/grpc",
 						},
 					}),
-					Message: &test.EchoResponse{},
+					Message: &ProtoMessageYAMLMarshaler{&test.EchoResponse{}},
 				},
 				expectAssertError: true,
 			},
@@ -448,7 +448,7 @@ func TestExpect_Build(t *testing.T) {
 							"application/grpc",
 						},
 					}),
-					Message: &test.EchoResponse{},
+					Message: &ProtoMessageYAMLMarshaler{&test.EchoResponse{}},
 				},
 				expectAssertError: true,
 			},
@@ -460,7 +460,7 @@ func TestExpect_Build(t *testing.T) {
 				},
 				v: &response{
 					Status:  createStatus(t, codes.NotFound, "not found"),
-					Message: &test.EchoResponse{},
+					Message: &ProtoMessageYAMLMarshaler{&test.EchoResponse{}},
 				},
 				expectAssertError: true,
 			},
@@ -473,7 +473,7 @@ func TestExpect_Build(t *testing.T) {
 				},
 				v: &response{
 					Status:  createStatus(t, codes.NotFound, "not found"),
-					Message: &test.EchoResponse{},
+					Message: &ProtoMessageYAMLMarshaler{&test.EchoResponse{}},
 				},
 				expectAssertError: true,
 			},
@@ -505,7 +505,7 @@ func TestExpect_Build(t *testing.T) {
 							Detail: "debug",
 						},
 					),
-					Message: &test.EchoResponse{},
+					Message: &ProtoMessageYAMLMarshaler{&test.EchoResponse{}},
 				},
 				expectBuildError: true,
 			},
@@ -536,7 +536,7 @@ func TestExpect_Build(t *testing.T) {
 							Detail: "debug",
 						},
 					),
-					Message: &test.EchoResponse{},
+					Message: &ProtoMessageYAMLMarshaler{&test.EchoResponse{}},
 				},
 				expectAssertError: true,
 				expectError:       `.status.details[0]: expected "google.rpc.Invalid" but got "google.rpc.LocalizedMessage"`,
@@ -568,7 +568,7 @@ func TestExpect_Build(t *testing.T) {
 							Detail: "debug",
 						},
 					),
-					Message: &test.EchoResponse{},
+					Message: &ProtoMessageYAMLMarshaler{&test.EchoResponse{}},
 				},
 				expectBuildError: true,
 				expectError:      `.status.details[0].'google.rpc.LocalizedMessage': invalid expect status detail: failed to build assertion: failed to parse "{{locale": col 9: expected '}}', found 'EOF'`,
@@ -600,7 +600,7 @@ func TestExpect_Build(t *testing.T) {
 							Detail: "debug",
 						},
 					),
-					Message: &test.EchoResponse{},
+					Message: &ProtoMessageYAMLMarshaler{&test.EchoResponse{}},
 				},
 				expectAssertError: true,
 				expectError:       `.status.details[0].'google.rpc.LocalizedMessage': ".Loc" not found`,
@@ -632,7 +632,7 @@ func TestExpect_Build(t *testing.T) {
 							Detail: "debug",
 						},
 					),
-					Message: &test.EchoResponse{},
+					Message: &ProtoMessageYAMLMarshaler{&test.EchoResponse{}},
 				},
 				expectAssertError: true,
 				expectError:       `.status.details[0].'google.rpc.LocalizedMessage'.Locale: expected "en-US" but got "ja-JP"`,

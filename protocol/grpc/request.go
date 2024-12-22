@@ -17,6 +17,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/goccy/go-yaml"
@@ -43,7 +44,7 @@ type Request struct {
 	Client   string          `yaml:"client,omitempty"`
 	Target   string          `yaml:"target,omitempty"`
 	Service  string          `yaml:"service,omitempty"`
-	Method   string          `yaml:"method"`
+	Method   string          `yaml:"method,omitempty"`
 	Metadata interface{}     `yaml:"metadata,omitempty"`
 	Message  interface{}     `yaml:"message,omitempty"`
 	Options  *RequestOptions `yaml:"options,omitempty"`
@@ -143,12 +144,12 @@ type TLSOption struct {
 }
 
 // RequestExtractor represents a request dump.
-type RequestExtractor Request
+type RequestExtractor request
 
 // ExtractByKey implements query.KeyExtractor interface.
 func (r RequestExtractor) ExtractByKey(key string) (interface{}, bool) {
 	q := queryutil.New().Key(key)
-	if v, err := q.Extract(Request(r)); err == nil {
+	if v, err := q.Extract(request(r)); err == nil {
 		return v, true
 	}
 	// for backward compatibility
@@ -158,11 +159,31 @@ func (r RequestExtractor) ExtractByKey(key string) (interface{}, bool) {
 	return nil, false
 }
 
+type request struct {
+	Method   string                     `yaml:"method,omitempty"`
+	Metadata any                        `yaml:"metadata,omitempty"`
+	Message  *ProtoMessageYAMLMarshaler `yaml:"message,omitempty"`
+}
+
+type ProtoMessageYAMLMarshaler struct {
+	proto.Message `yaml:",inline"`
+}
+
+// MarshalYAML implements yaml.BytesMarshalerContext interface.
+func (m *ProtoMessageYAMLMarshaler) MarshalYAML(_ gocontext.Context) ([]byte, error) {
+	jb, err := protojson.Marshal(m.Message)
+	if err != nil {
+		return nil, err
+	}
+	yb, err := yaml.JSONToYAML(jb)
+	return yb, err
+}
+
 type response struct {
-	Status  *responseStatus       `yaml:"status,omitempty"`
-	Header  *yamlutil.MDMarshaler `yaml:"header,omitempty"`
-	Trailer *yamlutil.MDMarshaler `yaml:"trailer,omitempty"`
-	Message proto.Message         `yaml:"message,omitempty"`
+	Status  *responseStatus            `yaml:"status,omitempty"`
+	Header  *yamlutil.MDMarshaler      `yaml:"header,omitempty"`
+	Trailer *yamlutil.MDMarshaler      `yaml:"trailer,omitempty"`
+	Message *ProtoMessageYAMLMarshaler `yaml:"message,omitempty"`
 }
 
 type responseStatus struct {
@@ -289,6 +310,10 @@ func (r *Request) Invoke(ctx *context.Context) (*context.Context, interface{}, e
 			return ctx, nil, errors.WrapPath(err, "options", "failed to apply options")
 		}
 	}
+	opts, err := context.ExecuteTemplate(ctx, opts)
+	if err != nil {
+		return ctx, nil, errors.WrapPath(err, "options", "failed to execute template")
+	}
 	if opts.Proto != nil {
 		dir := filepath.Dir(ctx.ScenarioFilepath())
 		for i, p := range opts.Proto.Imports {
@@ -329,7 +354,7 @@ func (r *Request) Invoke(ctx *context.Context) (*context.Context, interface{}, e
 		Status: &responseStatus{
 			status.New(codes.OK, ""),
 		},
-		Message: respMsg,
+		Message: &ProtoMessageYAMLMarshaler{respMsg},
 	}
 	if sts != nil {
 		resp.Status = &responseStatus{sts}
@@ -395,9 +420,9 @@ func (r *Request) appendMetadata(ctx *context.Context) (*context.Context, error)
 
 func (r *Request) dumpRequest(ctx *context.Context, reqMsg proto.Message) *context.Context {
 	//nolint:exhaustruct
-	dumpReq := &Request{
+	dumpReq := &request{
 		Method:  r.Method,
-		Message: reqMsg,
+		Message: &ProtoMessageYAMLMarshaler{reqMsg},
 	}
 	reqMD, _ := metadata.FromOutgoingContext(ctx.RequestContext())
 	if len(reqMD) > 0 {

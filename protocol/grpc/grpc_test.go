@@ -1,6 +1,7 @@
 package grpc
 
 import (
+	"os"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"

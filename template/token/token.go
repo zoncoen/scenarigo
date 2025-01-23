@@ -20,8 +20,9 @@ const (
 	REM  // %
 	CALL // }}:\n
 
-	LAND // &&
-	LOR  // ||
+	LAND       // &&
+	LOR        // ||
+	COALESCING // ??
 
 	EQL // ==
 	NEQ // !=
@@ -81,6 +82,8 @@ func (t Token) String() string {
 		return "&&"
 	case LOR:
 		return "||"
+	case COALESCING:
+		return "??"
 	case EQL:
 		return "=="
 	case NEQ:
@@ -141,7 +144,7 @@ func (t Token) Precedence() int {
 	switch t {
 	case QUESTION, COLON:
 		return 1
-	case LOR:
+	case LOR, COALESCING:
 		return 2
 	case LAND:
 		return 3

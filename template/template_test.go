@@ -435,6 +435,32 @@ func TestTemplate_Execute_BinaryExpr(t *testing.T) {
 				str:         `{{true + false}}`,
 				expectError: "failed to execute: {{true + false}}: invalid operation: bool(true) + bool(false) not defined",
 			},
+			"coalescing defined": {
+				str: `{{a.b ?? true + "default"}}`, // the right-hand side is not executed
+				data: map[string]interface{}{
+					"a": map[string]interface{}{
+						"b": "something",
+					},
+				},
+				expect: "something",
+			},
+			"coalescing null": {
+				str: `{{a.b ?? "default"}}`,
+				data: map[string]interface{}{
+					"a": map[string]interface{}{
+						"b": nil,
+					},
+				},
+				expect: "default",
+			},
+			"coalescing undefined": {
+				str:    `{{a.b ?? "default"}}`,
+				expect: "default",
+			},
+			"invalid argument to left-hand side of coalescing": {
+				str:         `{{true ?? "default"}}`,
+				expectError: "failed to execute: {{true ?? \"default\"}}: invalid operation: invalid argument to left-hand side of ??",
+			},
 		}
 		runExecute(t, tests)
 	})

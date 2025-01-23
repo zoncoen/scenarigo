@@ -944,6 +944,46 @@ func TestScanner_Scan(t *testing.T) {
 					},
 				},
 			},
+			"??": {
+				src: `{{a.b??"default"}}`,
+				expected: []result{
+					{
+						pos: 1,
+						tok: token.LDBRACE,
+						lit: "{{",
+					},
+					{
+						pos: 3,
+						tok: token.IDENT,
+						lit: "a",
+					},
+					{
+						pos: 4,
+						tok: token.PERIOD,
+						lit: ".",
+					},
+					{
+						pos: 5,
+						tok: token.IDENT,
+						lit: "b",
+					},
+					{
+						pos: 6,
+						tok: token.COALESCING,
+						lit: "??",
+					},
+					{
+						pos: 8,
+						tok: token.STRING,
+						lit: "default",
+					},
+					{
+						pos: 17,
+						tok: token.RDBRACE,
+						lit: "}}",
+					},
+				},
+			},
 			"==": {
 				src: `{{true==true}}`,
 				expected: []result{

@@ -533,6 +533,32 @@ func TestParser_Parse(t *testing.T) {
 					Rdbrace: 13,
 				},
 			},
+			"??": {
+				src: `{{a.b??"default"}}`,
+				expected: &ast.ParameterExpr{
+					Ldbrace: 1,
+					X: &ast.BinaryExpr{
+						X: &ast.SelectorExpr{
+							X: &ast.Ident{
+								NamePos: 3,
+								Name:    "a",
+							},
+							Sel: &ast.Ident{
+								NamePos: 5,
+								Name:    "b",
+							},
+						},
+						OpPos: 6,
+						Op:    token.COALESCING,
+						Y: &ast.BasicLit{
+							ValuePos: 8,
+							Kind:     token.STRING,
+							Value:    "default",
+						},
+					},
+					Rdbrace: 17,
+				},
+			},
 			"==": {
 				src: `{{1==1}}`,
 				expected: &ast.ParameterExpr{

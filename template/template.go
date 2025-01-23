@@ -81,7 +81,15 @@ func (t *Template) executeExpr(ctx context.Context, expr ast.Expr, data interfac
 		}
 		return v, nil
 	case *ast.BinaryExpr:
-		v, err := t.executeBinaryExpr(ctx, e, data)
+		var (
+			v   interface{}
+			err error
+		)
+		if e.Op == token.COALESCING {
+			v, err = t.executeCoalescingExpr(ctx, e, data)
+		} else {
+			v, err = t.executeBinaryExpr(ctx, e, data)
+		}
 		if err != nil {
 			return nil, fmt.Errorf("invalid operation: %w", err)
 		}
@@ -333,6 +341,25 @@ func (t *Template) executeBinaryOperation(op token.Token, x, y val.Value, yExpr 
 		}
 	}
 	return nil, val.ErrOperationNotDefined
+}
+
+func (t *Template) executeCoalescingExpr(ctx context.Context, e *ast.BinaryExpr, data interface{}) (interface{}, error) {
+	switch e.X.(type) {
+	case *ast.Ident, *ast.SelectorExpr, *ast.IndexExpr:
+		extracted, err := extract(e.X, data)
+		if err != nil {
+			var notDefined errNotDefined
+			if errors.As(err, &notDefined) {
+				return t.executeExpr(ctx, e.Y, data)
+			}
+			return nil, err
+		}
+		if extracted == nil {
+			return t.executeExpr(ctx, e.Y, data)
+		}
+		return extracted, nil
+	}
+	return nil, errors.New("invalid argument to left-hand side of ??")
 }
 
 func oneOf(x val.Value, ys ...val.Value) (val.Bool, error) {

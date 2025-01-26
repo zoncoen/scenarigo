@@ -902,7 +902,7 @@ plugins:
 					"src/main.go": `package plugin`,
 					"src/go.mod":  `go 100.0.0`,
 				},
-				expect: fmt.Sprintf(`failed to build plugin plugin.so: re-install scenarigo command with go100.0.0: "go mod tidy" failed: go: go.mod requires go >= 100.0.0 (running go %s; GOTOOLCHAIN=%s)`, goVersion, toolchain),
+				expect: "failed to build plugin plugin.so: re-install scenarigo command with go100.0.0",
 			},
 			"invalid version": {
 				config: `
@@ -1213,7 +1213,7 @@ plugins:
 					t.Fatal("no error")
 				}
 				if !strings.Contains(err.Error(), test.expect) {
-					t.Fatalf("unexpected error: %s", err)
+					t.Fatalf("expected %q but got %q", test.expect, err)
 				}
 			})
 		}
@@ -2111,7 +2111,7 @@ import (
 	t.Run("failure", func(t *testing.T) {
 		tooHighError := fmt.Sprintf("go.mod requires go >= 100.0.0 (scenarigo was built with %s)", goVer)
 		if toolchain == "local" {
-			tooHighError = fmt.Sprintf(`failed to edit toolchain directive: "go mod tidy" failed: go: go.mod requires go >= 100.0.0 (running go %s; GOTOOLCHAIN=local)`, strings.TrimPrefix(goVer, "go"))
+			tooHighError = fmt.Sprintf(`"go mod tidy" failed: go: go.mod requires go >= 100.0.0 (running go %s; GOTOOLCHAIN=local)`, strings.TrimPrefix(goVer, "go"))
 		}
 
 		tests := map[string]struct {

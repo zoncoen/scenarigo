@@ -15,6 +15,7 @@ import (
 	"regexp"
 	"runtime"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/fatih/color"
@@ -252,6 +253,9 @@ func buildRun(cmd *cobra.Command, args []string) error {
 }
 
 func findGoCmd(ctx context.Context) (string, error) {
+	if goCmd := os.Getenv("SCENARIGO_GO"); goCmd != "" {
+		return goCmd, nil
+	}
 	goCmd, err := exec.LookPath("go")
 	if err != nil {
 		return "", fmt.Errorf("go command required: %w", err)
@@ -552,10 +556,27 @@ func modTidy(ctx context.Context, dir, goCmd string) error {
 		}
 		return nil
 	}
-	if _, err := execute(ctx, dir, goCmd, "mod", "tidy"); err != nil {
-		return fmt.Errorf(`"go mod tidy" failed: %w`, err)
+
+	// FIXME: workaround for CI
+	// sometimes "go mod tidy" fail on CI w/o error message
+	var err error
+	var retry uint64
+	if e := os.Getenv("SCENARIGO_GO_MOD_TIDY_RETRY"); e != "" {
+		retry, err = strconv.ParseUint(e, 0, 64)
+		if err != nil {
+			return fmt.Errorf("invalid SCENARIGO_GO_MOD_TIDY_RETRY: %w", err)
+		}
 	}
-	return nil
+	for i := uint64(0); i <= retry; i++ {
+		_, err = execute(ctx, dir, goCmd, "mod", "tidy")
+		if err == nil {
+			return nil
+		}
+		if i != retry {
+			warnLog(os.Stdout, `"go mod tidy" failed, retry...`)
+		}
+	}
+	return fmt.Errorf(`%s: "go mod tidy" failed: %w`, dir, err)
 }
 
 func getInitialState(gomod *modfile.File) (map[string]modfile.Require, map[string]modfile.Replace) {

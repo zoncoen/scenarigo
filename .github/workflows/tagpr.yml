@@ -6,13 +6,15 @@ jobs:
   tagpr:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
     - name: Generate token
       id: generate_token
       uses: tibdex/github-app-token@v2.1.0
       with:
         app_id: ${{ secrets.WRITE_APP_ID }}
         private_key: ${{ secrets.WRITE_PRIVATE_KEY }}
+    - uses: actions/checkout@v4
+      with:
+        token: ${{ steps.generate_token.outputs.token }}
     - uses: Songmu/tagpr@v1
       env:
         GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}

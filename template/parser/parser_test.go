@@ -707,6 +707,43 @@ func TestParser_Parse(t *testing.T) {
 					Rdbrace: 15,
 				},
 			},
+			"expr with new-line-char": {
+				src: `
+{{foo(
+  1,
+  3
+  -
+  2)}}
+`,
+				expected: &ast.BinaryExpr{
+					X: &ast.BinaryExpr{
+						X:     &ast.BasicLit{ValuePos: 1, Kind: token.STRING, Value: "\n"},
+						OpPos: 2,
+						Op:    token.CONCAT,
+						Y: &ast.ParameterExpr{
+							Ldbrace: 2,
+							X: &ast.CallExpr{
+								Fun:    &ast.Ident{NamePos: 4, Name: "foo"},
+								Lparen: 7,
+								Args: []ast.Expr{
+									&ast.BasicLit{ValuePos: 11, Kind: token.INT, Value: "1"},
+									&ast.BinaryExpr{
+										X:     &ast.BasicLit{ValuePos: 16, Kind: token.INT, Value: "3"},
+										OpPos: 20,
+										Op:    token.SUB,
+										Y:     &ast.BasicLit{ValuePos: 24, Kind: token.INT, Value: "2"},
+									},
+								},
+								Rparen: 25,
+							},
+							Rdbrace: 26,
+						},
+					},
+					OpPos: 28,
+					Op:    token.CONCAT,
+					Y:     &ast.BasicLit{ValuePos: 28, Kind: token.STRING, Value: "\n"},
+				},
+			},
 		}
 		for name, test := range tests {
 			test := test

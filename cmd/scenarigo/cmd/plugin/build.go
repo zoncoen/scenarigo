@@ -15,6 +15,7 @@ import (
 	"regexp"
 	"runtime"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/fatih/color"
@@ -164,11 +165,25 @@ func buildRun(cmd *cobra.Command, args []string) error {
 		}
 		// NOTE: All module names must be unique and different from the standard modules.
 		defaultModName := filepath.Join("plugins", strings.TrimSuffix(out, ".so"))
-		pb, err := newPluginBuilder(cmd, goCmd, out, mod, src, filepathutil.From(pluginDir, out), defaultModName)
+		pb, err := newPluginBuilder(ctx(cmd), goCmd, out, mod, src, filepathutil.From(pluginDir, out), defaultModName)
 		if err != nil {
 			return fmt.Errorf("failed to build plugin %s: %w", out, err)
 		}
 		pbs = append(pbs, pb)
+	}
+
+	goworkPath, err := checkGowork(ctx(cmd), goCmd, pbs)
+	if err != nil {
+		return fmt.Errorf("failed to build plugin: %w", err)
+	}
+
+	var gowork []byte
+	if goworkPath != "" {
+		b, err := os.ReadFile(goworkPath)
+		if err != nil {
+			return fmt.Errorf("failed to build plugin: %w", err)
+		}
+		gowork = b
 	}
 
 	var overrides map[string]*overrideModule
@@ -207,7 +222,7 @@ func buildRun(cmd *cobra.Command, args []string) error {
 
 		var retry bool
 		for _, pb := range pbs {
-			if err := pb.build(cmd, goCmd, overrideKeys, overrides); err != nil {
+			if err := pb.build(cmd, goCmd, overrideKeys, overrides, goworkPath, gowork); err != nil {
 				var re *retriableError
 				if errors.As(err, &re) {
 					msg := fmt.Sprintf("%s: %s", pb.name, err)
@@ -238,6 +253,9 @@ func buildRun(cmd *cobra.Command, args []string) error {
 }
 
 func findGoCmd(ctx context.Context) (string, error) {
+	if goCmd := os.Getenv("SCENARIGO_GO"); goCmd != "" {
+		return goCmd, nil
+	}
 	goCmd, err := exec.LookPath("go")
 	if err != nil {
 		return "", fmt.Errorf("go command required: %w", err)
@@ -246,6 +264,53 @@ func findGoCmd(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("failed to check go version: %w", err)
 	}
 	return goCmd, nil
+}
+
+func checkGowork(ctx context.Context, goCmd string, pbs []*pluginBuilder) (string, error) {
+	env := os.Getenv("GOWORK")
+	// prioritize explicit config
+	// ref. https://go.dev/blog/get-familiar-with-workspaces#workspace-commands
+	if env != "" {
+		if env == "off" {
+			return "", nil
+		}
+		if strings.HasSuffix(env, ".work") {
+			return env, nil
+		}
+	}
+
+	files := []goworkConfig{}
+	for _, pb := range pbs {
+		gowork, err := execute(ctx, pb.dir, goCmd, "env", "GOWORK")
+		if err != nil {
+			return "", fmt.Errorf("failed to build plugin %s: %w", pb.out, err)
+		}
+		gowork = strings.Trim(gowork, "\n")
+		if gowork != "" {
+			files = append(files, goworkConfig{pb.out, gowork})
+		}
+	}
+	if len(files) == 0 {
+		return "", nil
+	}
+
+	var gowork string
+	for _, f := range files {
+		if gowork != "" && gowork != f.gowork {
+			buf := bytes.NewBufferString("found multiple workspace files\n")
+			for _, f := range files {
+				buf.WriteString(fmt.Sprintf("    %s:\n      %s\n", f.out, f.gowork))
+			}
+			return "", errors.New(buf.String())
+		}
+		gowork = f.gowork
+	}
+	return gowork, nil
+}
+
+type goworkConfig struct {
+	out    string
+	gowork string
 }
 
 func selectUnifiedVersions(pbs []*pluginBuilder) (map[string]*overrideModule, error) {
@@ -430,8 +495,7 @@ type pluginBuilder struct {
 	out             string
 }
 
-func newPluginBuilder(cmd *cobra.Command, goCmd, name, mod, src, out, defaultModName string) (*pluginBuilder, error) {
-	ctx := ctx(cmd)
+func newPluginBuilder(ctx context.Context, goCmd, name, mod, src, out, defaultModName string) (*pluginBuilder, error) {
 	dir := mod
 	info, err := os.Stat(mod)
 	if err != nil {
@@ -492,10 +556,27 @@ func modTidy(ctx context.Context, dir, goCmd string) error {
 		}
 		return nil
 	}
-	if _, err := execute(ctx, dir, goCmd, "mod", "tidy"); err != nil {
-		return fmt.Errorf(`"go mod tidy" failed: %w`, err)
+
+	// FIXME: workaround for CI
+	// sometimes "go mod tidy" fail on CI w/o error message
+	var err error
+	var retry uint64
+	if e := os.Getenv("SCENARIGO_GO_MOD_TIDY_RETRY"); e != "" {
+		retry, err = strconv.ParseUint(e, 0, 64)
+		if err != nil {
+			return fmt.Errorf("invalid SCENARIGO_GO_MOD_TIDY_RETRY: %w", err)
+		}
 	}
-	return nil
+	for i := uint64(0); i <= retry; i++ {
+		_, err = execute(ctx, dir, goCmd, "mod", "tidy")
+		if err == nil {
+			return nil
+		}
+		if i != retry {
+			warnLog(os.Stdout, `"go mod tidy" failed, retry...`)
+		}
+	}
+	return fmt.Errorf(`%s: "go mod tidy" failed: %w`, dir, err)
 }
 
 func getInitialState(gomod *modfile.File) (map[string]modfile.Require, map[string]modfile.Replace) {
@@ -510,7 +591,7 @@ func getInitialState(gomod *modfile.File) (map[string]modfile.Require, map[strin
 	return initialRequires, initialReplaces
 }
 
-func (pb *pluginBuilder) build(cmd *cobra.Command, goCmd string, overrideKeys []string, overrides map[string]*overrideModule) error {
+func (pb *pluginBuilder) build(cmd *cobra.Command, goCmd string, overrideKeys []string, overrides map[string]*overrideModule, goworkPath string, gowork []byte) error {
 	ctx := ctx(cmd)
 	if err := pb.updateGoMod(cmd, goCmd, overrideKeys, overrides); err != nil {
 		return err
@@ -518,7 +599,24 @@ func (pb *pluginBuilder) build(cmd *cobra.Command, goCmd string, overrideKeys []
 	if err := os.RemoveAll(pb.out); err != nil {
 		return fmt.Errorf("failed to delete the old plugin %s: %w", pb.out, err)
 	}
-	if _, err := execute(ctx, pb.dir, goCmd, "build", "-buildmode=plugin", "-o", pb.out, pb.src); err != nil {
+	var envs []string
+	if goworkPath == "" {
+		envs = append(envs, "GOWORK=off")
+	} else {
+		envs = append(envs, fmt.Sprintf("GOWORK=%s", goworkPath))
+		defer func() {
+			// restore go.work
+			f, err := os.OpenFile(goworkPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o644)
+			if err == nil {
+				defer f.Close()
+				f.Write(gowork)
+			}
+		}()
+		if _, err := executeWithEnvs(ctx, envs, pb.dir, goCmd, "work", "use", "."); err != nil {
+			return fmt.Errorf(`"go work use ." failed: %w`, err)
+		}
+	}
+	if _, err := executeWithEnvs(ctx, envs, pb.dir, goCmd, "build", "-buildmode=plugin", "-o", pb.out, pb.src); err != nil {
 		return fmt.Errorf(`"go build -buildmode=plugin -o %s %s" failed: %w`, pb.out, pb.src, err)
 	}
 	return nil

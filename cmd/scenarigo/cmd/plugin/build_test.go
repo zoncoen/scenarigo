@@ -142,6 +142,7 @@ go %s
 		tests := map[string]struct {
 			config            string
 			files             map[string]string
+			envGowork         string
 			expectPluginPaths []string
 			expectGoMod       map[string]string
 			skipOpen          bool
@@ -779,6 +780,39 @@ replace 127.0.0.1/dependent-gomodule.git v1.0.0 => ../local
 				},
 				skipOpen: true,
 			},
+			"with go.work file": {
+				config: `
+schemaVersion: config/v1
+plugins:
+  plugin.so:
+    src: src/main.go
+`,
+				files: map[string]string{
+					"src/main.go": pluginCode,
+					"src/go.work": fmt.Sprintf(`go %s`, goVersion),
+				},
+				expectPluginPaths: []string{"plugin.so"},
+				expectGoMod: map[string]string{
+					"src/go.mod": gomod("plugins/plugin"),
+				},
+			},
+			"with GOWORK": {
+				config: `
+schemaVersion: config/v1
+plugins:
+  plugin.so:
+    src: src/main.go
+`,
+				files: map[string]string{
+					"src/main.go":    pluginCode,
+					"config/go.work": fmt.Sprintf(`go %s`, goVersion),
+				},
+				envGowork:         "config/go.work",
+				expectPluginPaths: []string{"plugin.so"},
+				expectGoMod: map[string]string{
+					"src/go.mod": gomod("plugins/plugin"),
+				},
+			},
 		}
 		for name, test := range tests {
 			test := test
@@ -788,6 +822,9 @@ replace 127.0.0.1/dependent-gomodule.git v1.0.0 => ../local
 				create(t, configPath, test.config)
 				for p, content := range test.files {
 					create(t, filepath.Join(tmpDir, p), content)
+				}
+				if test.envGowork != "" {
+					t.Setenv("GOWORK", filepath.Join(tmpDir, test.envGowork))
 				}
 				cmd := &cobra.Command{}
 				config.ConfigPath = configPath
@@ -829,9 +866,10 @@ replace 127.0.0.1/dependent-gomodule.git v1.0.0 => ../local
 
 	t.Run("failure", func(t *testing.T) {
 		tests := map[string]struct {
-			config string
-			files  map[string]string
-			expect string
+			config    string
+			files     map[string]string
+			envGowork string
+			expect    string
 		}{
 			"no config": {
 				config: "",
@@ -864,7 +902,7 @@ plugins:
 					"src/main.go": `package plugin`,
 					"src/go.mod":  `go 100.0.0`,
 				},
-				expect: fmt.Sprintf(`failed to build plugin plugin.so: re-install scenarigo command with go100.0.0: "go mod tidy" failed: go: go.mod requires go >= 100.0.0 (running go %s; GOTOOLCHAIN=%s)`, goVersion, toolchain),
+				expect: "failed to build plugin plugin.so: re-install scenarigo command with go100.0.0",
 			},
 			"invalid version": {
 				config: `
@@ -1126,6 +1164,32 @@ replace 127.0.0.1/dependent-gomodule.git v1.0.0 => ../local2
 				},
 				expect: "replace 127.0.0.1/dependent-gomodule.git directive conflicts: plugin1.so => ../local1, plugin2.so => ../local2",
 			},
+			"invalid go.work file": {
+				config: `
+schemaVersion: config/v1
+plugins:
+  plugin.so:
+    src: src/main.go
+`,
+				files: map[string]string{
+					"src/main.go": pluginCode,
+					"src/go.work": "invalid",
+				},
+				expect: "unknown directive: invalid",
+			},
+			"invalid GOWORK": {
+				config: `
+schemaVersion: config/v1
+plugins:
+  plugin.so:
+    src: src/main.go
+`,
+				files: map[string]string{
+					"src/main.go": pluginCode,
+				},
+				envGowork: "go.work",
+				expect:    "no such file or directory",
+			},
 		}
 		for name, test := range tests {
 			test := test
@@ -1139,6 +1203,9 @@ replace 127.0.0.1/dependent-gomodule.git v1.0.0 => ../local2
 				for p, content := range test.files {
 					create(t, filepath.Join(tmpDir, p), content)
 				}
+				if test.envGowork != "" {
+					t.Setenv("GOWORK", filepath.Join(tmpDir, test.envGowork))
+				}
 				cmd := &cobra.Command{}
 				config.ConfigPath = configPath
 				err := buildRun(cmd, []string{})
@@ -1146,7 +1213,7 @@ replace 127.0.0.1/dependent-gomodule.git v1.0.0 => ../local2
 					t.Fatal("no error")
 				}
 				if !strings.Contains(err.Error(), test.expect) {
-					t.Fatalf("unexpected error: %s", err)
+					t.Fatalf("expected %q but got %q", test.expect, err)
 				}
 			})
 		}
@@ -1852,7 +1919,7 @@ replace google.golang.org/grpc v1.46.0 => google.golang.org/grpc v1.40.0
 				cmd := &cobra.Command{}
 				var stdout bytes.Buffer
 				cmd.SetOutput(&stdout)
-				pb, err := newPluginBuilder(cmd, goCmd, "test.so", gomod, test.src, filepath.Join(tmpDir, "test.so"), "test")
+				pb, err := newPluginBuilder(ctx, goCmd, "test.so", gomod, test.src, filepath.Join(tmpDir, "test.so"), "test")
 				if err != nil {
 					t.Fatalf("failed to create plugin builder: %s", err)
 				}
@@ -2044,7 +2111,7 @@ import (
 	t.Run("failure", func(t *testing.T) {
 		tooHighError := fmt.Sprintf("go.mod requires go >= 100.0.0 (scenarigo was built with %s)", goVer)
 		if toolchain == "local" {
-			tooHighError = fmt.Sprintf(`failed to edit toolchain directive: "go mod tidy" failed: go: go.mod requires go >= 100.0.0 (running go %s; GOTOOLCHAIN=local)`, strings.TrimPrefix(goVer, "go"))
+			tooHighError = fmt.Sprintf(`"go mod tidy" failed: go: go.mod requires go >= 100.0.0 (running go %s; GOTOOLCHAIN=local)`, strings.TrimPrefix(goVer, "go"))
 		}
 
 		tests := map[string]struct {
@@ -2246,4 +2313,79 @@ func tipOut(tip, s string) string {
 		return tip
 	}
 	return s
+}
+
+func TestCheckGowork(t *testing.T) {
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("failed to get working directory: %s", err)
+	}
+
+	tests := map[string]struct {
+		env         string
+		plugins     []string
+		expect      string
+		expectError string
+	}{
+		"set valid GOWORK": {
+			env:     "/path/to/go.work",
+			plugins: []string{"plugin1", "plugin2"},
+			expect:  "/path/to/go.work",
+		},
+		"GOWORK is off": {
+			env:     "off",
+			plugins: []string{"plugin1", "plugin2"},
+			expect:  "",
+		},
+		"ignore invalid GOWORK": {
+			env:    "/path/to/go.mod",
+			expect: "",
+		},
+		"found a go.work": {
+			plugins: []string{"plugin1", "nogowork"},
+			expect:  "plugin1/go.work",
+		},
+		"found multi go.work": {
+			plugins:     []string{"plugin1", "plugin2"},
+			expectError: "found multiple workspace files",
+		},
+	}
+	for name, test := range tests {
+		test := test
+		t.Run(name, func(t *testing.T) {
+			ctx := context.Background()
+			pbs := make([]*pluginBuilder, 0, len(test.plugins))
+			for _, p := range test.plugins {
+				mod := filepath.Join("testdata", "gowork", p)
+				pb, err := newPluginBuilder(ctx, "go", "test.so", mod, "", "/path/to/gen/test.so", "plugins/test")
+				if err != nil {
+					t.Fatal(err)
+				}
+				pbs = append(pbs, pb)
+			}
+
+			t.Setenv("GOWORK", test.env)
+			got, err := checkGowork(ctx, "go", pbs)
+			if err != nil {
+				if test.expectError == "" {
+					t.Fatalf("unexpected error: %s", err)
+				}
+				if !strings.Contains(err.Error(), test.expectError) {
+					t.Fatalf("expect error %q but got %q", test.expectError, err)
+				}
+				return
+			}
+			if test.expectError != "" {
+				t.Fatal("no error")
+			}
+
+			expect := test.expect
+			if expect != "" && !filepath.IsAbs(expect) {
+				expect = filepath.Join(wd, "testdata", "gowork", expect)
+			}
+			if got != expect {
+				t.Errorf("expect %q but got %q", expect, got)
+			}
+		})
+	}
 }

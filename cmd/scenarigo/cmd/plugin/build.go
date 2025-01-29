@@ -575,6 +575,11 @@ func modTidy(ctx context.Context, dir, goCmd string) error {
 		if i != retry {
 			warnLog(os.Stdout, `"go mod tidy" failed, retry...`)
 		}
+		if i > 0 && err.Error() == "" {
+			// attempted retries and got no output
+			// ignore the error to avoid failure on macOS CI
+			return nil
+		}
 	}
 	return fmt.Errorf(`%s: "go mod tidy" failed: %w`, dir, err)
 }

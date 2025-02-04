@@ -59,7 +59,7 @@ func (s *scanner) unread(ch rune) {
 
 func (s *scanner) skipSpaces() {
 	for {
-		if ch := s.read(); ch != ' ' {
+		if ch := s.read(); ch != ' ' && ch != '\n' && ch != '\r' {
 			s.unread(ch)
 			return
 		}

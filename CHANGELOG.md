@@ -1,5 +1,54 @@
 # CHANGELOG
 
+## [v0.18.0](https://github.com/zoncoen/scenarigo/compare/v0.17.3...v0.18.0) - 2025-01-29
+### New Features
+- add secrets field to define credential variables by @zoncoen in https://github.com/zoncoen/scenarigo/pull/414
+- always update toolchain directive to build plugins with the go version used to build scenarigo by @zoncoen in https://github.com/zoncoen/scenarigo/pull/421
+- add verbose flag to "plugin" sub-command by @zoncoen in https://github.com/zoncoen/scenarigo/pull/454
+- enable to create protocol buffer messages dynamically from proto files by @zoncoen in https://github.com/zoncoen/scenarigo/pull/457
+- add protocol option by @zoncoen in https://github.com/zoncoen/scenarigo/pull/477
+- enable to use go.work for building plugins by @zoncoen in https://github.com/zoncoen/scenarigo/pull/499
+### Bug Fixes
+- fix: keep orders of protocol options by @zoncoen in https://github.com/zoncoen/scenarigo/pull/480
+- Fix parsing of template contains new line char by @goccy in https://github.com/zoncoen/scenarigo/pull/500
+### Dependency Upgrades
+- chore(deps): bump google.golang.org/grpc from 1.63.0 to 1.63.2 by @dependabot in https://github.com/zoncoen/scenarigo/pull/412
+- chore(deps): bump golang.org/x/net from 0.21.0 to 0.23.0 by @dependabot in https://github.com/zoncoen/scenarigo/pull/415
+- chore(deps): bump golang.org/x/text from 0.14.0 to 0.15.0 by @dependabot in https://github.com/zoncoen/scenarigo/pull/417
+- chore(deps): bump google.golang.org/protobuf from 1.33.0 to 1.34.1 by @dependabot in https://github.com/zoncoen/scenarigo/pull/418
+- chore(deps): bump github.com/fatih/color from 1.16.0 to 1.17.0 by @dependabot in https://github.com/zoncoen/scenarigo/pull/419
+- chore(deps): bump google.golang.org/grpc from 1.63.2 to 1.64.0 by @dependabot in https://github.com/zoncoen/scenarigo/pull/420
+- chore(deps): bump golang.org/x/text from 0.15.0 to 0.16.0 by @dependabot in https://github.com/zoncoen/scenarigo/pull/424
+- chore(deps): bump golang.org/x/mod from 0.17.0 to 0.18.0 by @dependabot in https://github.com/zoncoen/scenarigo/pull/423
+- chore(deps): bump google.golang.org/protobuf from 1.34.1 to 1.34.2 by @dependabot in https://github.com/zoncoen/scenarigo/pull/425
+- chore(deps): bump golang.ort/x/* to the latest by @zoncoen in https://github.com/zoncoen/scenarigo/pull/428
+- chore(deps): bump github.com/spf13/cobra from 1.8.0 to 1.8.1 by @dependabot in https://github.com/zoncoen/scenarigo/pull/430
+- chore(deps): bump github.com/vektah/gqlparser/v2 from 2.5.1 to 2.5.14 in /scripts/cross-build by @dependabot in https://github.com/zoncoen/scenarigo/pull/426
+- chore(deps): bump indirect modules by @zoncoen in https://github.com/zoncoen/scenarigo/pull/437
+- chore(deps): bump github.com/goccy/go-yaml from 1.11.3 to 1.12.0 by @dependabot in https://github.com/zoncoen/scenarigo/pull/433
+- chore(deps): bump golang.org/x/mod from 0.18.0 to 0.20.0 by @dependabot in https://github.com/zoncoen/scenarigo/pull/435
+- chore(deps): bump golang.org/x/sync from 0.7.0 to 0.8.0 by @dependabot in https://github.com/zoncoen/scenarigo/pull/436
+- chore(deps): bump actions/checkout from 3 to 4 by @dependabot in https://github.com/zoncoen/scenarigo/pull/441
+- chore(deps): bump google.golang.org/grpc from 1.64.0 to 1.65.0 by @dependabot in https://github.com/zoncoen/scenarigo/pull/431
+- chore(deps): bump golang.org/x/text from 0.16.0 to 0.17.0 by @dependabot in https://github.com/zoncoen/scenarigo/pull/442
+- chore(deps): bump google.golang.org/grpc from 1.65.0 to 1.66.0 by @dependabot in https://github.com/zoncoen/scenarigo/pull/445
+- chore(deps): bump golang.org/x/mod from 0.20.0 to 0.21.0 by @dependabot in https://github.com/zoncoen/scenarigo/pull/447
+- chore(deps): bump golang.org/x/text from 0.17.0 to 0.19.0 by @dependabot in https://github.com/zoncoen/scenarigo/pull/451
+- chore(deps): bump google.golang.org/grpc from 1.66.0 to 1.67.1 by @dependabot in https://github.com/zoncoen/scenarigo/pull/456
+- chore(deps): bump google.golang.org/protobuf from 1.34.2 to 1.35.1 by @dependabot in https://github.com/zoncoen/scenarigo/pull/452
+- chore(deps): bump github.com/fatih/color from 1.17.0 to 1.18.0 by @dependabot in https://github.com/zoncoen/scenarigo/pull/453
+- Update goccy/go-yaml to v1.15.12 by @goccy in https://github.com/zoncoen/scenarigo/pull/476
+- chore(deps): bump github.com/jhump/protoreflect from 1.16.0 to 1.17.0 by @dependabot in https://github.com/zoncoen/scenarigo/pull/469
+- chore(deps): bump golang.org/x modules by @zoncoen in https://github.com/zoncoen/scenarigo/pull/478
+- chore(deps): bump codecov/codecov-action from 4 to 5 by @dependabot in https://github.com/zoncoen/scenarigo/pull/465
+- chore(deps): bump goreleaser/goreleaser-action from 5 to 6 by @dependabot in https://github.com/zoncoen/scenarigo/pull/422
+- chore(deps): bump github.com/goccy/go-yaml from 1.15.12 to 1.15.13 by @dependabot in https://github.com/zoncoen/scenarigo/pull/484
+- chore(deps): bump google.golang.org/protobuf from 1.36.0 to 1.36.1 by @dependabot in https://github.com/zoncoen/scenarigo/pull/485
+- chore(deps): bump google.golang.org/grpc from 1.67.1 to 1.69.2 by @dependabot in https://github.com/zoncoen/scenarigo/pull/479
+- chore(deps): bump google.golang.org/grpc from 1.69.2 to 1.70.0 by @dependabot in https://github.com/zoncoen/scenarigo/pull/496
+- chore(deps): bump google.golang.org/protobuf from 1.36.1 to 1.36.4 by @dependabot in https://github.com/zoncoen/scenarigo/pull/497
+- chore(deps): bump github.com/goccy/go-yaml from 1.15.13 to 1.15.15 by @dependabot in https://github.com/zoncoen/scenarigo/pull/491
+
 ## [v0.17.3] - 2024-04-14
 ### Bug Fixes
 - **release:** ensure the Docker image exists ([#411](https://github.com/zoncoen/scenarigo/issues/411))

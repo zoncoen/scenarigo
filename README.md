@@ -1001,7 +1001,6 @@ The template feature provides functions to convert types.
       <td>
         nullish coalescing operator.
         The operator returns the left-hand side if it is defined and not null, otherwise the operator returns the right-hand side.
-        The left-hand side should be IDENT, SelectorExpr, or IndexExpr.
       </td>
     </tr>
     <tr>

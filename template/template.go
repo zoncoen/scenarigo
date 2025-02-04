@@ -354,12 +354,20 @@ func (t *Template) executeCoalescingExpr(ctx context.Context, e *ast.BinaryExpr,
 			}
 			return nil, err
 		}
-		if extracted == nil {
+		if extracted == nil || isNil(reflect.ValueOf(extracted)) {
 			return t.executeExpr(ctx, e.Y, data)
 		}
 		return extracted, nil
+	default:
+		x, err := t.executeExpr(ctx, e.X, data)
+		if err != nil {
+			return nil, err
+		}
+		if x == nil || isNil(reflect.ValueOf(x)) {
+			return t.executeExpr(ctx, e.Y, data)
+		}
+		return x, nil
 	}
-	return nil, errors.New("invalid argument to left-hand side of ??")
 }
 
 func oneOf(x val.Value, ys ...val.Value) (val.Bool, error) {

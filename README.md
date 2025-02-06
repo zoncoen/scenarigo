@@ -561,7 +561,7 @@ IndexExpr       = Expr "[" INT "]"
 CallExpr        = Expr "(" [Expr {"," Expr}] ")"
 BinaryExpr      = Expr BinaryOp Expr
 BinaryOp        = "+" | "-" | "*" | "/" | "%" |
-                  "&&" | "||" |
+                  "&&" | "||" | "??" |
                   "==" | "!=" | "<" | "<=" | ">" | ">=" 
 ConditionalExpr = Expr ? Expr : Expr
 ```
@@ -994,6 +994,14 @@ The template feature provides functions to convert types.
       <td align="center">_ || _</td>
       <td>(bool, bool) -> bool</td>
       <td>logical or</td>
+    </tr>
+    <tr>
+      <td align="center">_ ?? _</td>
+      <td>(A, B) -> A | B</td>
+      <td>
+        nullish coalescing operator.
+        The operator returns the left-hand side if it is defined and not null, otherwise the operator returns the right-hand side.
+      </td>
     </tr>
     <tr>
       <td align="center">_ ? _ : _</td>

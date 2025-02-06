@@ -1178,6 +1178,74 @@ func TestTemplate_Execute_BinaryExpr(t *testing.T) {
 		runExecute(t, tests)
 	})
 
+	t.Run("??", func(t *testing.T) {
+		tests := map[string]executeTestCase{
+			"lhs defined": {
+				str: `{{a.b ?? true + "default"}}`, // the right-hand side is not executed
+				data: map[string]interface{}{
+					"a": map[string]interface{}{
+						"b": "something",
+					},
+				},
+				expect: "something",
+			},
+			"lhs nil": {
+				str: `{{a.b ?? "default"}}`,
+				data: map[string]interface{}{
+					"a": map[string]interface{}{
+						"b": nil,
+					},
+				},
+				expect: "default",
+			},
+			"lhs typed nil": {
+				str: `{{a.b ?? "default"}}`,
+				data: map[string]interface{}{
+					"a": map[string]interface{}{
+						"b": []int(nil),
+					},
+				},
+				expect: "default",
+			},
+			"lhs undefined": {
+				str:    `{{a.b ?? "default"}}`,
+				expect: "default",
+			},
+			"lhs expr": {
+				str: `{{a.b + " new" ?? true + "default"}}`, // the right-hand side is not executed
+				data: map[string]interface{}{
+					"a": map[string]interface{}{
+						"b": "something",
+					},
+				},
+				expect: "something new",
+			},
+			"lhs expr nil": {
+				str: `{{(true ? a.b : a.b) ?? "default"}}`,
+				data: map[string]interface{}{
+					"a": map[string]interface{}{
+						"b": nil,
+					},
+				},
+				expect: "default",
+			},
+			"lhs expr typed nil": {
+				str: `{{(true ? a.b : a.b) ?? "default"}}`,
+				data: map[string]interface{}{
+					"a": map[string]interface{}{
+						"b": []int(nil),
+					},
+				},
+				expect: "default",
+			},
+			"lhs expr contains undefined variable": {
+				str:         `{{a.b + 1 ?? "default"}}`,
+				expectError: "failed to execute: {{a.b + 1 ?? \"default\"}}: invalid operation: invalid operation: \".a.b\" not found",
+			},
+		}
+		runExecute(t, tests)
+	})
+
 	t.Run("? :", func(t *testing.T) {
 		tests := map[string]executeTestCase{
 			"true ? 1 : 2": {

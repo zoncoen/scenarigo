@@ -64,7 +64,7 @@ L:
 
 		switch p.tok {
 		case token.ADD, token.SUB, token.MUL, token.QUO, token.REM,
-			token.LAND, token.LOR,
+			token.LAND, token.LOR, token.COALESCING,
 			token.EQL, token.NEQ, token.LSS, token.LEQ, token.GTR, token.GEQ:
 			pos := p.pos
 			tok := p.tok

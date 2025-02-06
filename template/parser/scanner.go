@@ -254,6 +254,11 @@ func (s *scanner) scanToken() (int, token.Token, string) {
 	case '.':
 		return s.pos - 1, token.PERIOD, "."
 	case '?':
+		next := s.read()
+		if next == '?' {
+			return s.pos - 2, token.COALESCING, "??"
+		}
+		s.unread(next)
 		return s.pos - 1, token.QUESTION, "?"
 	case ':':
 		return s.pos - 1, token.COLON, ":"

@@ -206,6 +206,11 @@ func (t *Template) executeUnaryOperation(op token.Token, x val.Value) (val.Value
 }
 
 func (t *Template) executeBinaryExpr(ctx context.Context, e *ast.BinaryExpr, data interface{}) (interface{}, error) {
+	// coalescing expr allows undefined variables as the left-hand side expr
+	if e.Op == token.COALESCING {
+		return t.executeCoalescingExpr(ctx, e, data)
+	}
+
 	x, err := t.executeExpr(ctx, e.X, data)
 	if err != nil {
 		return nil, err
@@ -333,6 +338,33 @@ func (t *Template) executeBinaryOperation(op token.Token, x, y val.Value, yExpr 
 		}
 	}
 	return nil, val.ErrOperationNotDefined
+}
+
+func (t *Template) executeCoalescingExpr(ctx context.Context, e *ast.BinaryExpr, data interface{}) (interface{}, error) {
+	switch e.X.(type) {
+	case *ast.Ident, *ast.SelectorExpr, *ast.IndexExpr:
+		extracted, err := extract(e.X, data)
+		if err != nil {
+			var notDefined errNotDefined
+			if errors.As(err, &notDefined) {
+				return t.executeExpr(ctx, e.Y, data)
+			}
+			return nil, err
+		}
+		if extracted == nil || isNil(reflect.ValueOf(extracted)) {
+			return t.executeExpr(ctx, e.Y, data)
+		}
+		return extracted, nil
+	default:
+		x, err := t.executeExpr(ctx, e.X, data)
+		if err != nil {
+			return nil, err
+		}
+		if x == nil || isNil(reflect.ValueOf(x)) {
+			return t.executeExpr(ctx, e.Y, data)
+		}
+		return x, nil
+	}
 }
 
 func oneOf(x val.Value, ys ...val.Value) (val.Bool, error) {

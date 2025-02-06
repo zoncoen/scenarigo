@@ -81,15 +81,7 @@ func (t *Template) executeExpr(ctx context.Context, expr ast.Expr, data interfac
 		}
 		return v, nil
 	case *ast.BinaryExpr:
-		var (
-			v   interface{}
-			err error
-		)
-		if e.Op == token.COALESCING {
-			v, err = t.executeCoalescingExpr(ctx, e, data)
-		} else {
-			v, err = t.executeBinaryExpr(ctx, e, data)
-		}
+		v, err := t.executeBinaryExpr(ctx, e, data)
 		if err != nil {
 			return nil, fmt.Errorf("invalid operation: %w", err)
 		}
@@ -214,6 +206,11 @@ func (t *Template) executeUnaryOperation(op token.Token, x val.Value) (val.Value
 }
 
 func (t *Template) executeBinaryExpr(ctx context.Context, e *ast.BinaryExpr, data interface{}) (interface{}, error) {
+	// coalescing expr allows undefined variables as the left-hand side expr
+	if e.Op == token.COALESCING {
+		return t.executeCoalescingExpr(ctx, e, data)
+	}
+
 	x, err := t.executeExpr(ctx, e.X, data)
 	if err != nil {
 		return nil, err

@@ -1,9 +1,10 @@
 name: run-examples
 on:
-  push:
-    branches:
-      - main
-  pull_request:
+  pull_request_target:
+    types:
+    - opened
+    - synchronize
+    - reopened
 jobs:
   test:
     strategy:

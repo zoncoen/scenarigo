@@ -9,15 +9,15 @@ jobs:
     outputs:
       go-version: ${{ steps.matrix.outputs.versions }}
     steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
     - name: Install Go
       uses: actions/setup-go@v5
       with:
         go-version: stable
         check-latest: true
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
     - name: Generate matrix
       id: matrix
       working-directory: ${{ github.workspace }}

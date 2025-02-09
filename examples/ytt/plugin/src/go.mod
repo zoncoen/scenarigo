@@ -2,7 +2,7 @@ module github.com/zoncoen/scenarigo/examples/ytt/plugin
 
 go 1.22.0
 
-toolchain go1.23.5
+toolchain go1.23.6
 
 require github.com/zoncoen/scenarigo v0.18.0
 

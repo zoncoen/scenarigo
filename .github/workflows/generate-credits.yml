@@ -10,24 +10,24 @@ jobs:
     if:  startsWith(github.head_ref, 'dependabot/') && github.actor == 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.pull_request.head.ref }}
+        token: ${{ steps.generate_token.outputs.token }}
     - name: Install Go
       uses: actions/setup-go@v5
       with:
         go-version: stable
         check-latest: true
+    - name: Generate CREDITS
+      run: make credits
     - name: Generate token # required to trigger actions on the commit
       id: generate_token
       uses: tibdex/github-app-token@v2.1.0
       with:
         app_id: ${{ secrets.WRITE_APP_ID }}
         private_key: ${{ secrets.WRITE_PRIVATE_KEY }}
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        ref: ${{ github.event.pull_request.head.ref }}
-        token: ${{ steps.generate_token.outputs.token }}
-    - name: Generate CREDITS
-      run: make credits
     - uses: EndBug/add-and-commit@v9
       with:
         add: CREDITS

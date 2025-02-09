@@ -22,7 +22,9 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/zoncoen/query-go v1.3.2 // indirect
 	github.com/zoncoen/query-go/extractor/yaml v0.2.2 // indirect
-	golang.org/x/mod v0.22.0 // indirect
+	golang.org/x/mod v0.23.0 // indirect
+	golang.org/x/sync v0.11.0 // indirect
 	golang.org/x/sys v0.29.0 // indirect
+	golang.org/x/text v0.22.0 // indirect
 	google.golang.org/protobuf v1.36.4 // indirect
 )

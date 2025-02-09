@@ -12,13 +12,13 @@ jobs:
         go-version: [stable, oldstable]
     runs-on: ${{ matrix.os }}
     steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
     - name: Install Go
       uses: actions/setup-go@v5
       with:
         go-version: ${{ matrix.go-version }}
         check-latest: true
-    - name: Checkout code
-      uses: actions/checkout@v4
     - name: Generate codes and plugins
       run: make gen
     - name: Test

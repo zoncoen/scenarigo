@@ -23,3 +23,54 @@ jobs:
       run: make build
     - name: Run examples
       run: make test/examples
+    - uses: actions/upload-artifact@v4
+      if: matrix.os == 'ubuntu-latest' && startsWith(matrix.go-version, 'stable')
+      with:
+        name: examples-go-mod-${{ github.event.number }}
+        path: examples/**/go.*
+        overwrite: true
+
+  update:
+    if:  startsWith(github.head_ref, 'dependabot/') && github.actor == 'dependabot[bot]'
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+    - name: Generate token # required to trigger actions on the commit
+      id: generate_token
+      uses: tibdex/github-app-token@v2.1.0
+      with:
+        app_id: ${{ secrets.WRITE_APP_ID }}
+        private_key: ${{ secrets.WRITE_PRIVATE_KEY }}
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.pull_request.head.ref }}
+        token: ${{ steps.generate_token.outputs.token }}
+    - name: Install Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: stable
+        check-latest: true
+    - uses: actions/download-artifact@v4
+      with:
+        name: examples-go-mod-${{ github.event.number }}
+        path: examples
+    - name: Generate token # required to trigger actions on the commit
+      id: generate_token
+      uses: tibdex/github-app-token@v2.1.0
+      with:
+        app_id: ${{ secrets.WRITE_APP_ID }}
+        private_key: ${{ secrets.WRITE_PRIVATE_KEY }}
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.pull_request.head.ref }}
+        token: ${{ steps.generate_token.outputs.token }}
+    - uses: actions/download-artifact@v4
+      with:
+        name: examples-go-mod-${{ github.event.number }}
+    - uses: EndBug/add-and-commit@v9
+      with:
+        add: .
+        default_author: github_actions
+        message: 'chore(examples): update go.mod'

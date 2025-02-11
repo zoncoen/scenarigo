@@ -13,8 +13,12 @@ jobs:
         go-version: [stable, oldstable]
     runs-on: ${{ matrix.os }}
     steps:
+    - uses: suzuki-shunsuke/get-pr-action@v0.1.0
+      id: pr
     - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        ref: ${{steps.pr.outputs.merge_commit_sha}}
     - name: Install Go
       uses: actions/setup-go@v5
       with:

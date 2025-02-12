@@ -22,10 +22,21 @@ jobs:
         ref: ${{ github.event.pull_request.head.ref }}
         token: ${{ steps.generate_token.outputs.token }}
     - name: Install Go
+      id: setup-go
       uses: actions/setup-go@v5
       with:
         go-version: stable
         check-latest: true
+        cache: false
+    - uses: actions/cache/restore@v4.2.0
+      id: go-cache
+      with:
+        path: |
+          ~/.cache/go-build
+          ~/go/pkg/mod
+        key: go-${{ matrix.os }}-${{ steps.setup-go.outputs.go-version }}-${{ hashFiles('go.sum') }}
+        restore-keys: |
+          go-${{ steps.setup-go.outputs.go-version }}-
     - name: Generate CREDITS
       run: make credits
     - uses: EndBug/add-and-commit@v9

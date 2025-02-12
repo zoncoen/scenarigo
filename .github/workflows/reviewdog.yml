@@ -12,6 +12,7 @@ jobs:
       with:
         go-version: stable
         check-latest: true
+        cache: false
     - name: golangci-lint
       uses: reviewdog/action-golangci-lint@v2
       with:

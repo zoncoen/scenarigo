@@ -1,8 +1,8 @@
 module github.com/zoncoen/scenarigo/examples/default-value-with-nullish-coalescing-operator/plugin
 
-go 1.22.0
+go 1.23
 
-toolchain go1.23.6
+toolchain go1.24.0
 
 require github.com/zoncoen/scenarigo v0.18.0
 

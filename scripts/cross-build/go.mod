@@ -1,6 +1,8 @@
 module github.com/zoncoen/scenarigo/scripts/cross-build
 
-go 1.21
+go 1.23
+
+toolchain go1.24.0
 
 require (
 	github.com/99designs/gqlgen v0.17.19

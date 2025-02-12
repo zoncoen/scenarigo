@@ -26,3 +26,5 @@ updates:
     open-pull-requests-limit: 10
     assignees:
       - "zoncoen"
+    ignore:
+      - dependency-name: "carvel.dev/ytt"

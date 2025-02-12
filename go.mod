@@ -1,9 +1,9 @@
 module github.com/zoncoen/scenarigo
 
-go 1.22.0
+go 1.23
 
 require (
-	carvel.dev/ytt v0.48.0
+	carvel.dev/ytt v0.50.0
 	dario.cat/mergo v1.0.1
 	github.com/bufbuild/protocompile v0.14.1
 	github.com/cenkalti/backoff/v4 v4.3.0
@@ -38,8 +38,8 @@ require (
 	github.com/k14s/starlark-go v0.0.0-20200720175618-3a5c849cc368 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
-	github.com/spf13/pflag v1.0.5 // indirect
-	golang.org/x/crypto v0.32.0 // indirect
-	golang.org/x/net v0.34.0 // indirect
-	golang.org/x/sys v0.29.0 // indirect
+	github.com/spf13/pflag v1.0.6 // indirect
+	golang.org/x/crypto v0.33.0 // indirect
+	golang.org/x/net v0.35.0 // indirect
+	golang.org/x/sys v0.30.0 // indirect
 )

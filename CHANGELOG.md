@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## [v0.19.0](https://github.com/zoncoen/scenarigo/compare/v0.18.0...v0.19.0) - 2025-02-12
+### New Features
+- Introduce nullish coalescing operator by @youxkei in https://github.com/zoncoen/scenarigo/pull/495
+### Dependency Upgrades
+- chore(deps): bump github.com/goccy/go-yaml from 1.15.15 to 1.15.17 by @dependabot in https://github.com/zoncoen/scenarigo/pull/505
+- chore(deps): bump golang.org/x/text from 0.21.0 to 0.22.0 by @dependabot in https://github.com/zoncoen/scenarigo/pull/507
+- chore(deps): bump golang.org/x/mod from 0.22.0 to 0.23.0 by @dependabot in https://github.com/zoncoen/scenarigo/pull/508
+- chore(deps): bump google.golang.org/protobuf from 1.36.4 to 1.36.5 by @dependabot in https://github.com/zoncoen/scenarigo/pull/509
+- chore(deps): bump github.com/goccy/go-yaml from 1.15.17 to 1.15.22 by @dependabot in https://github.com/zoncoen/scenarigo/pull/516
+
 ## [v0.18.0](https://github.com/zoncoen/scenarigo/compare/v0.17.3...v0.18.0) - 2025-01-29
 ### New Features
 - add secrets field to define credential variables by @zoncoen in https://github.com/zoncoen/scenarigo/pull/414
